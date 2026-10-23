@@ -275,7 +275,7 @@ export async function exportMap(input: ExportInput): Promise<ExportManifest> {
     manifest.mapZip = zipName;
   }
 
-  // 清单自己也要落盘：验收包（`game_material_review`）与「在文件夹中显示」都读它。
+  // 清单自己也要落盘：验收包（`game_material({action:'review'})`）与「在文件夹中显示」都读它。
   // 盘上的 files 里补一条 manifest.json（bytes 0 —— 序列化那一刻还不知道自己的大小）；
   // `write` 随后往 `files` 里 push 的是带真实字节数的那条，返回值与旧实现一致地含它。
   await writeJson("manifest.json", { ...manifest, files: [...manifest.files, { path: "manifest.json", bytes: 0, kind: "json" }] });

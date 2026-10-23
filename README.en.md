@@ -335,19 +335,33 @@ Generate (billed).
 ## Driving it from chat
 
 **Every feature of all eight modules** (including the experimental rigged animation and map tiles) **is available through
-chat**. The plugin registers the whole pipeline as `game_material_*` tools, so an agent can drive it forward,
-wait, review, and also stop at each step for you to approve.
+chat**. The plugin registers exactly **one** tool, `game_material`: first read the guide for the topic, then call the
+methods it lists. Detailed workflows, method tables and parameters are loaded **on demand**, so unrelated tasks do
+not pay for them in context.
 
-| Tool | What it does |
+| action | What it does |
 |---|---|
-| `game_material_intake` | **Step 0 of the fixed workflow**: nail down the key parameters and review mode before doing anything |
-| `game_material_call` | Universal channel: every remote method of the plugin is individually callable, covering all features |
-| `game_material_upload` | Upload assets by local file path (character sheet / reference image / first and last frames / parts…) |
-| `game_material_reviewMode` | Record the review mode: `auto` approves automatically / `manual` requires human approval at each step |
-| `game_material_status` | See the current progress and which step to do now |
-| `game_material_wait` | Block until "no task is running"; what comes back is a reviewable state |
-| `game_material_review` | Produce a **review package**: absolute URL, status, approval flag and deep link for every asset |
-| `game_material_approve` | Approve / un-approve |
+| `guide` | Read the manual: `overview` / `workflow` / `config` / `methods` / `ai-asset` / eight module topics |
+| `intake` | **Step 0 of the fixed workflow**: nail down the key parameters and review mode before doing anything |
+| `call` | Universal channel: every remote method of the plugin is individually callable (`{method, payload}`) |
+| `upload` | Upload assets by local file path (character sheet / reference image / first and last frames / parts…) |
+| `reviewMode` | Record the review mode: `auto` approves automatically / `manual` requires human approval at each step |
+| `status` | See the current progress and which step to do now |
+| `wait` | Block until "no task is running"; what comes back is a reviewable state |
+| `review` | Produce a **review package**: absolute URL, status, approval flag and deep link for every asset |
+| `approve` | Approve / un-approve |
+
+For example:
+
+```js
+game_material({ action: "guide", topic: "sprite" })        // read the sprite guide first
+game_material({ action: "intake", module: "sprite" })     // ask for parameters and review mode
+game_material({ action: "call", method: "runTurnVideo", payload: { projectId } })
+game_material({ action: "wait", module: "sprite", id: projectId })
+```
+
+The old per-tool registrations (`game_material_call` / `game_material_status` / …) have been merged into this single
+tool; see [docs/ENGINEERING.md](docs/ENGINEERING.md#对话调用agent-也能驱动整条流水线) for the migration mapping.
 
 Review links are **deep links**: an `openUrl` posted by the agent in its reply takes you straight to the
 matching plugin page when clicked, landing on the right module / project / stage without any navigating
@@ -474,7 +488,7 @@ Existing project data is never deleted.
 
 - **UI**: the module disappears from the workbench tabs and from the sidebar shortcut menu. If you were
   sitting on that module, the workbench falls back to the first visible one.
-- **Chat**: `game_material_call` / `status` / `intake` / `upload` / `wait` / `review` / `approve` all refuse,
+- **Chat**: `game_material`'s `guide` / `call` / `status` / `intake` / `upload` / `wait` / `review` / `approve` all refuse,
   and the error says where to turn the feature back on. Hiding only the UI would not be hiding at all: the
   agent cannot see the tab but could still call generation methods and spend real money, so the host half
   re-checks the current setting on every call.

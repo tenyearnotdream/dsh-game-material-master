@@ -77,9 +77,11 @@ plugin.apply(ctx);
 const studio = ctx.get("gameStudio");
 check("网关实例可用", studio !== undefined && typeof studio.createMapProject === "function");
 check("资源路由已注册", captured.routes.length > 0 && typeof captured.routes[0].handler === "function");
-check("注册了 8 个 game_material_* 工具", captured.tools.length === 8, captured.tools.map((tool) => tool.name).join("、"));
-const tool = (name) => captured.tools.find((entry) => entry.name === name);
-const run = async (name, args) => tool(name).execute(args, { signal: undefined });
+check("只注册 1 个 game_material 工具", captured.tools.length === 1 && captured.tools[0].name === "game_material", captured.tools.map((tool) => tool.name).join("、"));
+const tool = (_name) => captured.tools[0];
+const actionOf = (name) => (name === "game_material" ? "" : name.replace(/^game_material_/, ""));
+const inputFor = (name, args) => (actionOf(name) === "" ? args : { action: actionOf(name), ...args });
+const run = async (name, args) => tool(name).execute(inputFor(name, args), { signal: undefined });
 
 /** 契约 §8 的 21 个方法（顺序即清单顺序）。 */
 
@@ -294,10 +296,10 @@ try {
     !mapgen.SERVABLE_MAP_DIRS.has("maps") && ["tilesets", "preview", "export", "ai"].every((dir) => mapgen.SERVABLE_MAP_DIRS.has(dir)),
     [...mapgen.SERVABLE_MAP_DIRS].join(",")
   );
-  const callDescription = tool("game_material_call").description;
-  check("对话面方法说明里有新方法（runMapGenerate / importSampleTileset）", callDescription.includes("runMapGenerate") && callDescription.includes("importSampleTileset"));
-  check("对话面方法说明里没有旧方法与旧术语", !callDescription.includes("saveMapFamilies") && !callDescription.includes("blob47") && !callDescription.includes("地形族") && !callDescription.includes("Tiled"));
-  check("上传工具说明里 map=tileset", tool("game_material_upload").description.includes("map=tileset"), "");
+  const mapGuide = (await tool().execute({ action: "guide", topic: "map" }, {})).text;
+  check("地图手册里有新方法（runMapGenerate / importSampleTileset）", mapGuide.includes("runMapGenerate") && mapGuide.includes("importSampleTileset"));
+  check("地图手册里没有旧方法与旧术语", !mapGuide.includes("saveMapFamilies") && !mapGuide.includes("blob47") && !mapGuide.includes("地形族") && !mapGuide.includes("Tiled"));
+  check("上传参数里有 tileset", (tool().parameters.properties.kind.enum ?? []).includes("tileset"), "");
 
   // ══ 4. 项目 / 素材 / 编辑走网关 ══════════════════════════════════════════
   section("4) 项目与素材（走网关，payload 一个字段都不能丢）");
@@ -856,7 +858,7 @@ try {
   const reviewedStage = await run("game_material_review", { module: "map", id: projectId, stage: "paint" });
   check("review 支持只看某一个阶段", reviewedStage.stages.length === 1 && reviewedStage.stages[0].stage === "paint");
   check("review 未知阶段被拒", (await failed(() => run("game_material_review", { module: "map", id: projectId, stage: "nope" }))).includes("未知阶段"));
-  const renderedReview = tool("game_material_review").output.render({}, reviewed);
+  const renderedReview = tool("game_material").output.render({ action: "review" }, reviewed);
   check("review 的文字渲染里没有旧术语（地形族 / 掩码 / Tiled / 等距）", !/地形族|掩码|Tiled|等距/.test(JSON.stringify(renderedReview)), JSON.stringify(renderedReview).slice(0, 120));
   check("review 的文字渲染里有阶段中文名（素材 / 自动连接 / 地图 / 导出）", /素材/.test(JSON.stringify(renderedReview)) && /自动连接/.test(JSON.stringify(renderedReview)));
 

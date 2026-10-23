@@ -5,12 +5,12 @@
  *
  * 钉住三件事：
  *
- * ① **工具面**：`ctx.tools` 上真的注册了那 8 个 `game_material_*` 工具，
- *    schema 合法（DSH 只认 type/oneOf/properties/required/additionalProperties/
- *    items/enum/const 这个子集），并且 `game_material_call` 的 method 枚举
- *    **覆盖插件的每一个远程方法**——「所有功能都能通过对话调用」这句话靠它成立。
+ * ① **工具面**：`ctx.tools` 上只注册 1 个 `game_material`，schema 合法（DSH 只认
+ *    type/oneOf/properties/required/additionalProperties/items/enum/const 这个子集），
+ *    常驻 schema + 系统提示词 ≤6,000 B；`guide` 的 `methods` 目录**覆盖插件的每一个
+ *    远程方法**——「所有功能都能通过对话调用」这句话靠它成立。
  *
- * ② **固定流程**：`game_material_intake` 必须先问用户关键参数与审核模式。
+ * ② **固定流程**：`action:"intake"` 必须先问用户关键参数与审核模式。
  *    这里直接调工具的 execute，断言：
  *      - 没配 Key 时给出 blocker；
  *      - 缺源图 / 缺提示词 / 缺素材时出现在 questions 里；
@@ -167,15 +167,8 @@ async function main() {
 
   const names = captured.tools.map((tool) => tool.name);
   check(
-    "注册了 8 个 game_material_* 工具",
-    captured.tools.length === 8 && names.every((name) => name.startsWith("game_material_")),
-    names.join("、")
-  );
-  check(
-    "工具名逐一符合预期",
-    ["call", "status", "intake", "upload", "reviewMode", "wait", "review", "approve"].every((suffix) =>
-      names.includes(`game_material_${suffix}`)
-    ),
+    "只注册 1 个 game_material 工具",
+    captured.tools.length === 1 && names[0] === "game_material",
     names.join("、")
   );
 
@@ -193,21 +186,53 @@ async function main() {
     ""
   );
 
-  // ── 2. game_material_call 必须覆盖每一个远程方法 ────────────────────────
-  console.log("\n2) 万能通道的方法覆盖");
-  const call = captured.tools.find((tool) => tool.name === "game_material_call");
-  const methodEnum = call?.parameters?.properties?.method?.enum ?? [];
+  // ── 1b. 常驻上下文预算 ────────────────────────────────────────────────
+  //
+  // 工具定义 + 系统提示词每次请求都会进上下文。8 个工具 + 长描述曾经是
+  // 49,393 B；这里把「常驻部分」钉在 6,000 B 以内，详细手册只能走 guide。
+  const onlyTool = captured.tools[0];
+  const surfaceBytes =
+    Buffer.byteLength(JSON.stringify({ name: onlyTool.name, description: onlyTool.description, parameters: onlyTool.parameters })) +
+    Buffer.byteLength(captured.sections[0]?.text ?? "");
+  check("常驻工具面 ≤ 6000 B", surfaceBytes <= 6000, `${surfaceBytes} B`);
+  check("工具描述 ≤ 1200 B", Buffer.byteLength(onlyTool.description) <= 1200, `${Buffer.byteLength(onlyTool.description)} B`);
+  check(
+    "action 覆盖 9 个动作",
+    ["guide", "intake", "call", "status", "wait", "review", "approve", "reviewMode", "upload"].every((action) =>
+      (onlyTool.parameters.properties.action.enum ?? []).includes(action)
+    ),
+    (onlyTool.parameters.properties.action.enum ?? []).join("、")
+  );
+
+  // ── 2. guide 方法目录覆盖每一个远程方法 ──────────────────────────────
+  console.log("\n2) guide 的方法覆盖");
   const clientOnly = METHODS.filter((spec) => spec.clientOnly === true).map((spec) => spec.method);
   const exposed = METHODS.filter((spec) => spec.clientOnly !== true).map((spec) => spec.method);
-  check("method 枚举覆盖全部非 clientOnly 方法", exposed.every((method) => methodEnum.includes(method)), `枚举 ${methodEnum.length} / 期望 ${exposed.length}`);
-  check("method 枚举不暴露 clientOnly 方法", clientOnly.every((method) => !methodEnum.includes(method)), clientOnly.join("、"));
-  check("枚举里没有多余的方法", methodEnum.length === exposed.length);
+  const methodGuide = await onlyTool.execute({ action: "guide", topic: "methods" }, { signal: undefined });
+  check(
+    "methods 目录覆盖全部非 clientOnly 方法",
+    exposed.every((method) => methodGuide.text.includes(method)),
+    `目录 ${exposed.filter((method) => methodGuide.text.includes(method)).length} / 期望 ${exposed.length}`
+  );
+  check(
+    "methods 目录不暴露 clientOnly 方法",
+    clientOnly.every((method) => !methodGuide.text.includes(method)),
+    clientOnly.join("、")
+  );
   check("reportClientOrigin 被标成 clientOnly", clientOnly.includes("reportClientOrigin"), clientOnly.join("、"));
-  check("setReviewMode 可以被模型调用", methodEnum.includes("setReviewMode"));
+  check("setReviewMode 出现在方法目录", methodGuide.text.includes("setReviewMode"));
 
-  // schema 里声明的 payload 情况与方法表一致（防止工具层和 wire 层漂移）。
-  const paramNames = [...call.parameters.properties.method.enum];
-  check("枚举顺序与方法表一致", JSON.stringify(paramNames) === JSON.stringify(exposed));
+  for (const module of links.STUDIO_MODULES) {
+    const guide = await onlyTool.execute({ action: "guide", topic: module }, { signal: undefined });
+    const expected = exposed.filter((method) => METHOD_MODULE[method] === module);
+    check(
+      `${module} 手册覆盖本模块方法`,
+      expected.every((method) => guide.text.includes(method)),
+      `${expected.filter((method) => guide.text.includes(method)).length} / ${expected.length}`
+    );
+  }
+  const overview = await onlyTool.execute({ action: "guide", topic: "overview" }, { signal: undefined });
+  check("overview 列出全部可见模块", links.STUDIO_MODULES.every((module) => overview.text.includes(module)));
 
   // ── 3. 远程 payload schema 必须放行界面用到的每个字段 ───────────────────
   //
@@ -233,7 +258,10 @@ async function main() {
 
   // ── 4. 准备一个真实项目 / 任务，供 intake 与 review 使用 ────────────────
   console.log("\n4) 固定流程第 0 步：先问再动手");
-  const tool = (name) => captured.tools.find((entry) => entry.name === name);
+  const tool = (_name) => captured.tools[0];
+  /** 旧测试仍按 `game_material_status` 这种名字调用；这里统一映射到 action。 */
+  const actionOf = (name) => (name === "game_material" ? "" : name.replace(/^game_material_/, ""));
+  const inputFor = (name, args) => (actionOf(name) === "" ? args : { action: actionOf(name), ...args });
   /**
    * 每次工具调用都顺手做一遍「无损 JSON」审计：DSH 会在工具边界做这道校验，
    * 不过就整次调用失败。审计放在这里，是为了让**后面每一个 run() 用的用例**
@@ -241,7 +269,7 @@ async function main() {
    */
   const losslessAudit = [];
   const run = async (name, args) => {
-    const value = await tool(name).execute(args, { signal: undefined });
+    const value = await tool(name).execute(inputFor(name, args), { signal: undefined });
     const problems = losslessProblems(value);
     if (problems.length > 0) losslessAudit.push(`${name} → ${problems.slice(0, 4).join("、")}`);
     return value;
@@ -411,8 +439,8 @@ async function main() {
   check("没有任务在跑时 wait 立刻返回 settled", waited.settled === true && waited.timedOut === false, JSON.stringify({ settled: waited.settled, elapsedMs: waited.elapsedMs }));
   check("wait 结果里带 openUrl", typeof waited.openUrl === "string");
 
-  const imageApproveEmpty = await tool("game_material_approve")
-    .execute({ module: "image", id: imageId, approved: true }, {})
+  const imageApproveEmpty = await tool("game_material")
+    .execute({ action: "approve", module: "image", id: imageId, approved: true }, {})
     .then(() => null, (error) => String(error?.message ?? error));
   check("空任务打通过给出可读错误", imageApproveEmpty !== null && imageApproveEmpty.includes("还没有产物"), String(imageApproveEmpty));
   await studio.addImageItem({ jobId: imageId, name: "one.png", data: png.toString("base64") });
@@ -438,7 +466,7 @@ async function main() {
 
   // 渲染器的签名是 render(args, value)，返回的是文本块数组（与 DSH 一致）。
   const renderText = (name, args, value) =>
-    (tool(name).output.render(args, value) ?? []).map((block) => block?.text ?? "").join("\n");
+    (tool(name).output.render(inputFor(name, args), value) ?? []).map((block) => block?.text ?? "").join("\n");
 
   const rigStatus = await run("game_material_status", { module: "rig", id: rigId });
   const rigStatusText = renderText("game_material_status", { module: "rig", id: rigId }, rigStatus);
@@ -583,11 +611,26 @@ async function main() {
     Object.keys(hiddenStatus.links ?? {}).join("、")
   );
   check("可见模块的深链接还在", typeof hiddenStatus.links?.sprite === "string", String(hiddenStatus.links?.sprite));
-  const hiddenStatusText = tool("game_material_status").output
-    .render({}, hiddenStatus)
+  const hiddenStatusText = tool("game_material").output
+    .render({ action: "status" }, hiddenStatus)
     .map((block) => block.text)
     .join("\n");
   check("status 的文本渲染里点明了隐藏项", hiddenStatusText.includes("已隐藏的功能"), hiddenStatusText.slice(0, 90).replace(/\n/g, " | "));
+
+  // 手册也要跟着隐藏：overview / methods 不能泄露被隐藏模块的能力与深链接。
+  await expectThrow("guide 对隐藏模块直接拒绝", () => run("game_material", { action: "guide", topic: "tile" }), "隐藏");
+  const hiddenOverview = await run("game_material", { action: "guide", topic: "overview" });
+  check(
+    "overview 不泄露被隐藏模块",
+    !hiddenOverview.text.includes("45°地图地块生成") && !hiddenOverview.text.includes("骨骼动画生成"),
+    hiddenOverview.text.slice(0, 120)
+  );
+  const hiddenMethods = await run("game_material", { action: "guide", topic: "methods" });
+  check(
+    "methods 不泄露被隐藏模块的方法",
+    !hiddenMethods.text.includes("runTileItems") && !hiddenMethods.text.includes("runRigSheet"),
+    ""
+  );
 
   // 取消隐藏必须**立刻**生效，不需要重启宿主（配置是内存缓存，工具每次现读）。
   await studio.saveConfig({ hiddenModules: [] });
@@ -797,24 +840,25 @@ async function main() {
   }
   check("客户端清单的 payload 标记与宿主一致", payloadMismatch.length === 0, payloadMismatch.join("、"));
 
-  // ── 9. 系统提示词里的固定流程 ──────────────────────────────────────────
-  console.log("\n9) 系统提示词的固定流程");
+  // ── 9. 系统提示词只负责指路，完整流程在 guide ─────────────────────────
+  console.log("\n9) 系统提示词与 guide 的分工");
   check("注册了 game-material-master 提示词段", captured.sections.length === 1 && captured.sections[0].name === "game-material-master", captured.sections.map((s) => s.name).join("、"));
   const prompt = captured.sections[0]?.text ?? "";
-  check("提示词要求先调 intake", /先调用 `game_material_intake`/.test(prompt), "");
-  check("提示词要求问自动/人工审核", /自动审核/.test(prompt) && /人工审核/.test(prompt), "");
-  check("提示词要求得到答复前不许生成", /不要调用任何生成类/.test(prompt), "");
-  check("提示词要求把 openUrl 写成 Markdown 链接", /Markdown 链接/.test(prompt) && /openUrl/.test(prompt), "");
-  check("提示词说明 manual 模式要停下等确认", /停下等用户回复/.test(prompt), "");
-  check("提示词提醒计费", /计费/.test(prompt), "");
+  check("提示词保持紧凑（< 600 B）", Buffer.byteLength(prompt) < 600, `${Buffer.byteLength(prompt)} B`);
+  check("提示词指向 game_material 与 guide", /game_material/.test(prompt) && /guide/.test(prompt), prompt);
+  const workflowGuide = (await onlyTool.execute({ action: "guide", topic: "workflow" }, {})).text;
+  check("workflow 要求先 intake", /先调用/.test(workflowGuide) && /action:["']intake["']/.test(workflowGuide), "");
+  check("workflow 要求问自动/人工审核", /自动审核/.test(workflowGuide) && /人工审核/.test(workflowGuide), "");
+  check("workflow 要求得到答复前不许生成", /不要调用任何生成类/.test(workflowGuide), "");
+  check("workflow 要求把 openUrl 写成 Markdown 链接", /Markdown 链接/.test(workflowGuide) && /openUrl/.test(workflowGuide), "");
+  check("workflow 说明 manual 模式要停下等确认", /停下等用户回复/.test(workflowGuide), "");
+  check("workflow 提醒计费", /计费/.test(workflowGuide), "");
   check("提示词段有稳定 order（利于 KV 缓存）", Number.isFinite(captured.sections[0]?.order), String(captured.sections[0]?.order));
 
-  // ── 10. 工具描述必须覆盖「模型该怎么用」的那几个方法 ────────────────────
-  // 新增一个 AI 能调的方法、却忘了写进 `game_material_call` 的描述里，
-  // 结果就是「能力做了但模型不知道」——这类漏掉在编译期完全看不出来。
+  // ── 10. 指导手册必须覆盖「模型该怎么用」的那几个方法 ────────────────────
+  // 新增一个 AI 能调的方法、却忘了写进手册里，结果就是「能力做了但模型不知道」。
   {
-    const callTool = (captured.tools ?? []).find((entry) => entry?.name === "game_material_call");
-    const callDescription = JSON.stringify(callTool?.description ?? "");
+    const rigGuide = (await onlyTool.execute({ action: "guide", topic: "rig" }, {})).text;
     const mustBeDocumented = [
       "setRigSemantics",
       "setRigBoneOffsets",
@@ -825,10 +869,10 @@ async function main() {
       "tintRigParts",
       "setRigTextureVersion"
     ];
-    const missing = mustBeDocumented.filter((method) => !callDescription.includes(method));
-    check(`骨骼动画的三层修改方法都写进了工具描述（共 ${callDescription.length} 字符）`, missing.length === 0, missing.join("、"));
-    check("提示词说明「重跑不会抹掉人工改动」", /互不覆盖|不会覆盖|不会被覆盖/.test(prompt), "");
-    check("提示词说明构建失败要先读 error", /导出前校验|构建失败/.test(prompt), "");
+    const missing = mustBeDocumented.filter((method) => !rigGuide.includes(method));
+    check(`骨骼动画的三层修改方法都写进了 rig 手册（共 ${rigGuide.length} 字符）`, missing.length === 0, missing.join("、"));
+    check("rig 手册说明「重跑不会抹掉人工改动」", /互不覆盖|不会覆盖|不会被覆盖/.test(rigGuide), "");
+    check("rig 手册说明构建失败要先读 error", /导出前校验|构建失败/.test(rigGuide), "");
   }
 
   // ── 11. 模块五在**对话调用面**上真的能用 ────────────────────────────────
@@ -838,12 +882,7 @@ async function main() {
   // （`known.几何由代码保证` 之类）—— 那种写法一旦有非法标识符字符就会静默
   // 变成运行时问题（`②` 就真的编译不过）。所以这里真调一遍。
   {
-    const intakeTool = (captured.tools ?? []).find((entry) => entry?.name === "game_material_intake");
-    const statusTool = (captured.tools ?? []).find((entry) => entry?.name === "game_material_status");
-    const reviewTool = (captured.tools ?? []).find((entry) => entry?.name === "game_material_review");
-    const callTool = (captured.tools ?? []).find((entry) => entry?.name === "game_material_call");
-    check("拿到了 intake / status / review / call 四个工具",
-      [intakeTool, statusTool, reviewTool, callTool].every((t) => typeof t?.execute === "function"));
+    check("单一工具同时承载 intake / status / review / call", typeof onlyTool.execute === "function");
 
     // ① 先建一个真实的地图地块项目（走真实网关，数据落在临时 DSH_HOME）
     const created = await studio.createTileProject({ name: "对话面验证", lang: "zh" });
@@ -852,7 +891,7 @@ async function main() {
       check("tile 项目 id 被判为 tile 模块", moduleForId(tileId) === "tile", moduleForId(tileId));
 
       // ② intake：必须能渲染出来，且把「四个阶段」与「只有第①步花钱」讲清楚
-      const intake = await intakeTool.execute({ module: "tile", id: tileId }, {});
+      const intake = await run("game_material_intake", { module: "tile", id: tileId });
       const intakeText = typeof intake === "string" ? intake : JSON.stringify(intake);
       check("intake 对 tile 不抛异常且返回了内容", intakeText.length > 50, `${intakeText.length} 字符`);
       check("intake 讲清了四个阶段", /生成.*验收.*拼.*导出/s.test(intakeText.replace(/\\n/g, " ")) || /四个阶段/.test(intakeText));
@@ -861,27 +900,27 @@ async function main() {
       check("intake 带上了 openUrl 深链接", /openUrl/.test(intakeText) && /module=tile/.test(intakeText));
 
       // ③ status：不给 id 时要列出 tile 项目；给 id 时要回几何与产物 URL
-      const listed = await statusTool.execute({ module: "tile" }, {});
+      const listed = await run("game_material_status", { module: "tile" });
       check("status 不给 id 时列出 tile 项目", JSON.stringify(listed).includes(tileId));
 
-      const detail = await statusTool.execute({ module: "tile", id: tileId }, {});
+      const detail = await run("game_material_status", { module: "tile", id: tileId });
       const detailText = JSON.stringify(detail);
       check("status 给了 id 时返回该 project 的快照", detailText.includes(tileId) || detail?.id === tileId);
       check("status 的快照里有 assetBase（界面据此拼产物 URL）",
         detailText.includes("tile-assets") || detail?.assetBase !== undefined);
 
       // ④ review：没产物时也要给出可读的结论，而不是崩
-      const review = await reviewTool.execute({ module: "tile", id: tileId }, {});
+      const review = await run("game_material_review", { module: "tile", id: tileId });
       const reviewText = JSON.stringify(review);
       check("review 对空项目不抛异常", reviewText.length > 20, `${reviewText.length} 字符`);
       check("review 带了 openUrl", reviewText.includes("openUrl") || typeof review?.openUrl === "string");
 
-      // ⑤ call：tile 的远程方法要通过 call 通道可达（枚举里有它）
-      const callDescription = JSON.stringify(callTool?.description ?? "");
+      // ⑤ call：tile 的远程方法要通过 call 通道可达（guide 的模块手册里有它）
+      const tileGuide = (await onlyTool.execute({ action: "guide", topic: "tile" }, {})).text;
       const tileMethods = ["listTileProjects", "createTileProject", "getTileProject",
         "runTileItems", "setTileApproved", "runTileMap", "runTileExport"];
-      const missingTile = tileMethods.filter((m) => !callDescription.includes(m));
-      check("地图地块的远程方法都写进了 game_material_call 的描述", missingTile.length === 0, missingTile.join("、"));
+      const missingTile = tileMethods.filter((m) => !tileGuide.includes(m));
+      check("地图地块的远程方法都写进了 tile 手册", missingTile.length === 0, missingTile.join("、"));
     } finally {
       await studio.deleteTileProject({ projectId: tileId });
     }

@@ -272,19 +272,33 @@ flowchart LR
 
 ## 用对话驱动
 
-八个模块（含实验性的骨骼动画与地图地块）的**全部功能都能通过对话调用**。插件把整条流水线注册成
-`game_material_*` 工具，agent 能自己推进、等待、审查，也可以在每一步停下来让你验收。
+八个模块（含实验性的骨骼动画与地图地块）的**全部功能都能通过对话调用**。插件只注册**一个**工具
+`game_material`：先按主题读手册，再按手册里的方法名调用。详细的流程、方法表与参数**按需加载**，
+不会在无关任务里常驻上下文。
 
-| 工具 | 作用 |
+| action | 作用 |
 |---|---|
-| `game_material_intake` | **固定流程第 0 步**：先把关键参数与审核模式问清楚，再动手 |
-| `game_material_call` | 万能通道：插件全部远程方法逐个可调，覆盖全部功能 |
-| `game_material_upload` | 按本机文件路径上传素材（设定图 / 参考图 / 首尾帧 / 部件…） |
-| `game_material_reviewMode` | 记下审核模式：`auto` 自动审核 / `manual` 每一步人工审核 |
-| `game_material_status` | 看一眼当前进度，以及现在该做哪一步 |
-| `game_material_wait` | 阻塞等到「没有任务在跑」，回来就是可审查状态 |
-| `game_material_review` | 出**验收包**：每个产物的绝对 URL、状态、通过标记、深链接 |
-| `game_material_approve` | 打「通过 / 取消通过」 |
+| `guide` | 读手册：`overview` / `workflow` / `config` / `methods` / `ai-asset` / 八个模块主题 |
+| `intake` | **固定流程第 0 步**：先把关键参数与审核模式问清楚，再动手 |
+| `call` | 万能通道：插件全部远程方法逐个可调（`{method, payload}`） |
+| `upload` | 按本机文件路径上传素材（设定图 / 参考图 / 首尾帧 / 部件…） |
+| `reviewMode` | 记下审核模式：`auto` 自动审核 / `manual` 每一步人工审核 |
+| `status` | 看一眼当前进度，以及现在该做哪一步 |
+| `wait` | 阻塞等到「没有任务在跑」，回来就是可审查状态 |
+| `review` | 出**验收包**：每个产物的绝对 URL、状态、通过标记、深链接 |
+| `approve` | 打「通过 / 取消通过」 |
+
+例如：
+
+```js
+game_material({ action: "guide", topic: "sprite" })        // 先读八方向图手册
+game_material({ action: "intake", module: "sprite" })     // 问清参数与审核模式
+game_material({ action: "call", method: "runTurnVideo", payload: { projectId } })
+game_material({ action: "wait", module: "sprite", id: projectId })
+```
+
+旧版按 `game_material_call` / `game_material_status` / … 逐个注册的工具已经合并到上面这一个工具，
+迁移对照见 [docs/ENGINEERING.md](docs/ENGINEERING.md#对话调用agent-也能驱动整条流水线)。
 
 验收链接是**深链接**：agent 在回复里贴出的 `openUrl` 点一下就切到插件对应页面，原地落到
 对应模块 / 项目 / 阶段上，不需要你自己翻。
@@ -393,7 +407,7 @@ Key 只写入本机 `<DSH_HOME>/game-material-master/config.json`，界面回显
 不用的模块可以在**设置 → 游戏素材大师 → 功能管理**里关掉，随时再打开，已有项目数据不会删：
 
 - **界面**：工作台页签、侧栏快捷菜单里都不再出现它；如果当时正停在这个模块，会自动落到第一个可见模块。
-- **对话**：`game_material_call` / `status` / `intake` / `upload` / `wait` / `review` / `approve`
+- **对话**：`game_material` 的 `guide` / `call` / `status` / `intake` / `upload` / `wait` / `review` / `approve`
   一律拒绝，报错里说明去哪里打开。只藏界面不拦工具等于没藏——模型看不见页签，
   照样能调生成类方法真实计费，所以宿主半区每次都按最新配置再拦一次。
 - 可见性**只能由用户在设置页里改**：工具面拒绝 `saveConfig({hiddenModules})`，

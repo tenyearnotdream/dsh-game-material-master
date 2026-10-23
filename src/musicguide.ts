@@ -12,7 +12,7 @@
  *
  * ## 为什么放在宿主侧
  *
- * 对话里的 agent 通过 `game_material_call({method:'getMusicGuide'})` 读取它。
+ * 对话里的 agent 通过 `game_material({action:'call', method:'getMusicGuide'})` 读取它。
  * 放在宿主侧的好处是：界面换语言不影响它、模型每次都能拿到**同一份**经过整理
  * 的清单，而不是靠模型记性。客户端只负责把 `guide` 原样显示在「创作技巧」里。
  */

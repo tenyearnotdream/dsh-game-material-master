@@ -44,6 +44,7 @@ DSH 插件「游戏素材大师」：从一张角色设定图出发批量产出�
 | 改完 `lib/client.js` 只需刷新浏览器 | 客户端束由宿主按请求从磁盘读，带 `rev` 指纹 |
 | **没有任何运行时依赖** | `zod` / `cordis` / dsh-typert-protocol 等一律从 DSH 自身安装树解析；`node_modules` 与 lock 文件不入库 |
 | `lib/` **入库**（不是构建产物目录） | 包直接以 `main: lib/index.js` 发布，`npm publish` 不触发构建 |
+| **对话工具面常驻只有一个 `game_material`**；详细流程 / 方法表放 `src/toolguides.ts`，由 `action:"guide"` 按需读取 | 工具定义与系统提示词每次请求都进上下文；旧版 8 个工具 + 49,393 B 描述在无关任务里白烧 token。新增方法必须进对应模块主题与自动生成的 `methods` 目录，**不许**把方法表塞回工具描述 / 系统提示词；`verify-tools.mjs` 有 ≤6,000 B 预算断言 |
 | 生成类调用必须带 loading 反馈，批量任务要按 `job.targets` 盖住**还没轮到**的方向 | 不盖遮罩时界面看着完全正常，只是「点了没反应」，用户会反复点——每次点击都真实计费。`verify-client.mjs` / `verify-feedback.mjs` 会拦 |
 | **后台轮询刷新项目 / 任务时，不许用宿主的值整份覆盖编辑草稿** | 有任务在跑时每 2.5~5 秒拉一次 `getProject` / `getImageJob` / `getSequenceJob` / `getRigJob`；无条件覆盖草稿会让用户正在长文本框里替换的提示词一两秒后被打回原形（真机：「我替换的时候它一秒钟又换回来」）。所有 load 走 `mergeDrafts()`：只有「草稿 === 上一次宿主值」的字段才跟着宿主更新；换项目 / 换任务 / 点「重置为默认」才 `force`。`verify-feedback.mjs` 有合并用例，`verify-client.mjs` 逐模块钉住调用点 |
 | 本地自选视频必须与远端生成的产物**同形**，且导入时作废该槽位已有的下游产物 | 两条路只差 `origin` / `originalName` 两个字段，阶段③④才不用改。不作废（尤其是 `frames/<方向>/raw.bin`）就会拿上一段视频的帧去合成——界面看着完全正常，只是动作 / 朝向对不上；同理，导入时要摘掉在跑的远端 `taskId`，否则它稍后会把本地视频覆盖掉。`verify-host.mjs` 的 9d 段逐条钉住这几条 |
@@ -105,7 +106,7 @@ npm run typecheck    # 只做类型检查
 ```bash
 node scripts/verify-host.mjs       # 宿主全链路（387 项）
 node scripts/verify-client.mjs     # 浏览器半区契约（364 项）
-node scripts/verify-tools.mjs      # 对话调用面（179 项）
+node scripts/verify-tools.mjs      # 对话调用面（193 项，含常驻工具面 ≤6,000 B 预算）
 node scripts/verify-pipeline.mjs   # 抽帧 / 抠像 / 合成（40 项）
 node scripts/verify-feedback.mjs   # 浏览器半区真渲染（212 项，含功能管理、侧栏菜单、生图后端设置页、语义保存错误与草稿合并）
 node scripts/verify-i18n.mjs       # 中英词条表契约（9 项）
@@ -195,6 +196,24 @@ Conventional Commits，中文描述：`feat(rig): …` / `docs: …` / `fix(spri
 | `0.9.0` | 2026-10-18 10:11 | **新增第八个模块「音效生成」**（`feat(sfx)`，火山引擎豆包语音 **Seed-Audio**：一句话描述 → 音效 / 环境音 / UI 声 / 生物吼叫 / 角色配音；可带 1 张参考图或最多 3 条参考音频（互斥）；每次生成一条 take、永不覆盖；单次 ≤120 秒；每次生成真实计费；界面直接生成、工具面可调）。新增 `src/sfxapi.ts` / `src/sfxgen.ts`、配置项 `sfx*`、wire 13 个方法（163 → **176**）、`sfx-assets` 路由与独立导出；新增自检 `verify-sfx` 54 / `verify-sfx-gateway` 39 / `verify-sfx-client` 28。⚠️ 宿主半区改动，需重启 DSH。 |
 | `0.9.1` | 2026-10-18 12:50 | **音效生成修复**（`fix(sfx)`）：轮询 `getSfxJob` 时同步刷新左侧任务列表（生成完成后不再停在「0 条 · ⏳」）；火山引擎 `fetch failed` 带上底层 `cause`（例如 TLS `ECONNRESET`），便于区分网络与鉴权问题。`verify-sfx-client` 28 → **29**。 |
 | `0.9.2` | 2026-10-18 13:11 | **音效生成网络重试**（`fix(sfx)`）：只对「TLS 握手尚未建立就断开」这类**请求还没发出**的错误自动重试最多 3 次（Clash / TUN 节点抖动常见）；已发出的请求不重试，避免重复计费。成功后日志写明重试次数；`verify-sfx` 54 → **55**。 |
+
+### 0.10.0 发布说明（未发布）
+
+`package.json` 是 `0.10.0`。这是一次**对话工具面的破坏性重构**：
+
+- 原来 8 个 `game_material_*` 工具合并成 1 个 `game_material`，用 `action` 选择
+  `guide / intake / call / status / wait / review / approve / reviewMode / upload`。
+- 新增 `src/toolguides.ts`：原来塞在工具描述与系统提示词里的流程 / 方法表 / 参数按主题拆到这里，
+  由 `action:"guide"` 按需加载；`methods` 目录从 `TOOL_METHODS` 自动生成并按 `hiddenModules` 过滤。
+- 常驻工具面从 **49,393 B**（工具 schema 33,615 B + 提示词 15,778 B）降到约 **3.9 KB**
+  （`verify-tools.mjs` 断言 ≤6,000 B）。详细手册只在实际调用时进入上下文。
+- `intake` / `upload` / `status` / `wait` / `review` / `approve` / `reviewMode` 的行为不变；
+  顺手把 `approve` 的 `variant` 与 `review` 的 `key` 补进 schema（之前执行体读了但 schema 没声明）。
+- 自动任务（AI 生成素材 / 音乐 / 谱曲）提示词改为「先读 guide」，并统一新调用语法；
+  `src/musicguide.ts` / `src/musicscoreguide.ts` / `src/sfxgen.ts` 里模型可见的旧工具名同步更新。
+- 自检：`verify-tools` 179 → **193**（新增常驻字节预算、guide 覆盖、隐藏模块不泄露手册）；
+  `verify-map-gateway` 216 / `verify-music-gateway` 51 / `verify-sfx-gateway` 39 / `verify-music-client` 66 保持。
+- ⚠️ 宿主半区改动，**要重启 DSH**；浏览器半区刷新即可。
 
 ### 0.9.0 发布说明（2026-10-18）
 

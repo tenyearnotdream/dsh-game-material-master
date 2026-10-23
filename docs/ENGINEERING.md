@@ -83,35 +83,69 @@ ffmpeg + 内置 JS 完成——不需要任何系统图像库，也不需要把�
 
 ### 工具
 
-| 工具 | 作用 |
+对话面只有一个工具 `game_material`，用 `action` 选择动作：
+
+| action | 作用 |
 |---|---|
-| `game_material_intake` | **固定流程第 0 步**：按真实状态算出「还缺哪些关键参数」与「必须先解决的阻塞」，并把「自动审核 / 每步人工审核」这个必问项一起交出来 |
-| `game_material_call` | 万能通道：插件界面上有的功能都能调（63 个方法，含配置、提示词、抠像参数、删除等），描述里逐个列了入参与用途 |
-| `game_material_upload` | 按**本机路径**上传素材（源图 / 参考图 / 首尾帧 / 参考视频），宿主自己读盘，不用把 base64 贴进对话 |
-| `game_material_reviewMode` | 记录用户选的审核模式，存在项目 / 任务上；界面与对话读写同一份 |
-| `game_material_status` | 读进度：项目 / 任务清单，或某个目标的阶段进度与产物 URL |
-| `game_material_wait` | 阻塞等待「没有任务在跑」或超时（默认 120s，上限 900s），回来就是可审查状态 |
-| `game_material_review` | 出**验收包**：每个产物的绝对 URL、状态、通过标记、报错与建议的下一步 |
-| `game_material_approve` | 打「通过 / 取消通过」（八方向图按阶段+方位，图片按张，序列帧按步骤，骨骼动画按阶段+部件） |
+| `guide` | 按主题读手册：`overview` / `workflow` / `config` / `methods` / `ai-asset` / 八个模块主题；方法表由 `TOOL_METHODS` 自动生成，并按 `hiddenModules` 过滤 |
+| `intake` | **固定流程第 0 步**：按真实状态算出「还缺哪些关键参数」与「必须先解决的阻塞」，并把「自动审核 / 每步人工审核」这个必问项一起交出来 |
+| `call` | 万能通道：插件界面上有的功能都能调（176 个方法），`{method, payload}`；方法名与参数在 guide 里 |
+| `upload` | 按**本机路径**上传素材（源图 / 参考图 / 首尾帧 / 参考视频），宿主自己读盘，不用把 base64 贴进对话 |
+| `reviewMode` | 记录用户选的审核模式，存在项目 / 任务上；界面与对话读写同一份 |
+| `status` | 读进度：项目 / 任务清单，或某个目标的阶段进度与产物 URL |
+| `wait` | 阻塞等待「没有任务在跑」或超时（默认 120s，上限 900s），回来就是可审查状态 |
+| `review` | 出**验收包**：每个产物的绝对 URL、状态、通过标记、报错与建议的下一步 |
+| `approve` | 打「通过 / 取消通过」（八方向图按阶段+方位，图片按张，序列帧按步骤，骨骼动画按阶段+部件） |
 
 底层没有第二套实现：工具直接复用界面用的那个 Typert 远程服务，所以
 「界面上做到的事」与「对话里做到的事」永远是同一件事、同一份数据。
 
-**被用户隐藏的模块是例外**：工具面每次调用都先按 `hiddenModules` 查一次模块归属，
-命中就拒绝（`game_material_status` 既不列它的清单也不给它的深链接）。理由与做法见
-「配置 → 功能管理：隐藏的模块必须对 AI 也关上」。
+**被用户隐藏的模块是例外**：每个 action 都先按 `hiddenModules` 查一次模块归属，
+命中就拒绝（`status` 既不列它的清单也不给它的深链接，`guide` 也不泄露它的手册）。
+理由与做法见「配置 → 功能管理：隐藏的模块必须对 AI 也关上」。
+
+### 渐进披露：常驻只有一个工具
+
+工具定义与系统提示词**每次请求都会进上下文**。旧版把整条流水线拆成 8 个工具、
+把方法表与固定流程写进描述，实测常驻 **49,393 B**（工具 schema 33,615 B + 系统提示词 15,778 B），
+无关任务也要付这笔 token。
+
+现在：
+
+- 常驻只有 `game_material` 一个工具；工具 schema + 系统提示词合计 **≤ 6,000 B**
+  （`verify-tools.mjs` 会打印实际值并断言，当前约 3.9 KB）；
+- 详细流程 / 方法签名 / 参数放在 `src/toolguides.ts`，由 `action:"guide"` 按主题读取；
+- `methods` 目录由 `TOOL_METHODS` + `METHOD_MODULE` + `SHARED_TOOL_METHODS` **自动生成**，
+  新增方法不会「做了但手册没提」；
+- 自动任务（AI 生成素材 / 音乐 / 谱曲）的第一行会明确要求先读 `guide`。
+
+⚠️ **硬约束**：新增远程方法时，必须写进对应模块主题（并自动出现在 `methods` 目录）；
+**不许**把方法表或固定流程重新塞回工具描述 / 系统提示词。`verify-tools.mjs` 的字节预算会拦。
+
+旧工具名 → 新调用：
+
+```text
+game_material_intake({...})          → game_material({action:"intake", ...})
+game_material_call({method,payload}) → game_material({action:"call", method, payload})
+game_material_upload({...})          → game_material({action:"upload", ...})
+game_material_reviewMode({...})      → game_material({action:"reviewMode", ...})
+game_material_status({...})          → game_material({action:"status", ...})
+game_material_wait({...})            → game_material({action:"wait", ...})
+game_material_review({...})          → game_material({action:"review", ...})
+game_material_approve({...})         → game_material({action:"approve", ...})
+```
 
 ### 固定流程
 
 ```
 第 0 步  先问，再动手
-         agent 必须先用 game_material_intake 把缺的参数问清楚，
+         agent 必须先用 game_material({action:"intake", module}) 把缺的参数问清楚，
          并且必须问「自动审核 还是 每一步人工审核」——合并成一次提问。
          两个问题都拿到答复之前，不允许调用任何生成 / 删除类方法。
 第 1 步  逐阶段推进（八方向图：images → videos → frames → sheet；
          骨骼动画：parts → layout → rig → atlas，其中只有 parts 花钱）
-         每次提交类调用之后立刻 game_material_wait。
-第 2 步  每步都审：game_material_review 看逐项 status / error / URL。
+         每次提交类调用之后立刻 game_material({action:"wait", id})。
+第 2 步  每步都审：game_material({action:"review", ...}) 看逐项 status / error / URL。
 第 3 步  按审核模式分岔
          auto   → agent 自己判断没问题就 approve 并进入下一步
          manual → 贴出验收链接并停下等用户回复，用户说「通过」才继续
@@ -319,7 +353,7 @@ comfy.ts 里**唯一**的 HTTP 出口（`/system_stats`、`/object_info`、`/upl
 | 半区 | 做什么 | 在哪 |
 |---|---|---|
 | 浏览器 | 页签与侧栏菜单按可见性过滤；选中项被隐藏时落到第一个可见模块 | `client.ts` 的 `useHiddenModules` / `visibleModulesOf` / `activeModule` |
-| 宿主 | `game_material_call` / `status` / `intake` / `upload` / `wait` / `review` / `approve` 全部拒绝 | `tools.ts` 的 `assertModuleVisible` + `METHOD_MODULE` |
+| 宿主 | `game_material` 的 `guide` / `call` / `intake` / `upload` / `wait` / `review` / `approve` 全部拒绝 | `tools.ts` 的 `assertModuleVisible` + `METHOD_MODULE` |
 
 几个刻意的选择：
 
@@ -580,7 +614,7 @@ dsh --profile gmmweb --port 19388     # 打印 http://127.0.0.1:19388/?token=…
 - 生成张数 1~8，按 Seedream 刊例约 0.2 元/张
 - 每张可单独重新生成、删除、下载原图、下载透明 PNG（未抠像时原图是唯一产物，所以原图也有独立下载入口）
 - 每张会记录**背景占比**，用来判断抠像是否可信（占比异常说明绿幕没生成好）
-- 每张可单独打「通过」，也可以一键全部通过；对话里的 `game_material_approve` 改的是同一份标记
+- 每张可单独打「通过」，也可以一键全部通过；对话里的 `game_material({action:"approve"})` 改的是同一份标记
 
 ---
 
@@ -600,7 +634,7 @@ dsh --profile gmmweb --port 19388     # 打印 http://127.0.0.1:19388/?token=…
 - 播放生成出来的视频（`<video>`，支持拖动进度条）
 - **循环播放抠像后的序列帧**（可调 fps 与缩放），直接判断动作连贯性与抠像边缘稳定性
 - 导出横向条图与逐帧 PNG
-- 对「视频 / 抽帧 / 条图」三步各自打「通过」；对话里的 `game_material_approve` 改的是同一份标记
+- 对「视频 / 抽帧 / 条图」三步各自打「通过」；对话里的 `game_material({action:"approve"})` 改的是同一份标记
 
 ---
 
@@ -2182,7 +2216,7 @@ Path的target指向路径槽位，附件要写`vertexCount`与三次Bezier控制
 - **④ 图集**：图集整图预览 + `.atlas` 文本 + DragonBones `_tex.json`，区域尺寸与
   `skeleton.json` 里的挂点尺寸一致。
 
-对话里也能全程驱动：`game_material_call({method:'runRigLayout', payload:{jobId, names:['head']}})`
+对话里也能全程驱动：`game_material({action:"call", method:'runRigLayout', payload:{jobId, names:['head']}})`
 只重跑一个部件，不花钱。
 
 ---
@@ -2337,7 +2371,7 @@ DSH 只把 `locale` 服务挂在**浏览器半区**（`ctx.provide("locale", …
 | 位置 | 例子 | 为什么 |
 |---|---|---|
 | 运行日志里由宿主 `log()` / `appendJobLog()` 写入的行 | `开始生成「南 · 正对镜头」`、`「{方向}」生成完成，用时 12.3 秒` | 宿主编好字符串再落到项目 JSON 里，语言切换时已经定型 |
-| 对话工具返回给模型的文本 | `game_material_status` / `review` 的渲染、`intake` 的追问 | 面向模型，不是面向界面 |
+| 对话工具返回给模型的文本 | `game_material({action:"status"})` / `review` 的渲染、`intake` 的追问 | 面向模型，不是面向界面 |
 
 要接着做的话，正确的路子不是把宿主字符串拖到客户端用正则猜，而是**让宿主写结构化日志**
 （`{ key, params }`，`message` 保留为中文兜底），由客户端渲染时翻译——`LogEntry` /
@@ -2363,7 +2397,7 @@ DSH 只把 `locale` 服务挂在**浏览器半区**（`ctx.provide("locale", …
 仍然 92% 透明），而那一小撮角色色自成小簇、被挡在门外。同一张帧修好后掩码里
 「不像绿色」的像素从 7.7% 降到 **0.00%**，角色的不透明像素数回到关掉填充时的基线。
 
-诊断字段（`KeyResult`，会写进合成日志与 `game_material_status` 的整图 cell）：
+诊断字段（`KeyResult`，会写进合成日志与 `game_material({action:"status"})` 的整图 cell）：
 `backgroundFraction`（背景占比）、`borderSamples` / `borderSamplesDropped`（边框采样里被排除的点数，
 > 0 通常意味着角色贴边）。`verify-pipeline.mjs` 第 12 节钉住了这一条：
 贴边素材里角色的深蓝必须保住、干净素材一个采样点都不许排除、双色背景两块都要算背景。
@@ -2596,7 +2630,7 @@ node scripts/dsh-web-cookie.mjs 127.0.0.1:43121 --json
 | `node scripts/find-missing-i18n.mjs` | **工具**（不是断言）：列出所有还没进词条表的 `T("…")` 原文，直接输出可粘贴的条目 |
 | `node scripts/verify-i18n.mjs` | 中英词条表契约：**每个 `T()` 都有英文条目 / 没有死条目 / `{nN}` 占位符两侧一致 / 译文不残留汉字与全角标点 / `lib/client.js` 与 `src/client.ts` 的词条表一致（忘了 build 就发版会整体退回中文）** |
 | `node scripts/i18n-wrap.mjs` | 词法级 codemod：把 `src/client.ts` 里含中日韩字符的字面量包成 `T(...)`（模板字面量拆成 `{nN}` 占位符，幂等，`i18n-ignore-*` 区间不碰） |
-| `node scripts/verify-tools.mjs` / `verify-client.mjs` / `verify-pipeline.mjs` | 对话调用面（**168 项**，含六个模块 status/review 的文字渲染与「隐藏的模块必须拒绝调用」、本地自选视频的槽位校验、**「AI 生成素材」回链的 dialog/asset/frames/shape 往返与坏值丢弃**）、浏览器半区契约（**352 项**，含「每个远程方法都有 api 实现」「本地自选视频与中间图片打包的调用点必须带 loading 反馈」「手动装配的四条回归」「功能管理 / 侧栏菜单的类名与接线」）、抠像回归（40 项） |
+| `node scripts/verify-tools.mjs` / `verify-client.mjs` / `verify-pipeline.mjs` | 对话调用面（**193 项**，含六个模块 status/review 的文字渲染与「隐藏的模块必须拒绝调用」、本地自选视频的槽位校验、**「AI 生成素材」回链的 dialog/asset/frames/shape 往返与坏值丢弃**）、浏览器半区契约（**352 项**，含「每个远程方法都有 api 实现」「本地自选视频与中间图片打包的调用点必须带 loading 反馈」「手动装配的四条回归」「功能管理 / 侧栏菜单的类名与接线」）、抠像回归（40 项） |
 
 
 
@@ -2612,7 +2646,7 @@ node scripts/verify-custom-image.mjs # 自定义生图后端三协议（68 项�
 node scripts/verify-comfy.mjs      # 本地 ComfyUI 后端（124 项，自起 mock ComfyUI，纯本地、不用装 ComfyUI）
 node scripts/verify-client.mjs     # 浏览器半区契约（352 项：阶段 ctx 键必须被转发、每个生成类调用点都带 loading 反馈、转圈时间轴与八圆圈、手动装配的四个坑、拆件质检 / IK 约束组件、功能管理 / 侧栏菜单的文本与样式契约）
 node scripts/verify-feedback.mjs   # 浏览器半区渲染（203 项：真加载 lib/client.js，断言遮罩真的出现 / 空闲时真的不出现 / 转圈模式两种生成方式与八圆圈都在 / **「选择本地视频」入口真的在（label + 隐藏 file input，只收 video/*）与每一处「保存」链接（八方向图 / 条带 / 成片 / 预览带 / 整包出口），且没有产物时不渲染空链接** / 深链接点击真的切面板 / 隐藏模块后页签与菜单真的消失、设置页勾选真的写回宿主 / **生图后端：ark 与自定义两组同屏、协议下拉、ComfyUI 工作流文本框只在选中 ComfyUI 时出现、改工作流不立刻发请求** / 语义校验失败没有误报成功）
-node scripts/verify-tools.mjs      # 对话调用面（168 项：工具 schema、方法覆盖、**客户端清单的 payload 标记与宿主 manifest 逐条一致**、返回值无损 JSON 审计、固定流程（含阶段①生成方式必问）、审核模式、深链接契约（含 AI 素材回链的 dialog / asset / frames / shape）、转圈模式的 status/review 渲染、**功能管理（每个方法都归了模块 / 隐藏后一律拒绝 / 可见性不许模型改）**）
+node scripts/verify-tools.mjs      # 对话调用面（193 项：工具 schema、方法覆盖、**客户端清单的 payload 标记与宿主 manifest 逐条一致**、返回值无损 JSON 审计、固定流程（含阶段①生成方式必问）、审核模式、深链接契约（含 AI 素材回链的 dialog / asset / frames / shape）、转圈模式的 status/review 渲染、**功能管理（每个方法都归了模块 / 隐藏后一律拒绝 / 可见性不许模型改）**）
 node scripts/verify-i18n.mjs       # 中英词条表契约（9 项：覆盖 / 死条目 / 占位符 / 译文纯净度 / 产物同步）
 node scripts/verify-tile.mjs       # 模块五几何内核（109 项，含两条反向验证）
 node scripts/verify-tile-pipeline.mjs # 模块五数据层与流水线（83 项）
@@ -2679,14 +2713,14 @@ node scripts/retry-video.mjs <项目 id> <方向> [--soft]         # 单方向�
 新 Hook 必须**显式写它的下标**。
 
 `verify-tools.mjs` 盯的是对话调用面这一类坑：工具 schema 必须落在 DSH 支持的关键字子集里、
-`game_material_call` 的 method 枚举必须**覆盖插件的每一个远程方法**（少一个就是「某个功能对话里调不了」）、
+`guide` 的 `methods` 目录必须**覆盖插件的每一个远程方法**、常驻工具面必须 **≤6,000 B**（少一个就是「某个功能对话里调不了」）、
 固定流程第 0 步必须按真实状态算出要问什么（缺源图就问、已有源图就不问）、
 审核模式必须只有 auto/manual 两个选项。**每一次 `run()` 还顺手审计一遍返回值能不能无损过
 JSON**（`undefined` 键 / `NaN` / `Infinity` / `-0`）——新版 DSH 会对工具输出做这道校验，
 不过就整次调用失败，而 `JSON.stringify` 自己会把这些问题抹掉，写成「stringify 之后没有
 undefined」的断言永远为真（这里真踩过，见上面的坑）。它还把六个模块的 `status` / `review` 文字渲染
 **真的跑一遍**——这几个渲染器按同一套字段写，而骨骼动画的阶段形状跟其它三个模块不一样
-（没有 `cells`，只有 `status`），一律按 `cells` 迭代会让 `game_material_review` 以
+（没有 `cells`，只有 `status`），一律按 `cells` 迭代会让 `game_material({action:"review"})` 以
 `stage.cells is not iterable` 整次失败，而按 `ready/total` 渲染 `status` 会印出一串
 `undefined`；两种坏法都只在骨骼动画上出现，别的模块一条测试都不会红。
 最后用**文本契约**把宿主 `links.ts` 与浏览器半区
@@ -2891,12 +2925,12 @@ running 落在下一次 `getProject` 里**：
 
 ### 对话面
 
-- `game_material_call` 暴露全部 27 个方法；`intake` 对 `music` 有专用问题（含「直接生成 / 谱曲模式」与谱曲依赖状态），缺谱乐 Key 不再硬阻塞谱曲；
+- `game_material({action:"call"})` 通过 guide 暴露全部音乐方法；`intake` 对 `music` 有专用问题（含「直接生成 / 谱曲模式」与谱曲依赖状态），缺谱乐 Key 不再硬阻塞谱曲；
   `status` 列表带 `musicJobs`；`review` / `wait` / `approve` 都有 music 分支。
 - `runMusicGeneration` / `renderMusicEdit` / `exportMusic` 的 `openUrl` 自动带
   `stage=generate|edit|export`，用户点回就落在对应卡片。
 - 系统提示词与 `buildMusicRequestPrompt` 都要求：先 `getMusicGuide` → 扩写/保存方案 →
-  `runMusicGeneration` → `game_material_wait` → 可选后期 → 把 `openUrl` 原样贴成 Markdown 链接。
+  `runMusicGeneration` → `game_material({action:"wait"})` → 可选后期 → 把 `openUrl` 原样贴成 Markdown 链接。
 - 创作指南（`musicguide.ts`）来自 **bitwize-music-studio/claude-ai-music-skills（CC0-1.0）**，
   只吸收方法论（风格提示词结构、歌词 13 点 QC、Suno 模型选择、母带响度目标）并改写为中英双语。
 

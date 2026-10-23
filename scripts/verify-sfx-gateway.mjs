@@ -47,8 +47,10 @@ ctx.provide("tools", { register: (definition) => { captured.tools.push(definitio
 ctx.provide("systemPrompt", { section: (section) => { captured.sections.push(section); return () => {}; } });
 plugin.apply(ctx);
 const studio = ctx.get("gameStudio");
-const tool = (name) => captured.tools.find((entry) => entry.name === name);
-const call = async (name, args) => tool(name).execute(args, {});
+const tool = (_name) => captured.tools[0];
+const actionOf = (name) => (name === "game_material" ? "" : name.replace(/^game_material_/, ""));
+const inputFor = (name, args) => (actionOf(name) === "" ? args : { action: actionOf(name), ...args });
+const call = async (name, args) => tool(name).execute(inputFor(name, args), {});
 
 function parsed(method, payload) {
   const spec = wire.METHODS.find((entry) => entry.method === method);
@@ -104,8 +106,8 @@ try {
   check("深链接带 module=sfx&job&stage", link.includes("module=sfx") && link.includes("job=fabc123") && link.includes("stage=generate"), link);
   check("深链接能解析回来", intent?.module === "sfx" && intent?.jobId === "fabc123" && intent?.stage === "generate", JSON.stringify(intent));
 
-  const sectionText = captured.sections.map((entry) => entry.text ?? "").join("\n");
-  check("系统提示词讲清音效流程", sectionText.includes("音效生成") && sectionText.includes("seed-audio-1.0") && sectionText.includes("runSfxGeneration"), "");
+  const sfxGuide = (await call("game_material", { action: "guide", topic: "sfx" })).text;
+  check("sfx 手册讲清音效流程", sfxGuide.includes("音效生成") && sfxGuide.includes("seed-audio-1.0") && sfxGuide.includes("runSfxGeneration"), "");
 
   section("3) 配置字段");
   const saved = await studio.saveConfig({ sfxApiKey: "test-key", sfxBaseUrl: "https://example.test", sfxModel: "seed-audio-1.0", sfxFormat: "mp3", sfxSampleRate: 44100 });

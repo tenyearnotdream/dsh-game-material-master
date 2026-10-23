@@ -158,8 +158,8 @@ const prompt = T.buildMusicRequestPrompt({
 });
 check("提示词含 jobId", prompt.includes("a1234"));
 check("提示词含用户完整歌词", prompt.includes("[Verse]\nline one\nline two"));
-check("提示词要求先读指南", prompt.includes("getMusicGuide"));
-check("提示词要求提交与等待", prompt.includes("runMusicGeneration") && prompt.includes("game_material_wait"));
+check("提示词要求先读手册与指南", prompt.includes("action:'guide'") && prompt.includes("getMusicGuide"));
+check("提示词要求提交与等待", prompt.includes("runMusicGeneration") && prompt.includes("action:'wait'"));
 check("提示词要求后期与导出", prompt.includes("renderMusicEdit") && prompt.includes("exportMusic"));
 check("提示词要求贴回链", prompt.includes("openUrl") && prompt.includes("Markdown"));
 check("manual 模式要求停下等确认", /停下等我回复/.test(prompt));

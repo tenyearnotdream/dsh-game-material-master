@@ -519,7 +519,7 @@ interface MethodSpec {
   result: z.ZodType;
   /**
    * 只给浏览器半区用、**不暴露给模型工具**的方法。
-   * `game_material_call` 的 method 枚举会跳过它们。
+   * `game_material({action:'call'})` 的 method 枚举会跳过它们。
    */
   clientOnly?: boolean;
 }
@@ -1322,7 +1322,7 @@ export const METHOD_NAMES: Array<{ method: string; payload: boolean; clientOnly:
 }));
 
 /**
- * 暴露成模型工具的方法（`game_material_call` 的 method 枚举）。
+ * 暴露成模型工具的方法（`game_material({action:'call'})` 的 method 枚举）。
  * 顺序即清单顺序，方便在工具描述里按模块分组。
  */
 export const TOOL_METHODS: Array<{ method: string; payload: boolean }> = METHODS.filter(

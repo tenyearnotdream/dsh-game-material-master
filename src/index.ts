@@ -2365,7 +2365,7 @@ export class GameStudioGateway extends TypertRemoteService {
     return { ok: true, ...(await riggen.removeRigTextureVersion(asString(input.jobId), asString(input.name), Number(input.version))) };
   }
 
-  /** AI 逐部件重绘（花钱）。生图要几十秒，所以走后台任务 + `game_material_wait`。 */
+  /** AI 逐部件重绘（花钱）。生图要几十秒，所以走后台任务 + `game_material({action:'wait'})`。 */
   async runRigRedraw(payload) {
     const input = asRecord(payload);
     return riggen.startRigRedraw(asString(input.jobId), asString(input.name), asString(input.prompt), {

@@ -15,7 +15,7 @@
  *
  * 火山引擎的 `seed-audio-1.0` 是**同步接口**：一次 POST 直接返回整段音频，
  * 没有 taskId、没有轮询。这里仍然用后台任务表承载，是为了不阻塞网关调用，
- * 也让 `game_material_wait` / 界面的「生成中」状态有统一落点。
+ * 也让 `game_material({action:'wait'})` / 界面的「生成中」状态有统一落点。
  *
  * 所有写 `job.json` 的地方都走 `patchSfxJob()` 的**按任务串行队列**：界面保存
  * 提示词、后台任务收尾、上传参考同时发生时，后写的不会覆盖前一次改动。
@@ -915,9 +915,9 @@ export function sfxNextActions(snapshot: Record<string, any>): string[] {
   if (typeof snapshot.blocker === "string" && snapshot.blocker !== "") actions.push(snapshot.blocker);
   const takes = Array.isArray(snapshot.takes) ? snapshot.takes : [];
   if (snapshot.busy === true) {
-    actions.push("正在生成：用 game_material_wait({module:'sfx', id}) 等它结束；不要重复提交。");
+    actions.push("正在生成：用 game_material({action:'wait', module:'sfx', id}) 等它结束；不要重复提交。");
   } else if (takes.length === 0) {
-    actions.push("还没有生成：runSfxGeneration({jobId})（★真实计费，每次一条），然后 game_material_wait。");
+    actions.push("还没有生成：runSfxGeneration({jobId})（★真实计费，每次一条），然后 game_material({action:'wait', module:'sfx', id})。");
   } else {
     actions.push("试听 takes 里的 URL；满意就 exportSfx({jobId, takeId})，不满意改提示词再 runSfxGeneration（会再计费一次）。");
   }

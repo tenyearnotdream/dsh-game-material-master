@@ -80,8 +80,10 @@ ctx.provide("tools", { register: (definition) => { captured.tools.push(definitio
 ctx.provide("systemPrompt", { section: (section) => { captured.sections.push(section); return () => {}; } });
 plugin.apply(ctx);
 const gw = ctx.get("gameStudio");
-const tool = (name) => captured.tools.find((entry) => entry.name === name);
-const run = async (name, args) => tool(name).execute(args, { signal: undefined });
+const tool = (_name) => captured.tools[0];
+const actionOf = (name) => (name === "game_material" ? "" : name.replace(/^game_material_/, ""));
+const inputFor = (name, args) => (actionOf(name) === "" ? args : { action: actionOf(name), ...args });
+const run = async (name, args) => tool(name).execute(inputFor(name, args), { signal: undefined });
 const base = `http://127.0.0.1:${port}`;
 
 /** 走一遍 wire schema，并断言「解析后一个键都没少」。 */
@@ -199,8 +201,8 @@ try {
   check("runMusicTool 的 params 过 schema", toolResult.started === true, JSON.stringify(toolResult));
 
   section("4) 工具面 / 深链接 / 隐藏模块");
-  const callTool = tool("game_material_call");
-  check("game_material_call 描述覆盖音乐方法", ["getMusicGuide", "getMusicScoreGuide", "runMusicGeneration", "runMusicScore", "submitMusicScoreToSuno", "renderMusicEdit", "exportMusic"].every((method) => String(callTool.description).includes(method)));
+  const musicGuide = (await run("game_material", { action: "guide", topic: "music" })).text;
+  check("music 手册覆盖音乐方法", ["getMusicGuide", "getMusicScoreGuide", "runMusicGeneration", "runMusicScore", "submitMusicScoreToSuno", "renderMusicEdit", "exportMusic"].every((method) => String(musicGuide).includes(method)));
   const callResult = await run("game_material_call", { method: "getMusicJob", payload: { jobId: created.id } });
   check("game_material_call 返回音乐 openUrl", /module=music/.test(callResult.openUrl ?? "") && /job=/.test(callResult.openUrl ?? ""), callResult.openUrl);
   const status = await run("game_material_status", {});
@@ -222,7 +224,7 @@ try {
   await call("saveConfig", { hiddenModules: [] });
 
   check("payload schema 没有静默丢键", losses.length === 0, losses.slice(0, 3).join(" | "));
-  check("系统提示词里有音乐模块段", captured.sections.some((section) => /音乐生成编辑/.test(section.text)));
+  check("音乐手册覆盖音乐模块", /音乐生成编辑/.test(musicGuide));
 
   await call("deleteMusicJob", { jobId: created.id });
 } finally {

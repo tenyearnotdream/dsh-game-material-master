@@ -369,7 +369,7 @@ export interface Config {
    * **被隐藏的功能模块**（`links.ts` 的 `STUDIO_MODULES` 子集）。
    *
    * 「隐藏」是**双向**的：界面上不再出现这个模块的页签与入口，对话工具面也
-   * 拒绝对它的任何调用（`game_material_call` / `status` / `review` … 一律报错）。
+   * 拒绝对它的任何调用（`game_material({action:'call'})` / `status` / `review` … 一律报错）。
    * 只挡界面不挡工具等于没挡——模型照样能调 `runTileItems` 真实计费。
    *
    * 空数组（默认）= 八个模块全部可见。全隐藏是允许的：面板会显示一句空态。
