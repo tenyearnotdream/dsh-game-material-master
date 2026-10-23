@@ -1895,6 +1895,7 @@
       "  宿主会跑 Python/scoremill、解析 MIDI、渲染试听（FluidSynth 或内置音源）。报错会带 scoremill 的原文（小节号/拍数）；只改那一处，最多重试 3 次；还不行就停下说明原因。": "  The host runs Python/scoremill, parses the MIDI, and renders the preview (FluidSynth or built-in synth). Errors include scoremill's own message (bar/beat); fix only that spot, retry at most 3 times; if it still fails, stop and explain why.",
       "第五步 · 让用户试听：": "Step 5 - Let the user audition:",
       "  把返回的 openUrl **原样**贴成 Markdown 链接；说清 BPM、调性、时长、段落与试听方式。": "  Paste the returned openUrl verbatim as a Markdown link; state BPM, key, duration, sections, and how to audition.",
+      "⚠️ music-assets 下的音频 / 封面只是文件直链，不能当插件入口；最终回复必须包含上面的 openUrl 深链接。": "Note: Audio/cover files under music-assets are direct file links, not plugin entry points; the final reply must include the openUrl deep link above.",
       "  不要伪造音频 URL，不要说「我听过了」；你只能看 MIDI 元数据与用户反馈。": "  Do not invent audio URLs and never claim you listened; you only see MIDI metadata and user feedback.",
       "第六步 · 按意见修改：": "Step 6 - Revise from feedback:",
       "  用户说「太吵 / 太慢 / 鼓太多 / 主题不明显 / 某段太长」时，只改对应段落；再调 runMusicScore，basedOn 指上一版 scoreId。": "  When the user says \"too loud / too slow / too many drums / theme not clear / a section too long\", change only that section; call runMusicScore again with basedOn pointing at the previous scoreId.",
@@ -2594,6 +2595,7 @@
         T("  导出：game_material({action:'call', method:'exportMusic', payload:{jobId:'{n0}', versionId?|songId?, format?, zip?}})。", { n0: input.jobId }),
         "",
         T("第五步 · 回链：把工具返回的 openUrl **原样**贴成 Markdown 链接（例如 [回到音乐编辑](…)）。"),
+        T("⚠️ music-assets 下的音频 / 封面只是文件直链，不能当插件入口；最终回复必须包含上面的 openUrl 深链接。"),
         T("  点开就回到插件音乐页，歌曲可试听、裁剪、调音量、淡入淡出、保存版本与导出。"),
         T("  同时在回答里说清：生成了几首、用了哪个引擎/模式、是否做了后期、下一步建议。不要伪造音频 URL，不要说「我听过了」。"),
         "",
@@ -2677,6 +2679,7 @@
         "",
         T("第五步 · 让用户试听："),
         T("  把返回的 openUrl **原样**贴成 Markdown 链接；说清 BPM、调性、时长、段落与试听方式。"),
+        T("⚠️ music-assets 下的音频 / 封面只是文件直链，不能当插件入口；最终回复必须包含上面的 openUrl 深链接。"),
         T("  不要伪造音频 URL，不要说「我听过了」；你只能看 MIDI 元数据与用户反馈。"),
         "",
         T("第六步 · 按意见修改："),
@@ -3401,8 +3404,10 @@
       const origin = window.location.origin;
       if (typeof origin !== "string" || origin === "" || origin === "null") return;
       const path = typeof window.location.pathname === "string" ? window.location.pathname : "";
-      // 宿主刚重启时插件可能比远程服务先就绪：失败就退避重试几次，
+      // 宿主刚重启时插件可能比远程服务先就绪：失败就退避重试，
       // 否则 `clientOrigin` 会一直空着，所有绝对产物地址都变成 `http://localhost`。
+      // 重试窗口给到 ~30s，并在窗口重新聚焦 / 回到前台时再补报一次——
+      // 用户重启 DSH 后不刷新页面也能恢复正确 origin。
       const send = (attempt) => {
         let pending;
         try {
@@ -3410,11 +3415,24 @@
         } catch {
           pending = Promise.reject(new Error("reportClientOrigin failed"));
         }
-        Promise.resolve(pending).catch(() => {
-          if (attempt < 20) window.setTimeout(() => send(attempt + 1), 250);
-        });
+        Promise.resolve(pending)
+          .then((result) => {
+            if (result?.ok === false && attempt < 60) window.setTimeout(() => send(attempt + 1), 500);
+          })
+          .catch(() => {
+            if (attempt < 60) window.setTimeout(() => send(attempt + 1), 500);
+          });
       };
       send(0);
+      // 宿主重启后页面通常不会重新 apply；focus / 回到前台是最可靠的补报时机。
+      if (typeof window.addEventListener === "function") {
+        window.addEventListener("focus", () => send(0));
+      }
+      if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") send(0);
+        });
+      }
     }
 
     // ── 样式 ─────────────────────────────────────────────────────────────

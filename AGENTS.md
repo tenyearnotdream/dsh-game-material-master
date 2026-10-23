@@ -106,7 +106,7 @@ npm run typecheck    # 只做类型检查
 ```bash
 node scripts/verify-host.mjs       # 宿主全链路（387 项）
 node scripts/verify-client.mjs     # 浏览器半区契约（364 项）
-node scripts/verify-tools.mjs      # 对话调用面（193 项，含常驻工具面 ≤6,000 B 预算）
+node scripts/verify-tools.mjs      # 对话调用面（194 项，含常驻工具面 ≤6,000 B 预算）
 node scripts/verify-pipeline.mjs   # 抽帧 / 抠像 / 合成（40 项）
 node scripts/verify-feedback.mjs   # 浏览器半区真渲染（212 项，含功能管理、侧栏菜单、生图后端设置页、语义保存错误与草稿合并）
 node scripts/verify-i18n.mjs       # 中英词条表契约（9 项）
@@ -114,8 +114,8 @@ node scripts/verify-comfy.mjs      # 本地 ComfyUI 后端（124 项，自起 mo
 node scripts/verify-custom-image.mjs  # 自定义生图后端三协议（68 项：起本地假服务端，离线、零计费）
 node scripts/verify-music.mjs      # 音乐生成编辑：mock 谱乐 AI 的生成/轮询/下载/编辑/导出/工具/路由（86 项）
 node scripts/verify-music-score.mjs   # 谱曲模式：方案 / 假 Python / 内置试听 / 乐谱包 / Suno 上传+cover mock（46 项，纯本地）
-node scripts/verify-music-gateway.mjs  # 音乐走真实网关：wire schema 不丢键、工具面、深链接、隐藏模块、谱曲字段（51 项）
-node scripts/verify-music-client.mjs   # 音乐界面真渲染 + 新对话桥 + 谱曲卡 + 静态契约（66 项）
+node scripts/verify-music-gateway.mjs  # 音乐走真实网关：wire schema 不丢键、工具面、深链接、隐藏模块、谱曲字段（52 项）
+node scripts/verify-music-client.mjs   # 音乐界面真渲染 + 新对话桥 + 谱曲卡 + 静态契约（67 项）
 node scripts/verify-sfx.mjs         # 音效生成：mock 火山引擎语音的请求/返回/错误/参考/导出/路由（55 项，纯本地）
 node scripts/verify-sfx-gateway.mjs # 音效走真实网关：wire schema 不丢键、工具面、深链接、隐藏模块、配置字段（39 项）
 node scripts/verify-sfx-client.mjs  # 音效界面真渲染：新建卡 / 任务卡 / 参考 / takes / 生成 / 遮罩 / 静态契约（29 项）
@@ -211,8 +211,8 @@ Conventional Commits，中文描述：`feat(rig): …` / `docs: …` / `fix(spri
   顺手把 `approve` 的 `variant` 与 `review` 的 `key` 补进 schema（之前执行体读了但 schema 没声明）。
 - 自动任务（AI 生成素材 / 音乐 / 谱曲）提示词改为「先读 guide」，并统一新调用语法；
   `src/musicguide.ts` / `src/musicscoreguide.ts` / `src/sfxgen.ts` 里模型可见的旧工具名同步更新。
-- 自检：`verify-tools` 179 → **193**（新增常驻字节预算、guide 覆盖、隐藏模块不泄露手册）；
-  `verify-map-gateway` 216 / `verify-music-gateway` 51 / `verify-sfx-gateway` 39 / `verify-music-client` 66 保持。
+- 自检：`verify-tools` 179 → **194**（新增常驻字节预算、guide 覆盖、隐藏模块不泄露手册）；
+  `verify-map-gateway` 216 / `verify-music-gateway` 52 / `verify-sfx-gateway` 39 / `verify-music-client` 67。
 - ⚠️ 宿主半区改动，**要重启 DSH**；浏览器半区刷新即可。
 
 ### 0.9.0 发布说明（2026-10-18）

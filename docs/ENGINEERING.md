@@ -2630,7 +2630,7 @@ node scripts/dsh-web-cookie.mjs 127.0.0.1:43121 --json
 | `node scripts/find-missing-i18n.mjs` | **工具**（不是断言）：列出所有还没进词条表的 `T("…")` 原文，直接输出可粘贴的条目 |
 | `node scripts/verify-i18n.mjs` | 中英词条表契约：**每个 `T()` 都有英文条目 / 没有死条目 / `{nN}` 占位符两侧一致 / 译文不残留汉字与全角标点 / `lib/client.js` 与 `src/client.ts` 的词条表一致（忘了 build 就发版会整体退回中文）** |
 | `node scripts/i18n-wrap.mjs` | 词法级 codemod：把 `src/client.ts` 里含中日韩字符的字面量包成 `T(...)`（模板字面量拆成 `{nN}` 占位符，幂等，`i18n-ignore-*` 区间不碰） |
-| `node scripts/verify-tools.mjs` / `verify-client.mjs` / `verify-pipeline.mjs` | 对话调用面（**193 项**，含六个模块 status/review 的文字渲染与「隐藏的模块必须拒绝调用」、本地自选视频的槽位校验、**「AI 生成素材」回链的 dialog/asset/frames/shape 往返与坏值丢弃**）、浏览器半区契约（**352 项**，含「每个远程方法都有 api 实现」「本地自选视频与中间图片打包的调用点必须带 loading 反馈」「手动装配的四条回归」「功能管理 / 侧栏菜单的类名与接线」）、抠像回归（40 项） |
+| `node scripts/verify-tools.mjs` / `verify-client.mjs` / `verify-pipeline.mjs` | 对话调用面（**194 项**，含六个模块 status/review 的文字渲染与「隐藏的模块必须拒绝调用」、本地自选视频的槽位校验、**「AI 生成素材」回链的 dialog/asset/frames/shape 往返与坏值丢弃**）、浏览器半区契约（**352 项**，含「每个远程方法都有 api 实现」「本地自选视频与中间图片打包的调用点必须带 loading 反馈」「手动装配的四条回归」「功能管理 / 侧栏菜单的类名与接线」）、抠像回归（40 项） |
 
 
 
@@ -2646,7 +2646,7 @@ node scripts/verify-custom-image.mjs # 自定义生图后端三协议（68 项�
 node scripts/verify-comfy.mjs      # 本地 ComfyUI 后端（124 项，自起 mock ComfyUI，纯本地、不用装 ComfyUI）
 node scripts/verify-client.mjs     # 浏览器半区契约（352 项：阶段 ctx 键必须被转发、每个生成类调用点都带 loading 反馈、转圈时间轴与八圆圈、手动装配的四个坑、拆件质检 / IK 约束组件、功能管理 / 侧栏菜单的文本与样式契约）
 node scripts/verify-feedback.mjs   # 浏览器半区渲染（203 项：真加载 lib/client.js，断言遮罩真的出现 / 空闲时真的不出现 / 转圈模式两种生成方式与八圆圈都在 / **「选择本地视频」入口真的在（label + 隐藏 file input，只收 video/*）与每一处「保存」链接（八方向图 / 条带 / 成片 / 预览带 / 整包出口），且没有产物时不渲染空链接** / 深链接点击真的切面板 / 隐藏模块后页签与菜单真的消失、设置页勾选真的写回宿主 / **生图后端：ark 与自定义两组同屏、协议下拉、ComfyUI 工作流文本框只在选中 ComfyUI 时出现、改工作流不立刻发请求** / 语义校验失败没有误报成功）
-node scripts/verify-tools.mjs      # 对话调用面（193 项：工具 schema、方法覆盖、**客户端清单的 payload 标记与宿主 manifest 逐条一致**、返回值无损 JSON 审计、固定流程（含阶段①生成方式必问）、审核模式、深链接契约（含 AI 素材回链的 dialog / asset / frames / shape）、转圈模式的 status/review 渲染、**功能管理（每个方法都归了模块 / 隐藏后一律拒绝 / 可见性不许模型改）**）
+node scripts/verify-tools.mjs      # 对话调用面（194 项：工具 schema、方法覆盖、**客户端清单的 payload 标记与宿主 manifest 逐条一致**、返回值无损 JSON 审计、固定流程（含阶段①生成方式必问）、审核模式、深链接契约（含 AI 素材回链的 dialog / asset / frames / shape）、转圈模式的 status/review 渲染、**功能管理（每个方法都归了模块 / 隐藏后一律拒绝 / 可见性不许模型改）**）
 node scripts/verify-i18n.mjs       # 中英词条表契约（9 项：覆盖 / 死条目 / 占位符 / 译文纯净度 / 产物同步）
 node scripts/verify-tile.mjs       # 模块五几何内核（109 项，含两条反向验证）
 node scripts/verify-tile-pipeline.mjs # 模块五数据层与流水线（83 项）
@@ -2961,7 +2961,7 @@ running 落在下一次 `getProject` 里**：
 - `verify-music-score.mjs`：谱曲模式，46 项（方案归一化、假 Python 脚本、脚本报错/不产出 MIDI、
   MIDI 元数据、内置试听、逐版修改、波形、乐谱包、Suno mock 的音频上传/cover/confirm/regenerate/
   版权通道/scoreId、老任务迁移、深链接）。纯本地、零计费。
-- `verify-music-gateway.mjs`：走真实网关，51 项（wire schema 逐键不丢、工具面、深链接、
+- `verify-music-gateway.mjs`：走真实网关，52 项（wire schema 逐键不丢、工具面、深链接、
   隐藏模块、谱曲字段与依赖状态）。
 - `verify-music-client.mjs`：真渲染 + 假 sessions，65 项（创建卡、歌曲/编辑/版本/导出、
   谱曲创建卡 / 谱曲卡 / 提示词 / 深链接、新对话不挂靠项目、功能管理）。

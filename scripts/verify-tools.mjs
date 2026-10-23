@@ -851,6 +851,7 @@ async function main() {
   check("workflow 要求问自动/人工审核", /自动审核/.test(workflowGuide) && /人工审核/.test(workflowGuide), "");
   check("workflow 要求得到答复前不许生成", /不要调用任何生成类/.test(workflowGuide), "");
   check("workflow 要求把 openUrl 写成 Markdown 链接", /Markdown 链接/.test(workflowGuide) && /openUrl/.test(workflowGuide), "");
+  check("workflow 区分插件入口与文件直链", /插件界面入口/.test(workflowGuide) && /文件直链/.test(workflowGuide), "");
   check("workflow 说明 manual 模式要停下等确认", /停下等用户回复/.test(workflowGuide), "");
   check("workflow 提醒计费", /计费/.test(workflowGuide), "");
   check("提示词段有稳定 order（利于 KV 缓存）", Number.isFinite(captured.sections[0]?.order), String(captured.sections[0]?.order));

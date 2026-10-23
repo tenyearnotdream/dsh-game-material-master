@@ -2063,7 +2063,7 @@ function renderIntake(value: any): string {
 }
 
 function renderUpload(value: any): string {
-  const tail = typeof value.openUrl === "string" ? `\n打开界面：[${value.openHint}](${value.openUrl})` : "";
+  const tail = typeof value.openUrl === "string" ? `\n★ 插件界面入口：[${value.openHint}](${value.openUrl})` : "";
   const slot = typeof value.key === "string" ? ` · 槽位 ${value.key}` : "";
   const video = value.video ?? {};
   const note =
@@ -2078,7 +2078,7 @@ function renderUpload(value: any): string {
 }
 
 function renderReviewMode(value: any): string {
-  const tail = typeof value.openUrl === "string" ? `\n打开界面：[${value.openHint}](${value.openUrl})` : "";
+  const tail = typeof value.openUrl === "string" ? `\n★ 插件界面入口：[${value.openHint}](${value.openUrl})` : "";
   return `${value.id} 的审核模式已记为「${value.reviewMode === "manual" ? "每一步人工审核" : "自动审核"}」。${
     value.reviewMode === "manual" ? "之后每一步产出后都要贴验收链接并停下等用户说通过。" : "之后 agent 自己审完即可继续。"
   }${tail}`;
@@ -2091,7 +2091,11 @@ function renderCallResult(value: any): string {
   const head = `${value.method} → ok`;
   const body = JSON.stringify(value.value, null, 2);
   const clipped = body.length > 4000 ? `${body.slice(0, 4000)}\n…（已截断）` : body;
-  const link = typeof value.openUrl === "string" ? `\n打开界面：[${value.openHint}](${value.openUrl})` : "";
+  const link =
+    typeof value.openUrl === "string"
+      ? `\n★ 插件界面入口（贴给用户）：[${value.openHint}](${value.openUrl})` +
+        "\n（返回体里的 url / downloadUrl 是文件直链，不能当插件入口。）"
+      : "";
   return `${head}\n${clipped}${link}`;
 }
 
@@ -2364,7 +2368,7 @@ function renderStatus(value: any): string {
   if (Array.isArray(value.steps)) {
     for (const step of value.steps) lines.push(`  ${step.title}：${step.status}${step.approved ? " · 已通过" : ""}${step.error ? ` · ${step.error}` : ""}`);
   }
-  if (typeof value.openUrl === "string") lines.push(`打开界面：[${value.openHint}](${value.openUrl})`);
+  if (typeof value.openUrl === "string") lines.push(`★ 插件界面入口：[${value.openHint}](${value.openUrl})`);
   return lines.join("\n");
 }
 
@@ -2429,7 +2433,7 @@ function renderReview(value: any): string {
     }
   }
   for (const action of value.nextActions ?? []) lines.push(`建议：${action}`);
-  if (typeof value.openUrl === "string") lines.push(`打开界面验收：[${value.openHint}](${value.openUrl})`);
+  if (typeof value.openUrl === "string") lines.push(`★ 插件界面入口：[${value.openHint}](${value.openUrl})`);
   return lines.join("\n");
 }
 
@@ -2437,7 +2441,7 @@ function renderApprove(value: any): string {
   const where = [value.stage, value.step, value.key, value.index === null || value.index === undefined ? undefined : `第 ${value.index} 张`]
     .filter((part) => part !== undefined && part !== null)
     .join(" / ");
-  const tail = typeof value.openUrl === "string" ? `\n打开界面：[${value.openHint}](${value.openUrl})` : "";
+  const tail = typeof value.openUrl === "string" ? `\n★ 插件界面入口：[${value.openHint}](${value.openUrl})` : "";
   return `${value.id}${where === "" ? "" : ` · ${where}`} → ${value.approved ? "已标记通过" : "已取消通过"}${tail}`;
 }
 

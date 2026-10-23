@@ -203,6 +203,7 @@ try {
   section("4) 工具面 / 深链接 / 隐藏模块");
   const musicGuide = (await run("game_material", { action: "guide", topic: "music" })).text;
   check("music 手册覆盖音乐方法", ["getMusicGuide", "getMusicScoreGuide", "runMusicGeneration", "runMusicScore", "submitMusicScoreToSuno", "renderMusicEdit", "exportMusic"].every((method) => String(musicGuide).includes(method)));
+  check("music 手册强调 openUrl 是插件入口、music-assets 只是文件直链", musicGuide.includes("music-assets") && musicGuide.includes("openUrl"));
   const callResult = await run("game_material_call", { method: "getMusicJob", payload: { jobId: created.id } });
   check("game_material_call 返回音乐 openUrl", /module=music/.test(callResult.openUrl ?? "") && /job=/.test(callResult.openUrl ?? ""), callResult.openUrl);
   const status = await run("game_material_status", {});

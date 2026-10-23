@@ -124,7 +124,7 @@ const textOf = (node) => {
 section("1) 模块注册 / 深链接 / 设置页");
 check("浏览器模块表有 music", /function make_MODULES\(\)[\s\S]*?key: "music", title: T\("音乐生成编辑"\)/.test(source));
 check("OPEN_MODULES 放行 music", source.includes('const OPEN_MODULES = new Set(["sprite", "image", "sequence", "rig", "tile", "map", "music", "sfx"])'));
-check("★ origin 上报失败会退避重试（宿主刚重启时不能永远停在 localhost）", source.includes("const send = (attempt)") && source.includes("attempt < 20"));
+check("★ origin 上报失败会退避重试（宿主刚重启时不能永远停在 localhost）", source.includes("const send = (attempt)") && source.includes("attempt < 60") && source.includes('addEventListener("focus"') && source.includes("visibilitychange"));
 check("解析 music 深链接", (() => {
   const intent = T.parseIntents("?dsh-gmm=1&module=music&job=a1234&stage=edit");
   return intent?.module === "music" && intent?.jobId === "a1234" && intent?.stage === "edit";
@@ -162,6 +162,7 @@ check("提示词要求先读手册与指南", prompt.includes("action:'guide'") 
 check("提示词要求提交与等待", prompt.includes("runMusicGeneration") && prompt.includes("action:'wait'"));
 check("提示词要求后期与导出", prompt.includes("renderMusicEdit") && prompt.includes("exportMusic"));
 check("提示词要求贴回链", prompt.includes("openUrl") && prompt.includes("Markdown"));
+check("提示词强调 openUrl 是插件入口、music-assets 只是文件直链", prompt.includes("music-assets") && prompt.includes("插件入口"));
 check("manual 模式要求停下等确认", /停下等我回复/.test(prompt));
 check("不调用其它模块工具", /不要调用其它模块的工具/.test(prompt));
 
