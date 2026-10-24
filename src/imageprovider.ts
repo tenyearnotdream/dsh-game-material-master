@@ -12,6 +12,7 @@
  * 只是偷偷还在用另一家模型。
  */
 
+import { assertToapisReady, generateToapisImage } from "./toapis.js";
 import { generateImage, type ArkResult } from "./ark.js";
 import { CUSTOM_PROTOCOL_DEFAULTS, loadConfig, type Config } from "./config.js";
 import { CustomImageError, generateCustomImage } from "./customimage.js";
@@ -29,27 +30,38 @@ export interface ProviderImageRequest {
 
 export type ProviderImageResult = ArkResult;
 
+/** Non-Ark backends take their size from their own provider settings. */
+export function imageUsesConfiguredSize(config: Config): boolean {return config.imageProvider !== "ark";}
+/** Only Ark supports a separate redraw model; other backends retain their selected model. */
+export function imageRedrawModelOf(config: Config): string {
+  return config.imageProvider === "ark" ? config.arkRedrawModel.trim() || config.arkModel : imageModelOf(config);
+}
+
 export function isCustomProvider(config: Config): boolean {
   return config.imageProvider === "custom";
 }
 
 /** 当前生图模型（Ark 是 `arkModel`，自定义是 `customModel`）。 */
 export function imageModelOf(config: Config): string {
+  if (config.imageProvider === "toapis") return config.toapisImageModel;
   return isCustomProvider(config) ? config.customModel : config.arkModel;
 }
 
 /** 当前输出尺寸。 */
 export function imageSizeOf(config: Config): string {
+  if (config.imageProvider === "toapis") return config.toapisImageSize;
   return isCustomProvider(config) ? config.customSize : config.arkSize;
 }
 
 /** 当前水印开关。水印是火山方舟特有的参数，自定义后端一律不带。 */
 export function imageWatermarkOf(config: Config): boolean {
+  if (config.imageProvider === "toapis") return false;
   return isCustomProvider(config) ? false : config.arkWatermark;
 }
 
 /** 当前请求超时。 */
 export function imageTimeoutOf(config: Config): number {
+  if (config.imageProvider === "toapis") return config.toapisTimeoutMs;
   return isCustomProvider(config) ? config.customTimeoutMs : config.arkTimeoutMs;
 }
 
@@ -74,6 +86,7 @@ export function customImageBlocker(config: Config): string | undefined {
  * 只说「未配置」会让人在设置页里来回找。
  */
 export function imageProviderBlocker(config: Config): string | undefined {
+  if (config.imageProvider === "toapis") {try {assertToapisReady(config);return undefined;} catch(error) {return String((error as Error).message);}}
   if (!isCustomProvider(config)) {
     if (config.arkApiKey.trim() === "") {
       return "尚未配置火山方舟 API Key（设置 → 游戏素材大师 → 生图后端 → 火山方舟）";
@@ -91,6 +104,7 @@ export function assertImageProviderReady(config: Config): void {
 
 /** 一句话摘要（界面角标与工具面共用）。 */
 export function imageProviderSummary(config: Config): string {
+  if (config.imageProvider === "toapis") return `ToAPIs · ${config.toapisImageModel}`;
   if (!isCustomProvider(config)) return `火山方舟 · ${config.arkModel}`;
   const label = CUSTOM_PROTOCOL_DEFAULTS[config.customProtocol]?.label ?? config.customProtocol;
   const model = config.customModel.trim() === "" ? "" : ` · ${config.customModel}`;
@@ -101,6 +115,7 @@ export function imageProviderSummary(config: Config): string {
 export async function generateImageWithProvider(request: ProviderImageRequest, signal?: AbortSignal): Promise<ProviderImageResult> {
   const config = await loadConfig();
   assertImageProviderReady(config);
+  if (config.imageProvider === "toapis") return generateToapisImage(config, request, signal);
   if (isCustomProvider(config)) {
     return generateCustomImage(
       {

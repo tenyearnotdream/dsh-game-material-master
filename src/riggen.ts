@@ -37,7 +37,8 @@ import {
   imageSizeOf,
   imageTimeoutOf,
   imageWatermarkOf,
-  isCustomProvider
+  imageUsesConfiguredSize,
+  imageRedrawModelOf
 } from "./imageprovider.js";
 import { decodeToRgba, mimeOf, toDataUri } from "./media.js";
 import { encodePng } from "./png.js";
@@ -1931,9 +1932,9 @@ export async function redrawRigPart(
   const dataUri = `data:image/png;base64,${encodePng(square.image.data, square.image.width, square.image.height).toString("base64")}`;
 
   // 部件重绘单独指定模型的开关只在火山方舟下有意义；自定义后端只有一个模型名。
-  const redrawModel = isCustomProvider(config) ? "" : config.arkRedrawModel.trim();
+  const redrawModel = imageRedrawModelOf(config);
   /** 这一次真正会用的模型名（只用于报错文案）。 */
-  const modelUsedForRedraw = isCustomProvider(config) ? config.customModel : redrawModel || config.arkModel;
+  const modelUsedForRedraw = redrawModel;
   const result = await generateImageWithProvider({
     model: redrawModel,
     prompt: buildRedrawPrompt(prompt, { role: part.role }),
@@ -2950,7 +2951,7 @@ export async function generateSheet(jobId: string): Promise<void> {
   const prompt = buildSheetRequest(job);
   const model = imageModelOf(config);
   job.settings.model = model;
-  if (isCustomProvider(config)) job.settings.size = config.customSize;
+  if (imageUsesConfiguredSize(config)) job.settings.size = imageSizeOf(config);
   job.sheet = { ...job.sheet, status: "running", error: undefined };
   appendJobLog(job.log, "info", `开始拆件生图（模型 ${model}）`);
   await writeRigJob(job);

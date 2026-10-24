@@ -40,7 +40,7 @@ export type StageKey = "images" | "videos" | "frames" | "sheet";
  * 节点的 `taskId` 在两个后端里都是字符串（MiniMax 是 task_id，ComfyUI 是 prompt_id），
  * 单看 id 分不出是谁家的，所以要把后端一起记在节点上。
  */
-export type VideoBackend = "minimax" | "comfy";
+export type VideoBackend = "minimax" | "comfy" | "toapis";
 
 /**
  * 阶段①「八方向绿幕图」的生成方式。
@@ -593,7 +593,7 @@ export function summarize(project: Project): ProjectSummary {
  * 一个不认识的字符串会让查询分派悄悄走到「按配置猜」那条路上。
  */
 function normalizeVideoBackend(raw: unknown): VideoBackend | undefined {
-  return raw === "comfy" || raw === "minimax" ? raw : undefined;
+  return raw === "comfy" || raw === "minimax" || raw === "toapis" ? raw : undefined;
 }
 
 function normalizeProject(raw: any): Project {

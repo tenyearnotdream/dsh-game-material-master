@@ -17,7 +17,7 @@ import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { basename, join, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
 import { imageJobsRoot, loadConfig } from "./config.js";
-import { generateImageWithProvider, imageModelOf, imageSizeOf, imageWatermarkOf, assertImageProviderReady, isCustomProvider } from "./imageprovider.js";
+import { generateImageWithProvider, imageModelOf, imageSizeOf, imageWatermarkOf, assertImageProviderReady, imageUsesConfiguredSize } from "./imageprovider.js";
 import { decodeToRgba, mimeOf, toDataUri } from "./media.js";
 import { keyGreen } from "./chroma.js";
 import { encodePng } from "./png.js";
@@ -279,7 +279,7 @@ export async function generateImageItem(jobId: string, index: number): Promise<v
   // 生图模型同样是全局设置（设置 → 游戏素材大师 → 生图后端），任务只跟随、不覆盖。
   job.settings.model = imageModelOf(config);
   // 自定义后端的尺寸是全局参数（任务上的 size 是火山方舟时代的遗留），跟着配置走。
-  if (isCustomProvider(config)) job.settings.size = config.customSize;
+  if (imageUsesConfiguredSize(config)) job.settings.size = imageSizeOf(config);
 
   const item: ImageItem = job.items[index] ?? { index, status: "empty", source: "generated" };
   job.items[index] = { ...item, status: "running", error: undefined };

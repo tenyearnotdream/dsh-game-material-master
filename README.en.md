@@ -648,3 +648,9 @@ The screenshots in this document were taken by Playwright against the real UI; t
 
 > Full engineering documentation (algorithm details, self-check contracts, history of pitfalls) is in
 > [docs/ENGINEERING.md](docs/ENGINEERING.md).
+
+## Optional ToAPIs image/video backend
+
+Configure ToAPIs in settings, then select ToAPIs as the image backend and/or enable its video option. Ark/MiniMax remain the defaults; ComfyUI, custom protocols and local processing remain available. Use `https://toapis.cn/v1` in China or `https://toapis.com/v1` internationally. ToAPIs uses asynchronous media endpoints, not a drop-in synchronous OpenAI image URL.
+
+[Configuration, billing and task recovery](https://github.com/universe-st/dsh-game-material-master/blob/main/docs/TOAPIS.md). Keys stay on the host; generation is billable. Check account pricing and model settings first.

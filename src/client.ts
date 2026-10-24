@@ -44,6 +44,21 @@
     /** 中文原文 → 英文译文。key 里可能带 `{nN}` 占位符。 */
 /* i18n-ignore-start */
     const EN: Record<string, string> = {
+      "ToAPIs：图片和视频使用独立的异步协议；每次生成会计费。": "ToAPIs uses asynchronous image/video endpoints. Each generation is billable.",
+      "ToAPIs 图片模型": "ToAPIs image model",
+      "ToAPIs 图片尺寸": "ToAPIs image size",
+      "ToAPIs 图片质量": "ToAPIs image quality",
+      "ToAPIs 视频模型": "ToAPIs video model",
+      "ToAPIs 视频分辨率": "ToAPIs video resolution",
+      "国内地址 https://toapis.cn/v1；国际地址 https://toapis.com/v1。": "China: https://toapis.cn/v1; international: https://toapis.com/v1.",
+      "ToAPIs 视频参数独立于 MiniMax；目前仅支持文生视频或一张首帧，不支持尾帧及多模态参考。": "ToAPIs video settings are independent of MiniMax. Currently supports text or one first frame, not last-frame/multimodal inputs.",
+      "ToAPIs 视频时长（秒）": "ToAPIs video duration (seconds)",
+      "使用 ToAPIs 生成视频": "Use ToAPIs for video generation",
+      "ToAPIs Key 已配置": "ToAPIs Key configured",
+      "ToAPIs Key 未配置": "ToAPIs Key not configured",
+      "ToAPIs Key 已保存": "ToAPIs Key saved",
+      "已清除 ToAPIs Key": "ToAPIs Key cleared",
+
       "南 · 正对镜头": "South · facing the camera",
       "源图": "Source image",
       "北 · 背对镜头": "North · back to the camera",
@@ -20056,6 +20071,7 @@
       const [config, setConfig] = React.useState(null);
       const [arkKey, setArkKey] = React.useState("");
       const [customKey, setCustomKey] = React.useState("");
+      const [toapisKey, setToapisKey] = React.useState("");
       const [minimaxKey, setMinimaxKey] = React.useState("");
       const [notice, setNotice] = React.useState(null);
       const [testing, setTesting] = React.useState(null);
@@ -20169,7 +20185,7 @@
        * 生图后端。`ark` 与 `custom` 互斥，两组配置同时保留、只由这个开关决定用哪一组
        * —— 来回切不会丢任何一边的 Key 和参数。
        */
-      const imageProvider = config.imageProvider === "custom" ? "custom" : "ark";
+      const imageProvider = config.imageProvider === "toapis" ? "toapis" : config.imageProvider === "custom" ? "custom" : "ark";
       const protocols = config.customProtocols ?? [];
       const protocolInfo = protocols.find((entry) => entry.id === config.customProtocol);
       const customProtocol = config.customProtocol ?? "openai";
@@ -20222,6 +20238,7 @@
                   onChange: (event) => void patch({ imageProvider: event.target.value })
                 },
                 h("option", { value: "ark" }, T("火山方舟 Seedream（云端，开箱即用）")),
+                h("option", { value: "toapis" }, "ToAPIs"),
                 h("option", { value: "custom" }, T("自定义生图模型（OpenAI / ComfyUI / SD WebUI）"))
               )
             )
@@ -20341,6 +20358,25 @@
               T("测试连接（会真实生成 1 张 1K 小图，产生少量费用）")
             )
           )
+        ),
+
+
+        h("div", {className:"SPR_settingsGroup", "data-testid":"cfg-toapis"},
+          h("h3",null,"ToAPIs"),
+          h("p",null,T("ToAPIs：图片和视频使用独立的异步协议；每次生成会计费。")),
+          ...[ ["toapisBaseUrl","Base URL"], ["toapisImageModel",T("ToAPIs 图片模型")],
+               ["toapisImageSize",T("ToAPIs 图片尺寸")], ["toapisImageQuality",T("ToAPIs 图片质量")],
+               ["toapisVideoModel",T("ToAPIs 视频模型")], ["toapisVideoResolution",T("ToAPIs 视频分辨率")] ].map(([key,label])=>
+            h("label",{className:"SPR_field"},h("span",{className:"SPR_fieldLabel"},label),h("input",{className:"SPR_input",value:config[key] ?? "",onChange:(event)=>void patch({[key]:event.target.value})}))),
+          h("p",null,T("国内地址 https://toapis.cn/v1；国际地址 https://toapis.com/v1。")),
+          h("p",null,T("ToAPIs 视频参数独立于 MiniMax；目前仅支持文生视频或一张首帧，不支持尾帧及多模态参考。")),
+          h(NumField,{label:T("超时（秒）"),value:Math.round((config.toapisTimeoutMs ?? 600000)/1000),min:10,max:3600,onChange:(value)=>void patch({toapisTimeoutMs:value*1000})}),
+          h(NumField,{label:T("ToAPIs 视频时长（秒）"),value:config.toapisVideoDuration ?? 4,min:4,max:15,onChange:(value)=>void patch({toapisVideoDuration:value})}),
+          h("label",{className:"SPR_check"},h("input",{type:"checkbox",checked:config.toapisVideo === true,onChange:(event)=>void patch({toapisVideo:event.target.checked,...(event.target.checked?{comfyVideo:false}:{})})}),h("span",null,T("使用 ToAPIs 生成视频"))),
+          h("p",null,config.toapisApiKeySet ? T("ToAPIs Key 已配置") : T("ToAPIs Key 未配置")),
+          h("input",{className:"SPR_input",type:"password",value:toapisKey,onChange:(event)=>setToapisKey(event.target.value),placeholder:T("留空表示不修改")}),
+          h(Btn,{onClick:()=>run(async()=>{await api.saveConfig({toapisApiKey:toapisKey});setToapisKey("");},T("ToAPIs Key 已保存"))},T("保存 Key")),
+          h(Btn,{disabled:!config.toapisApiKeySet,onClick:()=>run(()=>api.saveConfig({clearToapisApiKey:true}),T("已清除 ToAPIs Key"))},T("清除"))
         ),
 
         /**
@@ -20718,7 +20754,7 @@
             h("input", {
               type: "checkbox",
               checked: config.comfyVideo === true,
-              onChange: (event) => void patch({ comfyVideo: event.target.checked })
+              onChange: (event) => void patch({ comfyVideo: event.target.checked, ...(event.target.checked ? {toapisVideo:false} : {}) })
             }),
             h("span", null, T("用本机 ComfyUI 生成视频（替代 MiniMax）"))
           ),
