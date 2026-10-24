@@ -126,7 +126,7 @@ export async function migrateLegacyDataRoot(): Promise<boolean> {
  * `custom` = 用户自己的生图服务，协议再分 OpenAI / ComfyUI / Stable Diffusion WebUI。
  * 换后端只改这一个字段：所有生图调用点都走 `imageprovider.generateImageWithProvider`。
  */
-export const IMAGE_PROVIDERS = ["ark", "custom"] as const;
+export const IMAGE_PROVIDERS = ["ark", "custom", "toapis"] as const;
 export type ImageProvider = (typeof IMAGE_PROVIDERS)[number];
 
 /** 自定义生图服务的协议。 */
@@ -159,6 +159,17 @@ export const CUSTOM_PROTOCOL_DEFAULTS: Record<CustomProtocol, { baseUrl: string;
 };
 
 export interface Config {
+  toapisBaseUrl: string;
+  toapisApiKey: string;
+  toapisImageModel: string;
+  toapisImageSize: string;
+  toapisImageQuality: string;
+  toapisVideo: boolean;
+  toapisVideoModel: string;
+  toapisVideoDuration: number;
+  toapisVideoResolution: string;
+  toapisTimeoutMs: number;
+
   /**
    * 生图后端：`ark`（默认）或 `custom`。
    *
@@ -381,6 +392,16 @@ export interface Config {
 }
 
 export const DEFAULT_CONFIG: Config = {
+  toapisBaseUrl: "https://toapis.cn/v1",
+  toapisApiKey: "",
+  toapisImageModel: "gpt-image-2-vip",
+  toapisImageSize: "1K",
+  toapisImageQuality: "low",
+  toapisVideo: false,
+  toapisVideoModel: "seedance-2-mini",
+  toapisVideoDuration: 4,
+  toapisVideoResolution: "480p",
+  toapisTimeoutMs: 600000,
   imageProvider: "ark",
   customProtocol: "openai",
   customBaseUrl: CUSTOM_PROTOCOL_DEFAULTS.openai.baseUrl,
@@ -569,7 +590,17 @@ export function normalizeConfig(input: unknown): Config {
   const comfyWorkflow = comfyWorkflowRaw.trim() === "" ? DEFAULT_CONFIG.comfyWorkflow : comfyWorkflowRaw;
 
   return {
-    imageProvider: raw.imageProvider === "custom" ? "custom" : "ark",
+    toapisBaseUrl: asString(raw.toapisBaseUrl, DEFAULT_CONFIG.toapisBaseUrl).trim(),
+    toapisApiKey: asString(raw.toapisApiKey, DEFAULT_CONFIG.toapisApiKey).trim(),
+    toapisImageModel: asString(raw.toapisImageModel, DEFAULT_CONFIG.toapisImageModel).trim(),
+    toapisImageSize: asString(raw.toapisImageSize, DEFAULT_CONFIG.toapisImageSize).trim(),
+    toapisImageQuality: asString(raw.toapisImageQuality, DEFAULT_CONFIG.toapisImageQuality).trim(),
+    toapisVideo: asBool(raw.toapisVideo, DEFAULT_CONFIG.toapisVideo),
+    toapisVideoModel: asString(raw.toapisVideoModel, DEFAULT_CONFIG.toapisVideoModel).trim(),
+    toapisVideoDuration: asInt(raw.toapisVideoDuration, DEFAULT_CONFIG.toapisVideoDuration, 4, 15),
+    toapisVideoResolution: asString(raw.toapisVideoResolution, DEFAULT_CONFIG.toapisVideoResolution).trim(),
+    toapisTimeoutMs: asInt(raw.toapisTimeoutMs, DEFAULT_CONFIG.toapisTimeoutMs, 10000, 3600000),
+    imageProvider: raw.imageProvider === "toapis" ? "toapis" : raw.imageProvider === "custom" ? "custom" : "ark",
     customProtocol: (CUSTOM_PROTOCOLS as readonly string[]).includes(String(raw.customProtocol))
       ? (raw.customProtocol as CustomProtocol)
       : DEFAULT_CONFIG.customProtocol,
@@ -687,7 +718,9 @@ export async function saveConfig(patch: Partial<Config>): Promise<Config> {
 }
 
 /** 回传给浏览器的脱敏视图：只说明 key 是否已配置，以及尾部 4 位。 */
-export interface ConfigView extends Omit<Config, "arkApiKey" | "minimaxApiKey" | "customApiKey" | "comfyCookies" | "musicApiKey" | "sfxApiKey"> {
+export interface ConfigView extends Omit<Config, "toapisApiKey" | "arkApiKey" | "minimaxApiKey" | "customApiKey" | "comfyCookies" | "musicApiKey" | "sfxApiKey"> {
+  toapisApiKeySet: boolean;
+  toapisApiKeyHint: string;
   arkApiKeySet: boolean;
   arkApiKeyHint: string;
   minimaxApiKeySet: boolean;
@@ -703,13 +736,15 @@ export interface ConfigView extends Omit<Config, "arkApiKey" | "minimaxApiKey" |
 }
 
 export function maskConfig(config: Config): ConfigView {
-  const { arkApiKey, minimaxApiKey, customApiKey, comfyCookies, musicApiKey, sfxApiKey, ...rest } = config;
+  const { toapisApiKey, arkApiKey, minimaxApiKey, customApiKey, comfyCookies, musicApiKey, sfxApiKey, ...rest } = config;
   const cookie = normalizeComfyCookies(comfyCookies);
   return {
     ...rest,
     rowOrder: [...config.rowOrder],
     // 复制一份再回传：界面改勾选后会把它当草稿改，共享同一个数组会互相写花。
     hiddenModules: [...config.hiddenModules],
+    toapisApiKeySet: toapisApiKey.trim() !== "",
+    toapisApiKeyHint: hintOf(toapisApiKey),
     arkApiKeySet: arkApiKey.trim() !== "",
     arkApiKeyHint: hintOf(arkApiKey),
     minimaxApiKeySet: minimaxApiKey.trim() !== "",

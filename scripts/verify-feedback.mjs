@@ -1360,7 +1360,9 @@ section("功能管理（隐藏模块）");
      */
     const providerSelect = collect(settings, (node) => node.props?.["data-testid"] === "cfg-image-provider")[0];
     check("设置页有「生图后端」选择器", providerSelect !== undefined);
-    check("后端选择器把 ark / custom 两个选项都列出来", collect(providerSelect, (node) => node.type === "option").length === 2);
+    check("后端选择器包含 ark / custom / toapis", JSON.stringify(collect(providerSelect, (node) => node.type === "option").map(node=>node.props.value).sort()) === JSON.stringify(["ark","custom","toapis"]));
+    check("ToAPIs 独立设置组存在", collect(settings,node=>node.props?.["data-testid"] === "cfg-toapis").length === 1);
+    check("ToAPIs API Key 使用密码框", collect(collect(settings,node=>node.props?.["data-testid"] === "cfg-toapis")[0],node=>node.props?.type === "password").length === 1);
     check("缺 Key 时给出「还不能开跑」的提示，而不是静默", textOf(settings).includes("还不能开跑"));
     check("火山方舟那一组标注了当前使用", textOf(settings).includes("当前使用"));
 

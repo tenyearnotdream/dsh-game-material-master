@@ -16,6 +16,7 @@
  * 中间改设置，那时按配置去查就会拿 MiniMax 的接口去查一个 ComfyUI 的 prompt_id。
  */
 
+import { assertToapisReady, assertToapisModel, submitToapisVideo, queryToapisVideo, downloadToapis } from "./toapis.js";
 import type { Config } from "./config.js";
 import {
   fetchComfyObjectInfo,
@@ -67,7 +68,7 @@ export interface VideoQueryResult {
 
 /** 当前配置用哪个后端。 */
 export function videoBackendOf(config: Config): VideoBackend {
-  return config.comfyVideo === true ? "comfy" : "minimax";
+  return config.comfyVideo === true ? "comfy" : config.toapisVideo === true ? "toapis" : "minimax";
 }
 
 /**
@@ -78,12 +79,14 @@ export function videoBackendOf(config: Config): VideoBackend {
  * 由请求本身报错（测试按钮负责提前发现）。
  */
 export function assertVideoBackendReady(config: Config): void {
+  if (videoBackendOf(config) === "toapis") {assertToapisReady(config);assertToapisModel(config.toapisVideoModel);return;}
   if (videoBackendOf(config) === "comfy") return;
   if (config.minimaxApiKey.trim() === "") throw new Error("尚未配置 MiniMax API Key");
 }
 
 /** 提交一个视频任务。返回的 taskId 与 backend 必须一起存进节点。 */
 export async function submitVideoTask(config: Config, request: VideoSubmitRequest): Promise<VideoSubmitResult> {
+  if (videoBackendOf(config) === "toapis") return {taskId:await submitToapisVideo(config,request),backend:"toapis",notes:["ToAPIs video uses its own configured model, duration and resolution"]};
   if (videoBackendOf(config) === "comfy") return submitViaComfy(config, request);
 
   const taskId = await submitVideo({
@@ -174,6 +177,7 @@ export async function queryVideoTask(
   taskId: string,
   options?: { model?: string }
 ): Promise<VideoQueryResult> {
+  if (backend === "toapis") return queryToapisVideo(config,taskId);
   if (backend === "comfy") {
     const query = await queryComfyVideo({
       baseUrl: config.comfyBaseUrl,
@@ -205,6 +209,7 @@ export async function queryVideoTask(
 /** 下载成品视频。ComfyUI 的地址是本机 `/view`，超时用 comfyTimeoutMs。 */
 export async function downloadVideoTask(config: Config, backend: VideoBackend, url: string) {
   // 反向代理鉴权时 `/view` 同样要带 Cookie，否则视频下不下来（只影响 comfy 后端）。
+  if (backend === "toapis") return downloadToapis(config,url,"video");
   const cookies = backend === "comfy" ? normalizeComfyCookies(config.comfyCookies) : "";
   return downloadVideo(url, backend === "comfy" ? config.comfyTimeoutMs : config.minimaxTimeoutMs, cookies === "" ? undefined : { Cookie: cookies });
 }
@@ -212,5 +217,6 @@ export async function downloadVideoTask(config: Config, backend: VideoBackend, u
 /** 失败原因：两个后端的 query 都会给 error，兜底文案按后端区分。 */
 export function videoFailureReason(backend: VideoBackend, error: string | undefined): string {
   if (error !== undefined && error.trim() !== "") return error;
+  if (backend === "toapis") return "ToAPIs task failed";
   return backend === "comfy" ? "ComfyUI 报告该任务失败" : "MiniMax 报告该任务失败";
 }
