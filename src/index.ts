@@ -1,3 +1,4 @@
+import {assertVideoBackendReady,videoBackendOf} from "./videogen.js";
 /**
 * dsh-8dir-sprites —— 宿主半区。
 *
@@ -29,7 +30,7 @@ import {
 } from "./directions.js";
 import { checkFfmpeg } from "./media.js";
 import { testArk } from "./ark.js";
-import { customImageBlocker, imageModelOf, imageProviderBlocker, imageProviderSummary, isCustomProvider, testCustomImage } from "./imageprovider.js";
+import { customImageBlocker, imageModelOf, imageSizeOf, imageProviderBlocker, imageProviderSummary, imageUsesConfiguredSize, testCustomImage } from "./imageprovider.js";
 import {
   detectComfyBindings,
   fetchComfyObjectInfo,
@@ -282,6 +283,11 @@ export class GameStudioGateway extends TypertRemoteService {
       imageProviderSummary: imageProviderSummary(config),
       /** 当前生效的生图模型（模块里那个只读展示位用它，比 summary 短）。 */
       imageModel: imageModelOf(config),
+      imageProviderSize: imageSizeOf(config),
+      videoProviderBackend: videoBackendOf(config),
+      videoProviderModel: videoBackendOf(config) === "toapis" ? config.toapisVideoModel : config.minimaxModel,
+      videoProviderBaseUrl: videoBackendOf(config) === "toapis" ? config.toapisBaseUrl : videoBackendOf(config) === "comfy" ? config.comfyBaseUrl : config.minimaxBaseUrl,
+      videoProviderBlocker: (()=>{try {assertVideoBackendReady(config);return null;}catch(error){return (error as Error).message;}})(),
       imageProviderBlocker: imageProviderBlocker(config) ?? null,
       customImageBlocker: customImageBlocker(config) ?? null,
       minimaxModels: MINIMAX_MODEL_PRESETS,
@@ -341,6 +347,15 @@ export class GameStudioGateway extends TypertRemoteService {
     const input = asRecord(payload);
     const patch: any = {};
     const directKeys = [
+      "toapisBaseUrl",
+      "toapisImageModel",
+      "toapisImageSize",
+      "toapisImageQuality",
+      "toapisVideo",
+      "toapisVideoModel",
+      "toapisVideoDuration",
+      "toapisVideoResolution",
+      "toapisTimeoutMs",
       "imageProvider",
       "customProtocol",
       "customBaseUrl",
@@ -418,6 +433,8 @@ export class GameStudioGateway extends TypertRemoteService {
       if (input[key] !== undefined)
         patch[key] = input[key];
     }
+    if (typeof input.toapisApiKey === "string") patch.toapisApiKey = input.toapisApiKey.trim();
+    if (input.clearToapisApiKey === true) patch.toapisApiKey = "";
     if (typeof input.arkApiKey === "string")
       patch.arkApiKey = input.arkApiKey.trim();
     if (typeof input.minimaxApiKey === "string")
@@ -1602,7 +1619,7 @@ export class GameStudioGateway extends TypertRemoteService {
       // 生图模型是全局设置（设置 → 游戏素材大师 → 生图后端），任务里不保留可覆盖的副本。
       job.settings.model = imageModelOf(current);
       // 自定义后端的尺寸也是全局参数；火山方舟下才保留任务级覆盖。
-      job.settings.size = isCustomProvider(current) ? current.customSize : asString(raw.size, job.settings.size);
+      job.settings.size = imageUsesConfiguredSize(current) ? imageSizeOf(current) : asString(raw.size, job.settings.size);
       job.settings.count = clampInt(raw.count, job.settings.count, 1, 8);
       job.settings.watermark = raw.watermark === true;
     }

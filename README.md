@@ -549,3 +549,9 @@ T("第 {n0} 帧", { n0: index + 1 })                        // 带插值，英�
 [MIT](LICENSE)
 
 > 完整工程文档（算法细节、自检契约、历史踩坑）见 [docs/ENGINEERING.md](docs/ENGINEERING.md)。
+
+## 可选 ToAPIs 图片／视频后端
+
+设置页可独立配置 ToAPIs，再将生图后端切为 ToAPIs，或打开「使用 ToAPIs 生成视频」。默认仍是火山方舟／MiniMax，ComfyUI、自定义协议和本地处理保持可选。国内 `https://toapis.cn/v1`，国际 `https://toapis.com/v1`；异步任务需要专用协议，不是把 OpenAI 的地址换一下即可。
+
+[配置、计费与恢复说明](https://github.com/universe-st/dsh-game-material-master/blob/main/docs/TOAPIS.md)。API Key仅在宿主保存，生成真实计费；先在自己的账号核对报价和参数。

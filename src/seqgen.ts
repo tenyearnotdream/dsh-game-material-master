@@ -181,9 +181,9 @@ export async function createSequenceJob(name: string): Promise<SequenceJob> {
     suffix: "",
     refs: { referenceImages: [], referenceVideos: [] },
     settings: {
-      model: config.minimaxModel,
-      duration: config.minimaxDuration,
-      resolution: config.minimaxResolution,
+      model: config.toapisVideo && !config.comfyVideo ? config.toapisVideoModel : config.minimaxModel,
+      duration: config.toapisVideo && !config.comfyVideo ? config.toapisVideoDuration : config.minimaxDuration,
+      resolution: config.toapisVideo && !config.comfyVideo ? config.toapisVideoResolution : config.minimaxResolution,
       promptOptimizer: config.minimaxPromptOptimizer,
       frameCount: config.frameCount,
       cellWidth: config.cellWidth,
@@ -308,7 +308,7 @@ function normalizeSequenceJob(raw: any): SequenceJob {
     video: {
       status: (raw?.video?.status ?? "empty") as NodeStatus,
       taskId: typeof raw?.video?.taskId === "string" ? raw.video.taskId : undefined,
-      backend: raw?.video?.backend === "comfy" || raw?.video?.backend === "minimax" ? raw.video.backend : undefined,
+      backend: raw?.video?.backend === "comfy" || raw?.video?.backend === "minimax" || raw?.video?.backend === "toapis" ? raw.video.backend : undefined,
       remoteStatus: typeof raw?.video?.remoteStatus === "string" ? raw.video.remoteStatus : undefined,
       file: typeof raw?.video?.file === "string" ? raw.video.file : undefined,
       error: typeof raw?.video?.error === "string" ? raw.video.error : undefined,
@@ -432,10 +432,10 @@ async function submitSequenceVideo(jobId: string): Promise<void> {
   // 模型是全局设置（设置 → 游戏素材大师 → 视频模型），任务只跟随、不覆盖：
   // 任务的模型快照一旦和当前网关/Key 对不上（例如官方 H3 + 优云智算网关），
   // 就会打出 cp.compshare.cn/v2/... 这种 404。这里以全局配置为准并回写任务。
-  const model = config.minimaxModel;
+  const model = config.toapisVideo && !config.comfyVideo ? config.toapisVideoModel : config.minimaxModel;
   job.settings.model = model;
-  job.settings.duration = normalizeDuration(model, job.settings.duration);
-  job.settings.resolution = normalizeResolution(model, job.settings.resolution);
+  job.settings.duration = config.toapisVideo && !config.comfyVideo ? config.toapisVideoDuration : normalizeDuration(model, job.settings.duration);
+  job.settings.resolution = config.toapisVideo && !config.comfyVideo ? config.toapisVideoResolution : normalizeResolution(model, job.settings.resolution);
 
   const built = buildSequencePrompt(job);
   if ("error" in built) throw new Error(built.error);
