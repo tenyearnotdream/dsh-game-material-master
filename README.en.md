@@ -21,7 +21,9 @@ third-party service.
 > A new **optional ToAPIs asynchronous image / video backend** lands via
 > [PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7) — thanks
 > [@ToAPIs-2025](https://github.com/ToAPIs-2025). The 0.9.x **sound-effect generator** (Seed-Audio) and its
-> network-retry fixes remain. See the
+> network-retry fixes remain. **0.10.1** fixes a crash in the isometric editor's one-click
+> **continent** generation (the height-field midpoint pass wrote to a cell that does not exist).
+> See the
 > [release notes in AGENTS.md](https://github.com/universe-st/dsh-game-material-master/blob/main/AGENTS.md#已发布版本).
 
 ![Game Material Master · workbench](https://raw.githubusercontent.com/universe-st/dsh-game-material-master/main/docs/images/gmm-00-workbench.png)
@@ -379,7 +381,7 @@ dsh plugin --profile web add /path/to/dsh-game-material-master
 ```
 
 The package is published to npm: [dsh-game-material-master](https://www.npmjs.com/package/dsh-game-material-master)
-(currently `0.10.0`, `latest`). It has no runtime dependencies, so `dsh plugin add` is all you need.
+(currently `0.10.1`, `latest`). It has no runtime dependencies, so `dsh plugin add` is all you need.
 
 **DSH version**: `>=0.2.0-rc.2 <0.3.0` (the `engines.dsh` field; since DSH 0.2.1 the plugin manager checks it first).
 When a Web deployment uses `--public-url https://host/prefix/`, deep links and asset URLs include that path prefix.

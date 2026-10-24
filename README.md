@@ -17,6 +17,8 @@
 > 新增**可选 ToAPIs 异步图片 / 视频后端**（感谢 [PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7)，
 > 来自 [@ToAPIs-2025](https://github.com/ToAPIs-2025)）。
 > 0.9.x 的 **音效生成**（Seed-Audio）与网络重试修复继续保留。
+>
+> **0.10.1 修复**：45° 地图编辑器「一键生成 → 大陆」不再崩溃（高度场中点插值写到了不存在的格子上）。
 > 完整变更见 [AGENTS.md 发布记录](https://github.com/universe-st/dsh-game-material-master/blob/main/AGENTS.md#已发布版本)。
 
 ![游戏素材大师 · 工作台](https://raw.githubusercontent.com/universe-st/dsh-game-material-master/main/docs/images/gmm-00-workbench.png)
@@ -313,7 +315,7 @@ dsh plugin --profile web add /path/to/dsh-game-material-master
 ```
 
 包已发布到 npm：[dsh-game-material-master](https://www.npmjs.com/package/dsh-game-material-master)
-（当前 `0.10.0`，`latest`）。本包没有运行时依赖，`dsh plugin add` 拉下来即可用。
+（当前 `0.10.1`，`latest`）。本包没有运行时依赖，`dsh plugin add` 拉下来即可用。
 
 **DSH 版本**：`>=0.2.0-rc.2 <0.3.0`（`package.json` 的 `engines.dsh`；DSH 0.2.1 起插件管理器优先按它判断兼容性）。
 Web 部署用 `--public-url https://host/prefix/` 时，深链接与产物地址会跟着补路径前缀。

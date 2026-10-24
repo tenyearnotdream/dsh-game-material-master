@@ -125,6 +125,9 @@ const planA = await G.isoPlan(p1.id, { view: { x: -500, y: -500, width: 1000, he
 const planB = await G.isoPlan(p2.id, { view: { x: -500, y: -500, width: 1000, height: 1000 } });
 check("同种子生成结果逐项一致", g1.changed === g2.changed && JSON.stringify(planA.chunks) === JSON.stringify(planB.chunks), `${g1.changed}/${g2.changed}`);
 check("随机生成铺满整层", g1.changed === 64, String(g1.changed));
+const groundTiles = ["水面", "水面", "草地", "石地"].map((name) => v1.tilesets.find((entry) => entry.name === name).palette[0].index);
+const continent = await G.runIsoGenerate(p1.id, { kind: "continent", tiles: groundTiles, seed: 7 });
+check("continent 一键生成不再崩（中点插值写到 grid[8.5]）", continent.changed === 64, String(continent.changed));
 
 section("8) 导出 PNG / JSON / zip 与可复现");
 const exportStarted = await G.runIsoExport(project.id, { scale: 1, formats: { png: true, json: true, tilesets: true } });
