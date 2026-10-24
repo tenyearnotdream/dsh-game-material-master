@@ -20,7 +20,7 @@ DSH 插件「游戏素材大师」：从一张角色设定图出发批量产出�
 | 图片生成 | `image` | 正式 |
 | 序列帧生成 | `sequence` | 正式 |
 | 骨骼动画生成 | `rig` | **实验性**（页签带角标、进入弹窗、模块内常驻提示条） |
-| 45°地图编辑器 | `iso` | 正式（**全本地零计费**：2:1 等距菱形地块、4×4 自动连接、多格/高处物件、动画地块、标记层、环绕、一键生成；导入自己的 45° 素材 + 程序化内置素材；导出 PNG / JSON / zip。**全本地**） |
+| 45°地图编辑器 | `iso` | 正式（**全本地零计费**：2:1 等距菱形地块、4×4 自动连接、多格/高处物件、动画地块、标记层、环绕、一键生成；导入自己的 45° 素材 + 程序化内置素材；素材卡支持 **AI 生成地面 / 物件**（新对话 → `composeIsoAsset` → 回链确认；首版不做 AI 自动连接）；导出 PNG / JSON / zip。**全本地**） |
 | 俯视地图编辑器 | `map` | 正式（参照 AsLib 的 RPG Map Maker：一屏、纯图标、零术语；素材列表 + 新增（属性一次定死）、内置素材默认在列表且可删可恢复、地图环绕、自动连接、动画地块（翻页图）、一键生成；默认三层「地理层 / 装饰层 / 建筑层」且图层可改名换序；**标记层**（每格一个标记、可命名、地图上画成圆圈里的数字、编号连续删了重排）；导出是「内容多选 → 一个「导出」按钮 → 一个 zip 下载 / 另存为」；**全本地零计费**） |
 | 音乐生成编辑 | `music` | 正式（谱乐 AI：灵感/歌词 → 不挂靠项目的新对话 → agent 读内置指南、选引擎/模式生成 → 回界面裁剪/音量/淡入淡出/标准化/导出；**生成按平台积分计费**。另有**谱曲模式**：对话里先给方案 → scoremill 本地写 MIDI → 宿主渲染试听 → 逐版修改 → 可选交 Suno；**谱曲/试听/导出本地免费**） |
 | 音效生成 | `sfx` | 正式（火山引擎豆包语音 **Seed-Audio**：一句话描述 → 音效 / 环境音 / UI 声 / 生物吼叫 / 角色配音；可带 1 张参考图或最多 3 条参考音频（互斥）；每次生成一条 take、永不覆盖；单次 ≤120 秒；**每次生成真实计费**。界面上直接生成，不派给对话；工具面同样可调） |
@@ -74,6 +74,8 @@ DSH 插件「游戏素材大师」：从一张角色设定图出发批量产出�
 | 音效模块：**静态资源 scope 四处 + MIME** | `AssetScope` 加 `sfx-assets`、`resolveAssetTarget` 分支、`SCOPES` 数组、`SERVABLE_SFX_DIRS`（唯一真源在 `sfxgen.ts`）四处同步；子目录 `refs` / `takes` / `out` 少一个就是 403 |
 | 音效模块：**界面轮询不许覆盖草稿** | 生成中每 2.5 秒拉一次 `getSfxJob`；提示词与参数走 `mergeDrafts()`，只有「草稿 === 上次宿主值」才跟随更新，切任务才 `force`。`verify-sfx-client.mjs` 有静态契约 |
 | 新增产物子目录时，`SERVABLE_DIRS`（`src/index.ts`）必须同步加一条 | 静态资源路由按**第一段路径**比对白名单，漏掉就 403。界面只表现为「图裂了」、不报错——转圈截帧的 `turn/` 就踩过。模块六的子目录白名单**唯一真源是 `mapgen.SERVABLE_MAP_DIRS`**（`index.ts` 的资源路由直接引用它，别再各写一份）；scope 级那三处（`AssetScope` 类型 / `resolveAssetTarget` 分支 / `SCOPES` 数组）改 scope 时要同步。`verify-map-gateway.mjs` 会真调一遍路由（含 `ai/` 的 200 与未列入目录的 403） |
+| 模块五：**AI 生成素材首版只做 ground / object**，`autotile` 4×4 仍手工导入；`composeIsoAsset` 只整理到 `ai/`、不自动进素材列表，`ai/` 必须留在 `SERVABLE_ISO_DIRS` | 单张 AI 图无法可靠推导 16 种接法；`ai/` 漏白名单就是回链图片 403；自动导入会替用户拍板「属性一次定死」的素材 |
+| 模块五：**物件大小 `objectScale` 在导入时烘进存图**（`footprint.cols × cell.width × objectScale`），渲染 / 导出都不读它；`importIsoTileset` 的 `objectScale` 必须留在 wire schema 里，越界要报错、不静默夹 | 少一行 schema 就是「滑杆调了、点确定还是原大小」；改成运行期缩放则地图与导出会各算一套 |
 | 模块六：**客户端只能执行宿主下发的绘制计划**，不许自己算变体 / 形状 / chunk / 坐标变换 | 界面里唯一允许复刻的是 `MAP_pointToCell` / `MAP_cellAnchor` / `MAP_cellTopLeft` / `MAP_lineCells` 四个坐标函数（命中测试必需），且有黄金对照盯着；**连「哪些 chunk 可见」都由宿主算**（`mapPlan({view})` 回 `visibleKeys`）。多写一套口径就是旧模块「预览好看、导出位移」的老路，`verify-map-client.mjs` 会扫源码拦 |
 | 模块六：**环绕（wrap）是默认行为**，凡涉及「邻居」的地方都必须先取模 | 网格、命中测试、绘制范围、脏块、自动连接的邻域判断都要 wrap。漏掉一处的表现是「接缝处形状不对 / 撤销后画面花掉」，只在贴边时看得出来 —— `verify-map.mjs` 里有「画第 0 行必须连带弄脏最后一行」这条断言，且配了非环绕的反向验证 |
 | 模块六：**界面文案不许出现旧术语** | 用户对第一版的反馈就是「门槛太高、专业名词太多」。`verify-map.mjs` 与 `verify-map-client.mjs` 各扫一遍**模块六那一段**（`模块六 · 地图编辑器` 到下一个分节注释），`地形族 / 掩码 / 优先级 / 切分 / 图集 / 变体种子 / 高度偏移 / Tiled / 等距` 0 命中，`chunk` 按**词边界**判（所以协议字段 `"chunks"` 可以照实写 —— 曾经为了骗过这条自检写出过 `"chu" + "nks"`，那种写法比术语本身更坏）。⚠️ **只有模块六这一段**：`图集`（模块④ Spine 图集）与 `等距`（模块⑤ 45° 地块）在别处是正确的词，全文件扫会误伤 |
@@ -106,7 +108,7 @@ npm run typecheck    # 只做类型检查
 ```bash
 node scripts/verify-host.mjs       # 宿主全链路（387 项）
 node scripts/verify-client.mjs     # 浏览器半区契约（362 项）
-node scripts/verify-tools.mjs      # 对话调用面（194 项，含常驻工具面 ≤6,000 B 预算）
+node scripts/verify-tools.mjs      # 对话调用面（196 项，含常驻工具面 ≤6,000 B 预算）
 node scripts/verify-pipeline.mjs   # 抽帧 / 抠像 / 合成（40 项）
 node scripts/verify-feedback.mjs   # 浏览器半区真渲染（214 项，含功能管理、侧栏菜单、生图后端设置页、语义保存错误与草稿合并）
 node scripts/verify-i18n.mjs       # 中英词条表契约（9 项）
@@ -121,10 +123,10 @@ node scripts/verify-sfx.mjs         # 音效生成：mock 火山引擎语音的�
 node scripts/verify-sfx-gateway.mjs # 音效走真实网关：wire schema 不丢键、工具面、深链接、隐藏模块、配置字段（39 项）
 node scripts/verify-sfx-client.mjs  # 音效界面真渲染：新建卡 / 任务卡 / 参考 / takes / 生成 / 遮罩 / 静态契约（29 项）
 node scripts/verify-rig-runtime.mjs  # 骨骼改动：官方 Spine 4.2 实际加载/IK/Path/FFD/顶点求值（开发依赖）
-node scripts/verify-iso.mjs        # 45° 地图编辑器几何内核（39 项：2:1 步进 / 命中反解 / 物件锚点 / 环绕脏块 / 内置素材确定性 / 自动连接 mask / 水面无接缝）
-node scripts/verify-iso-pipeline.mjs  # 45° 地图编辑器数据层与导出（39 项：导入 / 编辑 / 撤销 / 计划 / 动画 / 一键生成 / 导出可复现 / 删除素材重映射）
-node scripts/verify-iso-gateway.mjs   # 45° 地图编辑器网关契约（53 项：20 个方法 / schema 逐键不丢 / 模块枚举 / 路由白名单）
-node scripts/verify-iso-client.mjs    # 45° 地图编辑器界面契约（62 项：客户端坐标函数与宿主逐点黄金对照 / 按 z 绘制 / pending·have / 方法表）
+node scripts/verify-iso.mjs        # 45° 地图编辑器几何内核（42 项：2:1 步进 / 命中反解 / 物件锚点 / 环绕脏块 / 内置素材确定性 / 自动连接 mask / 水面无接缝 / 物件大小边界）
+node scripts/verify-iso-pipeline.mjs  # 45° 地图编辑器数据层与导出（54 项：导入 / 编辑 / 撤销 / 计划 / 动画 / 一键生成 / 导出可复现 / 删除素材重映射 / AI 整理 / 物件大小落盘）
+node scripts/verify-iso-gateway.mjs   # 45° 地图编辑器网关契约（58 项：21 个方法 / schema 逐键不丢 / 模块枚举 / 路由白名单 / AI 回链参数 / objectScale 透传）
+node scripts/verify-iso-client.mjs    # 45° 地图编辑器界面契约（83 项：客户端坐标函数与宿主逐点黄金对照 / 新增素材预览的菱形地格与「滑杆在图片下方」/ 按 z 绘制 / pending·have / 方法表 / AI 对话框与回链）
 
 node scripts/verify-map.mjs            # 地图编辑器几何 / 环绕 / 自动连接 / 标记点 / AI 素材按形态规整与「收口 + 无缝」/ 播放速度 / 清晰度重采样 / 循环方式 / 自动裁边 / 换向与斜接 / 整图（多格印花）的内核（238 项，含反向验证与术语黑名单）
 node scripts/verify-map-pipeline.mjs   # 地图编辑器数据层与流水线（416 项，含 A2 每格 4 条 op、动画循环、翻页图调色板每列一条、dropKeys、标记点 op 与撤销、老文档升级、导出逐字段与真解包的 ZIP）
@@ -198,6 +200,17 @@ Conventional Commits，中文描述：`feat(rig): …` / `docs: …` / `fix(spri
 | `0.9.1` | 2026-10-18 12:50 | **音效生成修复**（`fix(sfx)`）：轮询 `getSfxJob` 时同步刷新左侧任务列表（生成完成后不再停在「0 条 · ⏳」）；火山引擎 `fetch failed` 带上底层 `cause`（例如 TLS `ECONNRESET`），便于区分网络与鉴权问题。`verify-sfx-client` 28 → **29**。 |
 | `0.9.2` | 2026-10-18 13:11 | **音效生成网络重试**（`fix(sfx)`）：只对「TLS 握手尚未建立就断开」这类**请求还没发出**的错误自动重试最多 3 次（Clash / TUN 节点抖动常见）；已发出的请求不重试，避免重复计费。成功后日志写明重试次数；`verify-sfx` 54 → **55**。 |
 | `0.11.0` | 2026-10-24 12:10 | **模块五推倒重做**（`feat(iso)!`）：删除「45°地图地块生成」（`tile`：AI 生成 / 模板 / 规整 / 拼图全删），换成**全本地 45° 地图编辑器**（`iso`：2:1 等距菱形地块、4×4 自动连接、多格/高处物件、动画地块、标记层、环绕、一键生成；导入自己的素材 + 程序化内置素材；导出 PNG / JSON / zip）。现有模块六「地图编辑器」一行未动。wire 删 13 个 tile 方法、加 20 个 iso 方法（176 → **183**）；`iso-assets` 路由；新增 `src/isogeom.ts` / `isotiles.ts` / `isodoc.ts` / `isorender.ts` / `isoexport.ts` / `isogen.ts` / `isosamplegen.ts`；自检新增 `verify-iso` 39 / `-pipeline` 39 / `-gateway` 53 / `-client` 62。⚠️ 宿主半区改动，需重启 DSH。 |
+| `0.12.0` | 2026-10-24 13:30 | **45° 地图编辑器 AI 生成素材**（`feat(iso)`）：素材卡新增「AI 生成素材」，支持地面 / 物件；自动开新对话生成 → 宿主 `composeIsoAsset` 抠绿 / 裁边 / 2:1 菱形或占格整理 → 回链打开「新增素材」预填，用户确认才导入。首版不做 4×4 自动连接（仍手工导入）。新增 wire 方法 184；`ai/` 资源目录；`verify-iso` 39 / `-pipeline` 50 / `-gateway` 57 / `-client` 69；`verify-tools` 196。⚠️ 宿主半区改动，需重启 DSH。 |
+
+### 0.12.0 发布说明（2026-10-24）
+
+`package.json` 是 `0.12.0`。相对 0.11.0：
+
+- **45° 地图编辑器新增 AI 生成素材**：素材卡「AI 生成素材」→ 新对话 → `composeIsoAsset` → 回链确认。首版支持地面（2:1 菱形）与物件（整图 + footprint）；自动连接 4×4 仍走手工导入。
+- 新增 `src/isocompose.ts`（纯像素整理）与 `isogen.composeIsoAsset`；`ai/` 加入 iso 资源目录。
+- 回链复用 `dialog=add&asset=…&shape=ground|object&frames=…&scale=…&cols=…&rows=…&keyed=1`，iso 界面自动打开「新增素材」并预填；只整理、不自动导入。
+- wire 新增 `composeIsoAsset`，方法数 184；新增 `iso-ai-asset` 工具手册；`verify-host` / `verify-tools` / `verify-iso-*` 同步。
+- ⚠️ 宿主半区改动，**要重启 DSH**；浏览器半区刷新即可。
 
 ### 0.11.0 发布说明（2026-10-24）
 

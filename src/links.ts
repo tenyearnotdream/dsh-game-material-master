@@ -130,6 +130,12 @@ export const OPEN_DIALOGS = ["add"] as const;
 export const OPEN_SHAPES = ["plain", "corner16", "a2quad", "stamp"] as const;
 
 /**
+ * 45° 编辑器的 AI 素材回链：`shape` 复用一个参数名，但取值是素材用法
+ * （`ground` / `object`）。两个模块的界面各自只接受自己那一组，不会串。
+ */
+export const OPEN_ISO_SHAPES = ["ground", "object"] as const;
+
+/**
  * `asset` 必须是**项目资源目录下的相对路径**：不接受绝对路径、不接受 `..`
  * （资源路由另有目录穿越拦截，这里先把脏值挡在意图之外，免得把坏链接带进界面）。
  */
@@ -228,7 +234,12 @@ export function normalizeIntent(intent: OpenIntent | undefined): OpenIntent {
   if (typeof intent.dialog === "string" && (OPEN_DIALOGS as readonly string[]).includes(intent.dialog)) out.dialog = intent.dialog;
   if (isSafeAssetPath(intent.asset)) out.asset = intent.asset.trim();
   if (typeof intent.frames === "number" && Number.isInteger(intent.frames) && intent.frames > 0) out.frames = intent.frames;
-  if (typeof intent.shape === "string" && (OPEN_SHAPES as readonly string[]).includes(intent.shape)) out.shape = intent.shape;
+  if (
+    typeof intent.shape === "string" &&
+    ((OPEN_SHAPES as readonly string[]).includes(intent.shape) || (OPEN_ISO_SHAPES as readonly string[]).includes(intent.shape))
+  ) {
+    out.shape = intent.shape;
+  }
   if (typeof intent.scale === "number" && Number.isInteger(intent.scale) && intent.scale >= OPEN_SCALE_MIN && intent.scale <= OPEN_SCALE_MAX) out.scale = intent.scale;
   for (const key of ["cols", "rows"] as const) {
     const value = intent[key];

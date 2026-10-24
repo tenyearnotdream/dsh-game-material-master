@@ -556,7 +556,20 @@ const importIsoTilesetSchema = z.object({
   clarity: z.enum(["smooth", "sharp", "crisp"]).optional(),
   footprint: z.record(z.string(), z.unknown()).optional(),
   anchor: z.record(z.string(), z.unknown()).optional(),
+  /** 仅物件：图片大小相对占格（1 = 正好占满）。 */
+  objectScale: z.number().optional(),
   pass: z.array(z.number()).optional(),
+  keyGreen: z.boolean().optional()
+});
+const composeIsoAssetSchema = z.object({
+  projectId: z.string(),
+  name: z.string().optional(),
+  files: z.array(z.string()).min(1),
+  /** 首版只支持地面 / 物件；自动连接 4×4 不在这里做。 */
+  kind: z.enum(["ground", "object"]),
+  /** 仅物件：占几格（1..地图大小）。 */
+  footprint: z.record(z.string(), z.unknown()).optional(),
+  /** 是否抠掉纯绿背景（AI 那条路默认开；导入时已抠过的图会带 keyed=1 关掉）。 */
   keyGreen: z.boolean().optional()
 });
 const saveIsoTilesetSchema = z.object({
@@ -1215,6 +1228,7 @@ export const METHODS: MethodSpec[] = [  { method: "getConfig", result: configVie
   { method: "deleteIsoProject", payload: isoProjectIdSchema, result: okSchema },
   { method: "importIsoTileset", payload: importIsoTilesetSchema, result: jsonObject },
   { method: "importIsoSampleTileset", payload: isoProjectIdSchema, result: jsonObject },
+  { method: "composeIsoAsset", payload: composeIsoAssetSchema, result: jsonObject },
   { method: "saveIsoTileset", payload: saveIsoTilesetSchema, result: jsonObject },
   { method: "removeIsoTileset", payload: removeIsoTilesetSchema, result: jsonObject },
   { method: "saveIsoDoc", payload: saveIsoDocSchema, result: jsonObject },

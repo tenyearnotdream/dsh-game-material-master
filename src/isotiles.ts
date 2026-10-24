@@ -42,6 +42,29 @@ export function parseIsoTilesetKind(value: unknown): IsoTilesetKind {
 
 export type IsoTilesetShape = "plain" | "corner16";
 
+/** 物件大小的上下限（界面与宿主共用同一口径）。 */
+export const ISO_OBJECT_SCALE_MIN = 0.1;
+export const ISO_OBJECT_SCALE_MAX = 4;
+
+/**
+ * 「新增素材」里物件大小的收口：`1` = 图片宽度正好占满占格。
+ *
+ * 不合法**明确报错**（别静默夹成边界值 —— 用户会以为自己的输入生效了）。
+ */
+export function parseIsoObjectScale(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    throw new Error(`物件大小必须是 ${ISO_OBJECT_SCALE_MIN * 100}%~${ISO_OBJECT_SCALE_MAX * 100}% 之间的数字，收到 ${String(value)}`);
+  }
+  if (n < ISO_OBJECT_SCALE_MIN || n > ISO_OBJECT_SCALE_MAX) {
+    throw new Error(
+      `物件大小必须在 ${ISO_OBJECT_SCALE_MIN * 100}%~${ISO_OBJECT_SCALE_MAX * 100}% 之间，收到 ${Math.round(n * 100)}%`
+    );
+  }
+  return Math.round(n * 1000) / 1000;
+}
+
 export interface IsoPassCell {
   /** 0 不可通过 / 1 可通过·角色在上面 / 2 可通过·物件盖住角色。 */
   value: 0 | 1 | 2;
@@ -74,6 +97,13 @@ export interface IsoTileset {
   footprint?: IsoFootprint;
   /** 仅物件：图片内的归一化锚点，默认底边中点。 */
   anchor?: { x: number; y: number };
+  /**
+   * 仅物件：图片视觉大小相对「占格宽度」的比例（1 = 图片宽度正好等于占格总宽）。
+   *
+   * 它是**烘进图片的**：导入时按 `footprint.cols × cell.width × objectScale`
+   * 重采样，所以渲染 / 导出都不读它。留着它只为了界面说明与回读。
+   */
+  objectScale?: number;
   /** 仅物件：占格逐格通行性（长度 = cols × rows）。 */
   pass?: number[];
   loop?: AssetLoop;
@@ -237,10 +267,13 @@ export function isoReason(tileset: {
   columns: number;
   frames: number;
   footprint?: IsoFootprint;
+  objectScale?: number;
 }): string {
   if (tileset.kind === "object") {
     const fp = tileset.footprint ?? { cols: 1, rows: 1 };
-    return `物件：占 ${fp.cols}×${fp.rows} 格${tileset.frames > 1 ? `、${tileset.frames} 帧` : ""}`;
+    const scale = tileset.objectScale;
+    const size = scale !== undefined && Math.abs(scale - 1) > 0.0005 ? `、大小 ${Math.round(scale * 100)}%` : "";
+    return `物件：占 ${fp.cols}×${fp.rows} 格${size}${tileset.frames > 1 ? `、${tileset.frames} 帧` : ""}`;
   }
   if (tileset.kind === "autotile") return `自动连接：4×4 = 16 块（${tileset.cell.width}×${tileset.cell.height}）`;
   return `地面：${tileset.columns} 列${tileset.frames > 1 ? ` × ${tileset.frames} 帧` : ""}（${tileset.cell.width}×${tileset.cell.height}）`;
@@ -261,6 +294,7 @@ export interface IsoTilesetBrief {
   animRows: boolean;
   footprint?: IsoFootprint;
   anchor?: { x: number; y: number };
+  objectScale?: number;
   loop?: AssetLoop;
   fps?: number;
   clarity?: AssetClarity;
@@ -286,6 +320,7 @@ export function briefOf(tileset: IsoTileset, rev?: number, allTilesets: readonly
     animRows: tileset.animRows,
     footprint: tileset.footprint,
     anchor: tileset.anchor,
+    objectScale: tileset.objectScale,
     loop: tileset.loop,
     fps: tileset.fps,
     clarity: tileset.clarity,

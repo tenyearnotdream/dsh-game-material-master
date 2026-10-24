@@ -719,12 +719,27 @@ z = layerIndex * 1e12 + depth * 1e6 + r * 4096 + c
 - 客户端按 chunk 直接画：不在同一块的前后物件顺序反了。
 - schema 漏字段（`isoPlan.view` / `applyIsoOps.ops` / `importIsoTileset.*`）：界面点了没反应。
 
+### AI 生成素材（首版：地面 / 物件）
+
+素材卡点「AI 生成素材」不自己生图：开一个不挂靠项目的新对话，把项目 id / 格子 / 名字 / 帧数 /
+生成方式 / 用途 / 物件占格写进首条消息；对话里的 agent 用图片或序列帧生成，再调
+`composeIsoAsset({projectId,name,files,kind,footprint})` 整理到 `ai/`，最后把带
+`dialog=add&asset=…&shape=ground|object` 的回链贴回来。
+
+- 首版只支持 `ground`（一块 2:1 菱形，多帧竖排成动画地面）与 `object`（整张图 + footprint）。
+  **`autotile` 4×4 不在首版**：单张 AI 图无法可靠推导 16 种接法，继续手工导入。
+- `composeIsoAsset` 抠绿、按 alpha 裁内容、地面缩进菱形框（外圈向边缘平均色收敛，避免重复铺时出现网格缝），
+  物件按第一帧比例与 footprint 缩放；最多留 4 倍分辨率，回链带 `scale`，导入时再缩到项目格子。
+- **只整理、不进素材列表**：回链打开「新增素材」，用户点「确定」才真的导入。
+- `ai/` 必须在 `SERVABLE_ISO_DIRS` 里，否则回链图片 403；`composeIsoAsset` 的每个字段
+  （`files` / `kind` / `footprint` / `keyGreen`）都必须写进 wire schema，少了就是「点了没反应」。
+
 ### 自检
 
 `verify-iso.mjs`（几何 / 锚点 / 环绕脏块 / 内置素材）、`verify-iso-pipeline.mjs`
-（CRUD / 编辑 / 撤销 / 计划 / 动画 / 生成 / 导出可复现）、`verify-iso-gateway.mjs`
-（20 个方法 / schema 逐键 / 模块枚举）、`verify-iso-client.mjs`（客户端坐标函数黄金对照 /
-按 z 绘制 / pending / 方法表）。`verify-host` 另测 `iso-assets` 路由，`verify-tools` 真调
+（CRUD / 编辑 / 撤销 / 计划 / 动画 / 生成 / 导出可复现 / AI 整理 / 动画地面）、`verify-iso-gateway.mjs`
+（21 个方法 / schema 逐键 / 模块枚举 / AI 回链参数）、`verify-iso-client.mjs`（客户端坐标函数黄金对照 /
+按 z 绘制 / pending / 方法表 / AI 对话框）。`verify-host` 另测 `iso-assets` 路由，`verify-tools` 真调
 intake / status / review。
 
 ## 模块六：俯视地图编辑器（导入自己的素材）
@@ -2189,7 +2204,7 @@ node scripts/dsh-web-cookie.mjs 127.0.0.1:43121 --json
 | `node scripts/find-missing-i18n.mjs` | **工具**（不是断言）：列出所有还没进词条表的 `T("…")` 原文，直接输出可粘贴的条目 |
 | `node scripts/verify-i18n.mjs` | 中英词条表契约：**每个 `T()` 都有英文条目 / 没有死条目 / `{nN}` 占位符两侧一致 / 译文不残留汉字与全角标点 / `lib/client.js` 与 `src/client.ts` 的词条表一致（忘了 build 就发版会整体退回中文）** |
 | `node scripts/i18n-wrap.mjs` | 词法级 codemod：把 `src/client.ts` 里含中日韩字符的字面量包成 `T(...)`（模板字面量拆成 `{nN}` 占位符，幂等，`i18n-ignore-*` 区间不碰） |
-| `node scripts/verify-tools.mjs` / `verify-client.mjs` / `verify-pipeline.mjs` | 对话调用面（**194 项**，含六个模块 status/review 的文字渲染与「隐藏的模块必须拒绝调用」、本地自选视频的槽位校验、**「AI 生成素材」回链的 dialog/asset/frames/shape 往返与坏值丢弃**）、浏览器半区契约（**352 项**，含「每个远程方法都有 api 实现」「本地自选视频与中间图片打包的调用点必须带 loading 反馈」「手动装配的四条回归」「功能管理 / 侧栏菜单的类名与接线」）、抠像回归（40 项） |
+| `node scripts/verify-tools.mjs` / `verify-client.mjs` / `verify-pipeline.mjs` | 对话调用面（**196 项**，含六个模块 status/review 的文字渲染与「隐藏的模块必须拒绝调用」、本地自选视频的槽位校验、**「AI 生成素材」回链的 dialog/asset/frames/shape 往返与坏值丢弃**）、浏览器半区契约（**362 项**，含「每个远程方法都有 api 实现」「本地自选视频与中间图片打包的调用点必须带 loading 反馈」「手动装配的四条回归」「功能管理 / 侧栏菜单的类名与接线」）、抠像回归（40 项） |
 
 
 
@@ -2203,9 +2218,9 @@ node scripts/verify-pipeline.mjs   # 抽帧/抠像/合成链路（40 项，含�
 node scripts/verify-host.mjs       # 宿主冒烟（387 项，真实 cordis + 真实 HTTP；含内置默认提示词的语言切换、hiddenModules 落盘与收敛、生图后端两组配置与阻塞判断、模块五资源路由）
 node scripts/verify-custom-image.mjs # 自定义生图后端三协议（68 项，本地假服务端；离线、零计费）
 node scripts/verify-comfy.mjs      # 本地 ComfyUI 后端（124 项，自起 mock ComfyUI，纯本地、不用装 ComfyUI）
-node scripts/verify-client.mjs     # 浏览器半区契约（352 项：阶段 ctx 键必须被转发、每个生成类调用点都带 loading 反馈、转圈时间轴与八圆圈、手动装配的四个坑、拆件质检 / IK 约束组件、功能管理 / 侧栏菜单的文本与样式契约）
+node scripts/verify-client.mjs     # 浏览器半区契约（362 项：阶段 ctx 键必须被转发、每个生成类调用点都带 loading 反馈、转圈时间轴与八圆圈、手动装配的四个坑、拆件质检 / IK 约束组件、功能管理 / 侧栏菜单的文本与样式契约）
 node scripts/verify-feedback.mjs   # 浏览器半区渲染（203 项：真加载 lib/client.js，断言遮罩真的出现 / 空闲时真的不出现 / 转圈模式两种生成方式与八圆圈都在 / **「选择本地视频」入口真的在（label + 隐藏 file input，只收 video/*）与每一处「保存」链接（八方向图 / 条带 / 成片 / 预览带 / 整包出口），且没有产物时不渲染空链接** / 深链接点击真的切面板 / 隐藏模块后页签与菜单真的消失、设置页勾选真的写回宿主 / **生图后端：ark 与自定义两组同屏、协议下拉、ComfyUI 工作流文本框只在选中 ComfyUI 时出现、改工作流不立刻发请求** / 语义校验失败没有误报成功）
-node scripts/verify-tools.mjs      # 对话调用面（194 项：工具 schema、方法覆盖、**客户端清单的 payload 标记与宿主 manifest 逐条一致**、返回值无损 JSON 审计、固定流程（含阶段①生成方式必问）、审核模式、深链接契约（含 AI 素材回链的 dialog / asset / frames / shape）、转圈模式的 status/review 渲染、**功能管理（每个方法都归了模块 / 隐藏后一律拒绝 / 可见性不许模型改）**）
+node scripts/verify-tools.mjs      # 对话调用面（196 项：工具 schema、方法覆盖、**客户端清单的 payload 标记与宿主 manifest 逐条一致**、返回值无损 JSON 审计、固定流程（含阶段①生成方式必问）、审核模式、深链接契约（含 AI 素材回链的 dialog / asset / frames / shape）、转圈模式的 status/review 渲染、**功能管理（每个方法都归了模块 / 隐藏后一律拒绝 / 可见性不许模型改）**）
 node scripts/verify-i18n.mjs       # 中英词条表契约（9 项：覆盖 / 死条目 / 占位符 / 译文纯净度 / 产物同步）
 node scripts/verify-live-bundle.mjs # 运行中的宿主是否已在提供新束（走 /plugins/events 拿真实 graph，再按图里的 URL 取回）
 

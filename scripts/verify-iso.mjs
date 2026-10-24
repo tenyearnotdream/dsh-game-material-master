@@ -149,6 +149,9 @@ const obj = DOC.applyIsoOps(doc, [{ kind: "object", op: "add", layerId: "l1", ti
 check("物件 op 新增成功", obj.changed === 1 && doc.objects.length === 1, JSON.stringify(obj.skipped));
 const overlap = DOC.applyIsoOps(doc, [{ kind: "object", op: "add", layerId: "l1", tilesetId: "ts1", r: 3, c: 3 }], layout8, { footprintOf: () => fp, isObjectTileset: () => true });
 check("同层物件不能重叠", overlap.changed === 0 && overlap.skipped.length > 0);
+check("物件大小默认不写（= 100%）", TILES.parseIsoObjectScale(undefined) === undefined && TILES.parseIsoObjectScale(null) === undefined);
+check("物件大小接受 0.1 ~ 4", TILES.parseIsoObjectScale(0.1) === 0.1 && TILES.parseIsoObjectScale(4) === 4 && TILES.parseIsoObjectScale(0.333) === 0.333);
+check("物件大小越界 / 非数字明确报错（不静默夹住）", (() => { try { TILES.parseIsoObjectScale(9); return false; } catch { return true; } })() && (() => { try { TILES.parseIsoObjectScale("abc"); return false; } catch { return true; } })());
 const undoObj = DOC.applyIsoOps(doc, obj.undo, layout8, { footprintOf: () => fp, isObjectTileset: () => true });
 check("物件逆操作删掉它", undoObj.changed === 1 && doc.objects.length === 0);
 

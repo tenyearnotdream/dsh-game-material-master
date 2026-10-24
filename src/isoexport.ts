@@ -77,6 +77,7 @@ export function buildIsoJson(context: IsoRenderContext, doc: IsoDoc, project: { 
       frames: tileset.frames,
       footprint: tileset.footprint,
       anchor: tileset.anchor,
+      objectScale: tileset.kind === "object" ? tileset.objectScale : undefined,
       pass: tileset.kind === "object" ? tileset.pass : undefined,
       loop: tileset.loop,
       fps: tileset.fps,

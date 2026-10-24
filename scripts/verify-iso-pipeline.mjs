@@ -2,7 +2,7 @@
 /**
  * 45° 地图编辑器（模块五 · iso）· 数据层 / 流水线自检。纯本地，不花钱。
  */
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -165,7 +165,115 @@ check("删除素材报告清掉的格子", del.clearedCells >= 0, JSON.stringify
 const view3 = await G.isoView(await G.readIsoProject(p1.id));
 check("删除后素材列表少一张", view3.tilesets.length === 9, String(view3.tilesets.length));
 
+section("10) AI 生成素材：composeIsoAsset / 落盘 / 导入");
+{
+  const fixtureDir = join(HOME, "ai-fixtures");
+  await (await import("node:fs/promises")).mkdir(fixtureDir, { recursive: true });
+  /** 512×256、2:1 菱形，菱形外纯绿；用来模拟“模型画的一块地面”。 */
+  const green = (() => {
+    const w = 512, h = 256;
+    const bitmap = { width: w, height: h, rgba: Buffer.alloc(w * h * 4) };
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const d = Math.abs(x + 0.5 - w / 2) / (w / 2) + Math.abs(y + 0.5 - h / 2) / (h / 2);
+        if (d <= 1) {
+          bitmap.rgba[i] = 82; bitmap.rgba[i + 1] = 150; bitmap.rgba[i + 2] = 84; bitmap.rgba[i + 3] = 255;
+        } else {
+          bitmap.rgba[i + 1] = 255; bitmap.rgba[i + 3] = 255;
+        }
+      }
+    }
+    return bitmap;
+  })();
+  const groundFile = join(fixtureDir, "ground.png");
+  await writeFile(groundFile, BITMAP.encodeBitmap(green));
+
+  /** 512×512、绿底红方块；模拟一个物件。 */
+  const object = (() => {
+    const w = 512, h = 512;
+    const bitmap = { width: w, height: h, rgba: Buffer.alloc(w * h * 4) };
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const inside = x > 128 && x < 384 && y > 80 && y < 470;
+        if (inside) {
+          bitmap.rgba[i] = 190; bitmap.rgba[i + 1] = 70; bitmap.rgba[i + 2] = 45; bitmap.rgba[i + 3] = 255;
+        } else {
+          bitmap.rgba[i + 1] = 255; bitmap.rgba[i + 3] = 255;
+        }
+      }
+    }
+    return bitmap;
+  })();
+  const objectFile = join(fixtureDir, "object.png");
+  await writeFile(objectFile, BITMAP.encodeBitmap(object));
+
+  const beforeTilesets = (await G.readIsoProject(project.id)).tilesets.length;
+  const groundAi = await G.composeIsoAsset({ projectId: project.id, name: "AI 草地", files: [groundFile], kind: "ground" });
+  check("AI 地面整理成 ai/ 文件", groundAi.file.startsWith("ai/") && groundAi.width === 256 && groundAi.height === 384, JSON.stringify(groundAi));
+  check("AI 地面保留 4 倍分辨率", groundAi.scale === 4 && groundAi.frameCount === 1 && groundAi.animRows === false);
+  check("AI 地面检测到绿幕", groundAi.keyed > 0.2, String(groundAi.keyed));
+  const groundAiFile = join(G.isoProjectDir(project.id), groundAi.file);
+  check("AI 地面文件真的存在", (await stat(groundAiFile)).size > 0);
+  check("整理阶段不自动进素材列表", (await G.readIsoProject(project.id)).tilesets.length === beforeTilesets);
+
+  const importedGround = await G.importIsoTileset(project.id, "AI 草地", (await readFile(groundAiFile)).toString("base64"), {
+    kind: "ground",
+    sourceCell: { width: cell.width * groundAi.scale, height: cell.height * groundAi.scale }
+  });
+  check("AI 地面能导入成 ground", importedGround.tilesets[0].kind === "ground" && importedGround.tilesets[0].tiles.length === 1);
+  const groundAi2 = await G.composeIsoAsset({ projectId: project.id, name: "AI 水面", files: [groundFile, groundFile], kind: "ground" });
+  check("AI 地面多帧 → animRows / 帧数", groundAi2.frameCount === 2 && groundAi2.animRows === true, JSON.stringify(groundAi2));
+  const importedGround2 = await G.importIsoTileset(project.id, "AI 水面", (await readFile(join(G.isoProjectDir(project.id), groundAi2.file))).toString("base64"), {
+    kind: "ground",
+    animRows: true,
+    sourceCell: { width: cell.width * groundAi2.scale, height: cell.height * groundAi2.scale }
+  });
+  check("AI 动画地面能导入成 2 帧", importedGround2.tilesets[0].frames === 2 && importedGround2.tilesets[0].animRows === true);
+
+  const objectAi = await G.composeIsoAsset({
+    projectId: project.id,
+    name: "AI 树",
+    files: [objectFile],
+    kind: "object",
+    footprint: { cols: 2, rows: 2 }
+  });
+  check("AI 物件按占格输出", objectAi.kind === "object" && objectAi.footprint.cols === 2 && objectAi.footprint.rows === 2 && objectAi.width === 2 * cell.width * objectAi.scale, JSON.stringify(objectAi));
+  check("AI 物件检测到绿幕", objectAi.keyed > 0.2, String(objectAi.keyed));
+  const importedObject = await G.importIsoTileset(project.id, "AI 树", (await readFile(join(G.isoProjectDir(project.id), objectAi.file))).toString("base64"), {
+    kind: "object",
+    footprint: { cols: 2, rows: 2 },
+    keyGreen: false
+  });
+  check("AI 物件能导入成 object", importedObject.tilesets[0].kind === "object" && importedObject.tilesets[0].footprint.cols === 2);
+
+  // 用户反馈：希望自己能调「图片相对于地格的大小」。物件导入时按 objectScale 重采样，
+  // 1 = 宽度正好占满 footprint；这里钉住 50% 真的把存图缩了一半，而且回读不丢。
+  const objectBase64 = (await readFile(join(G.isoProjectDir(project.id), objectAi.file))).toString("base64");
+  const importedHalf = await G.importIsoTileset(project.id, "AI 小树", objectBase64, {
+    kind: "object",
+    footprint: { cols: 2, rows: 2 },
+    objectScale: 0.5,
+    keyGreen: false
+  });
+  check("物件大小 50% → 存图宽度 = 占格总宽 × 0.5", importedHalf.tilesets[0].imageWidth === 2 * cell.width * 0.5, String(importedHalf.tilesets[0].imageWidth));
+  const importedHalfBrief = G.isoTilesetBrief(importedHalf.tilesets[0]);
+  check("objectScale 回读 / 素材说明带大小", importedHalf.tilesets[0].objectScale === 0.5 && /大小 50%/.test(importedHalfBrief.reason), importedHalfBrief.reason);
+  const reloadedProject = await G.readIsoProject(project.id);
+  const reloadedHalf = reloadedProject?.tilesets.find((tileset) => tileset.name === "AI 小树");
+  check("objectScale 落盘并回读（重开项目不丢）", reloadedHalf?.objectScale === 0.5 && reloadedHalf?.imageWidth === 64, JSON.stringify({ objectScale: reloadedHalf?.objectScale, imageWidth: reloadedHalf?.imageWidth }));
+  let objectScaleRejected = false;
+  try {
+    await G.importIsoTileset(project.id, "AI 大树", objectBase64, { kind: "object", footprint: { cols: 2, rows: 2 }, objectScale: 9 });
+  } catch {
+    objectScaleRejected = true;
+  }
+  check("物件大小越界（900%）明确报错", objectScaleRejected);
+}
+
 await rm(HOME, { recursive: true, force: true });
+
 console.log("");
 if (failures.length > 0) {
   console.error(`失败 ${failures.length} 项：${failures.join("、")}`);

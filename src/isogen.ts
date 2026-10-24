@@ -24,6 +24,7 @@ import {
   parseAssetLoop,
   parseClarity,
   resampleToSize,
+  safeAssetStem,
   STAMP_KEY_OPTIONS,
   type AssetClarity,
   type AssetLoop,
@@ -82,6 +83,7 @@ import {
   isoReason,
   paletteOf,
   parseIsoAnchor,
+  parseIsoObjectScale,
   parseIsoTilesetKind,
   parsePassCells,
   rebuildIsoTiles,
@@ -93,6 +95,7 @@ import {
 import { buildIsoPlan, isoBitmapToPng, isoRenderContext, passCellsOf, planBounds, rasterizeIso, type IsoPlanChunk, type IsoPlanLegendEntry, type IsoPlanMarker, type IsoRenderPlan } from "./isorender.js";
 import { exportIsoMap, type IsoExportManifest } from "./isoexport.js";
 import { renderIsoSamples } from "./isosamplegen.js";
+import { composeIsoFrames, type IsoAiAssetKind } from "./isocompose.js";
 import { assetBasePath } from "./links.js";
 
 export type IsoStage = "assets" | "paint" | "export";
@@ -166,7 +169,7 @@ export function isValidIsoProjectId(id: string): boolean {
  * 子目录白名单。**唯一真源**：`index.ts` 的资源路由直接引用它。
  * 少一条只表现为图裂 / 403，不报错。
  */
-export const SERVABLE_ISO_DIRS = new Set(["tilesets", "preview", "export"]);
+export const SERVABLE_ISO_DIRS = new Set(["tilesets", "preview", "export", "ai"]);
 
 const DEFAULT_COLS = 32;
 const DEFAULT_ROWS = 32;
@@ -282,6 +285,13 @@ function normalizeIsoTileset(raw: unknown): IsoTileset | undefined {
       return undefined;
     }
   })();
+  const objectScale = (() => {
+    try {
+      return kind === "object" ? parseIsoObjectScale(source.objectScale) : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
   const previous = Array.isArray(source.tiles) ? (source.tiles as MapTile[]) : [];
   let tiles: MapTile[] = [];
   try {
@@ -307,6 +317,7 @@ function normalizeIsoTileset(raw: unknown): IsoTileset | undefined {
     animRows,
     footprint,
     anchor,
+    objectScale,
     pass,
     loop: (() => {
       try {
@@ -550,6 +561,7 @@ interface RegisterInput {
   animRows: boolean;
   footprint?: IsoFootprint;
   anchor?: { x: number; y: number };
+  objectScale?: number;
   pass?: number[];
   builtin?: boolean;
   fps?: number;
@@ -593,6 +605,7 @@ async function registerIsoTileset(project: IsoProject, input: RegisterInput): Pr
     animRows: input.animRows,
     footprint: input.footprint,
     anchor: input.anchor,
+    objectScale: input.kind === "object" ? input.objectScale ?? 1 : undefined,
     pass: input.pass,
     loop: input.loop,
     fps: input.fps,
@@ -674,6 +687,7 @@ export async function importIsoTileset(
     clarity?: unknown;
     footprint?: unknown;
     anchor?: unknown;
+    objectScale?: unknown;
     pass?: unknown;
     keyGreen?: unknown;
   } = {}
@@ -692,6 +706,13 @@ export async function importIsoTileset(
   const clarity = (() => {
     try {
       return parseClarity(opts.clarity);
+    } catch (error) {
+      throw new Error(messageOf(error));
+    }
+  })();
+  const objectScale = (() => {
+    try {
+      return kind === "object" ? parseIsoObjectScale(opts.objectScale) ?? 1 : undefined;
     } catch (error) {
       throw new Error(messageOf(error));
     }
@@ -721,7 +742,7 @@ export async function importIsoTileset(
       bitmap = keyed.bitmap;
       if (keyed.keyed === 0) warnings.push("没有检测到绿幕背景，按原图用了。");
     }
-    const targetWidth = Math.max(1, footprint.cols * project.cell.width);
+    const targetWidth = Math.max(1, Math.round(footprint.cols * project.cell.width * (objectScale ?? 1)));
     stored = objectSheet(bitmap, sourceCell, frames, targetWidth, clarity);
   } else {
     const cols = Math.floor(size.width / sourceCell.width);
@@ -753,6 +774,7 @@ export async function importIsoTileset(
     animRows,
     footprint,
     anchor,
+    objectScale,
     pass,
     fps: (() => {
       try {
@@ -776,6 +798,92 @@ export async function importIsoTileset(
     appendJobLog(fresh.logs, "info", `导入素材：${tileset.name}（${tileset.kind}，${tileset.imageWidth}×${tileset.imageHeight} → ${tileset.tiles.length} 块）`);
   });
   return { tilesets: [tileset], warnings };
+}
+
+export interface ComposeIsoAssetInput {
+  projectId: string;
+  name?: string;
+  files: readonly string[];
+  kind: IsoAiAssetKind;
+  footprint?: { cols?: number; rows?: number };
+  keyGreen?: boolean;
+}
+
+export interface ComposeIsoAssetResult {
+  file: string;
+  name: string;
+  kind: IsoAiAssetKind;
+  cell: IsoCell;
+  width: number;
+  height: number;
+  frameCount: number;
+  animRows: boolean;
+  footprint?: IsoFootprint;
+  scale: number;
+  keyed: number;
+  notes: string[];
+}
+
+/**
+ * 「AI 生成素材」的终点：把模型给的几张原图整理成 `ai/<名字>.png`。
+ *
+ * **只整理、不进素材列表**。素材属性在「新增素材」那一刻定死，所以最后一步
+ * 必须由用户点「确定」；返链只负责把图与建议属性预填。
+ */
+export async function composeIsoAsset(input: ComposeIsoAssetInput): Promise<ComposeIsoAssetResult> {
+  const project = await readProjectOrThrow(input.projectId);
+  const files = (input.files ?? []).map((file) => String(file));
+  if (files.length === 0) throw new Error("没有可整理的帧：files 不能为空。");
+  if (input.kind !== "ground" && input.kind !== "object") {
+    throw new Error(`AI 生成素材目前只支持 ground / object（收到 ${String(input.kind)}）。自动连接 4×4 请手工导入。`);
+  }
+  const footprint = input.kind === "object"
+    ? {
+        cols: Math.max(1, Math.round(Number(input.footprint?.cols ?? 1) || 1)),
+        rows: Math.max(1, Math.round(Number(input.footprint?.rows ?? 1) || 1))
+      }
+    : undefined;
+  if (footprint !== undefined) {
+    const doc = await theDocOrFresh(project.id);
+    if (footprint.cols > doc.cols || footprint.rows > doc.rows) {
+      throw new Error(`物件占格 ${footprint.cols}×${footprint.rows} 比地图（${doc.cols}×${doc.rows}）还大`);
+    }
+  }
+  const composed = await composeIsoFrames({
+    files,
+    kind: input.kind,
+    cell: project.cell,
+    footprint,
+    keyGreen: input.keyGreen !== false
+  });
+  const name = input.name === undefined || String(input.name).trim() === "" ? "AI 素材" : String(input.name).trim();
+  const file = `ai/${safeAssetStem(name)}.png`;
+  await mkdir(join(isoProjectDir(project.id), "ai"), { recursive: true });
+  await writeFile(isoAssetPath(project.id, file), encodeBitmap(composed.bitmap));
+  const animRows = input.kind === "ground" && composed.frameCount > 1;
+  await patchIsoProject(project.id, (fresh) => {
+    appendJobLog(
+      fresh.logs,
+      "info",
+      `整理 AI 素材：${name}（${input.kind} / ${composed.frameCount} 帧 → ${composed.bitmap.width}×${composed.bitmap.height}${
+        composed.scale > 1 ? `，每格 ${project.cell.width * composed.scale}px（${composed.scale} 倍）` : ""
+      }，落在 ${file}，等你在「新增素材」里确认）`
+    );
+  });
+  return {
+    file,
+    name,
+    kind: input.kind,
+    cell: project.cell,
+    width: composed.bitmap.width,
+    height: composed.bitmap.height,
+    frameCount: composed.frameCount,
+    animRows,
+    footprint,
+    scale: composed.scale,
+    keyed: composed.keyed,
+    notes: composed.notes
+  };
 }
 
 async function probeImageSizeFromBytes(bytes: Buffer): Promise<{ width: number; height: number } | undefined> {

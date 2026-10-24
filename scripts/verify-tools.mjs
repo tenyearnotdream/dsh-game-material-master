@@ -619,6 +619,7 @@ async function main() {
 
   // 手册也要跟着隐藏：overview / methods 不能泄露被隐藏模块的能力与深链接。
   await expectThrow("guide 对隐藏模块直接拒绝", () => run("game_material", { action: "guide", topic: "iso" }), "隐藏");
+  await expectThrow("guide 对隐藏模块的 AI 分支也拒绝", () => run("game_material", { action: "guide", topic: "iso-ai-asset" }), "隐藏");
   const hiddenOverview = await run("game_material", { action: "guide", topic: "overview" });
   check(
     "overview 不泄露被隐藏模块",
@@ -909,9 +910,11 @@ async function main() {
 
       const isoGuide = (await onlyTool.execute({ action: "guide", topic: "iso" }, {})).text;
       const isoMethods = ["listIsoProjects", "createIsoProject", "importIsoTileset",
-        "applyIsoOps", "runIsoGenerate", "runIsoExport", "setIsoApproved"];
+        "composeIsoAsset", "applyIsoOps", "runIsoGenerate", "runIsoExport", "setIsoApproved"];
       const missingIso = isoMethods.filter((m) => !isoGuide.includes(m));
       check("45° 地图编辑器的远程方法都写进了 iso 手册", missingIso.length === 0, missingIso.join("、"));
+      const isoAiGuide = (await onlyTool.execute({ action: "guide", topic: "iso-ai-asset" }, {})).text;
+      check("iso-ai-asset 手册讲清 ground / object / composeIsoAsset", isoAiGuide.includes("composeIsoAsset") && isoAiGuide.includes("ground") && isoAiGuide.includes("object"), isoAiGuide.slice(0, 80));
     } finally {
       await studio.deleteIsoProject({ projectId: isoId });
     }

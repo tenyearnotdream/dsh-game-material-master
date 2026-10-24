@@ -27,15 +27,17 @@ const LINKS = await import("../lib/links.js");
 const source = readFileSync(new URL("../src/wire.ts", import.meta.url), "utf8");
 
 section("1) 方法表 / 模块枚举");
-check("wire 方法总数为 183", WIRE.METHODS.length === 183, String(WIRE.METHODS.length));
+check("wire 方法总数为 184", WIRE.METHODS.length === 184, String(WIRE.METHODS.length));
 const names = new Set(WIRE.METHODS.map((method) => method.method));
-for (const method of ["listIsoProjects", "createIsoProject", "getIsoProject", "saveIsoProject", "deleteIsoProject", "importIsoTileset", "importIsoSampleTileset", "saveIsoTileset", "removeIsoTileset", "saveIsoDoc", "applyIsoOps", "isoUndo", "isoRedo", "isoPlan", "runIsoGenerate", "runIsoPreview", "runIsoExport", "cancelIsoJob", "setIsoApproved", "revealIsoProject"]) {
+for (const method of ["listIsoProjects", "createIsoProject", "getIsoProject", "saveIsoProject", "deleteIsoProject", "importIsoTileset", "importIsoSampleTileset", "composeIsoAsset", "saveIsoTileset", "removeIsoTileset", "saveIsoDoc", "applyIsoOps", "isoUndo", "isoRedo", "isoPlan", "runIsoGenerate", "runIsoPreview", "runIsoExport", "cancelIsoJob", "setIsoApproved", "revealIsoProject"]) {
   check(`注册了 ${method}`, names.has(method));
 }
 check("不再注册 tile 方法", ![...names].some((method) => /^(list|create|get|save|delete|run|set|cancel|reveal)Tile/.test(method)));
 check("模块顺序为 sprite,image,sequence,rig,iso,map,music,sfx", LINKS.STUDIO_MODULES.join(",") === "sprite,image,sequence,rig,iso,map,music,sfx", LINKS.STUDIO_MODULES.join(","));
 check("阶段为 assets,paint,export", LINKS.ISO_STAGES.join(",") === "assets,paint,export", LINKS.ISO_STAGES.join(","));
-check("深链接放行 module=iso", LINKS.parseIntentQuery("dsh-gmm=1&module=iso&job=gabc1234&stage=paint")?.module === "iso");
+const isoIntent = LINKS.parseIntentQuery("dsh-gmm=1&module=iso&job=gabc1234&stage=assets&dialog=add&asset=ai/x.png&shape=ground&frames=2&scale=4&cols=2&rows=2&keyed=1");
+check("深链接放行 module=iso", isoIntent?.module === "iso");
+check("AI 回链参数 shape=ground / scale / cols / rows / keyed 都不丢", isoIntent?.shape === "ground" && isoIntent?.scale === 4 && isoIntent?.cols === 2 && isoIntent?.rows === 2 && isoIntent?.keyed === 1, JSON.stringify(isoIntent));
 
 section("2) payload schema 逐键不丢");
 function schema(method) {
@@ -57,8 +59,12 @@ parseCase("importIsoTileset", {
   projectId: "gabc1234", name: "草地", data: "AAAA", kind: "object",
   sourceCell: { width: 64, height: 96 }, animRows: true, frames: 2, fps: 4,
   loop: "pingpong", clarity: "sharp", footprint: { cols: 2, rows: 2 },
-  anchor: { x: 0.5, y: 1 }, pass: [0, 1, 1, 2], keyGreen: true
-}, ["projectId", "name", "data", "kind", "sourceCell", "animRows", "frames", "fps", "loop", "clarity", "footprint", "anchor", "pass", "keyGreen"]);
+  anchor: { x: 0.5, y: 1 }, objectScale: 0.75, pass: [0, 1, 1, 2], keyGreen: true
+}, ["projectId", "name", "data", "kind", "sourceCell", "animRows", "frames", "fps", "loop", "clarity", "footprint", "anchor", "objectScale", "pass", "keyGreen"]);
+parseCase("composeIsoAsset", {
+  projectId: "gabc1234", name: "AI 草地", files: ["/tmp/a.png", "/tmp/b.png"],
+  kind: "ground", footprint: { cols: 2, rows: 1 }, keyGreen: true
+}, ["projectId", "name", "files", "kind", "footprint", "keyGreen"]);
 parseCase("saveIsoTileset", { projectId: "gabc1234", tilesetId: "ts1", name: "n", fps: null, loop: "reverse" }, ["projectId", "tilesetId", "name", "fps", "loop"]);
 parseCase("saveIsoDoc", { projectId: "gabc1234", name: "n", cols: 9, rows: 7, layers: [{ id: "l0", name: "x" }], addLayer: { name: "y", kind: "object" }, removeLayerId: "l2", moveLayer: { id: "l1", toIndex: 0 }, clearLayerId: "l1" }, ["projectId", "name", "cols", "rows", "layers", "addLayer", "removeLayerId", "moveLayer", "clearLayerId"]);
 parseCase("applyIsoOps", { projectId: "gabc1234", ops: [{ kind: "paint" }], stroke: "s1", have: ["0,0"] }, ["projectId", "ops", "stroke", "have"]);
@@ -70,10 +76,12 @@ parseCase("revealIsoProject", { projectId: "gabc1234", target: "export" }, ["pro
 parseCase("isoUndo", { projectId: "gabc1234", have: [] }, ["projectId", "have"]);
 
 section("3) 源码 / 路由纪律");
-check("AssetScope 含 iso-assets", /"iso-assets"/.test(readFileSync(new URL("../src/index.ts", import.meta.url), "utf8")));
+const indexSource = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+check("AssetScope 含 iso-assets", /"iso-assets"/.test(indexSource));
+check("importIsoTileset 网关把 objectScale 传给了宿主实现", /objectScale: input\.objectScale/.test(indexSource));
 check("模块枚举含 iso、不含 tile", /"rig", "iso", "map"/.test(source) && !/"tile"/.test(source));
 check("不再有 Tile 方法 schema", !/const tileIdSchema|runTileItemsSchema/.test(source));
-check("SERVABLE_ISO_DIRS 在 isogen 里（tilesets / preview / export）", /SERVABLE_ISO_DIRS = new Set\(\["tilesets", "preview", "export"\]\)/.test(readFileSync(new URL("../src/isogen.ts", import.meta.url), "utf8")));
+check("SERVABLE_ISO_DIRS 在 isogen 里（tilesets / preview / export / ai）", /SERVABLE_ISO_DIRS = new Set\(\["tilesets", "preview", "export", "ai"\]\)/.test(readFileSync(new URL("../src/isogen.ts", import.meta.url), "utf8")));
 
 console.log("");
 if (failures.length > 0) {

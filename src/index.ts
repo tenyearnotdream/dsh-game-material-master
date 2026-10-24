@@ -1004,6 +1004,7 @@ export class GameStudioGateway extends TypertRemoteService {
       clarity: input.clarity,
       footprint: input.footprint,
       anchor: input.anchor,
+      objectScale: input.objectScale,
       pass: input.pass,
       keyGreen: input.keyGreen
     });
@@ -1016,6 +1017,17 @@ export class GameStudioGateway extends TypertRemoteService {
     const project = await isogen.readIsoProject(asString(asRecord(payload).projectId));
     const revisions = await isogen.tilesetRevisions(asString(asRecord(payload).projectId));
     return { tilesets: result.tilesets.map((tileset) => isogen.isoTilesetBrief(tileset, revisions.get(tileset.id), project?.tilesets)), warnings: result.warnings };
+  }
+  async composeIsoAsset(payload: any) {
+    const input = asRecord(payload);
+    return isogen.composeIsoAsset({
+      projectId: asString(input.projectId),
+      name: asString(input.name),
+      files: Array.isArray(input.files) ? input.files.map((file: unknown) => asString(file)) : [],
+      kind: input.kind as any,
+      footprint: input.footprint as any,
+      keyGreen: input.keyGreen === false ? false : true
+    });
   }
   async saveIsoTileset(payload: any) {
     const input = asRecord(payload);
