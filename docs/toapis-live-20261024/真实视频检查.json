@@ -1,0 +1,92 @@
+[
+  {
+    "project": "pmvlvn2j393a7db",
+    "direction": "back",
+    "width": 640,
+    "height": 640,
+    "duration": 4.041667,
+    "frames": 97,
+    "distinct_sample_frames": 5,
+    "sha256": "d9f36b1ed442366480d8bef34cc26c0d49666fd49be0517a4c9155f8f0b65cab"
+  },
+  {
+    "project": "pmvlvn2j393a7db",
+    "direction": "downLeft",
+    "width": 640,
+    "height": 640,
+    "duration": 4.041667,
+    "frames": 97,
+    "distinct_sample_frames": 5,
+    "sha256": "e81e9663d4a165fa63df2be95099e7dcd92d1ff698a11da735532123ff60b37f"
+  },
+  {
+    "project": "pmvlvn2j393a7db",
+    "direction": "downRight",
+    "width": 640,
+    "height": 640,
+    "duration": 4.041667,
+    "frames": 97,
+    "distinct_sample_frames": 5,
+    "sha256": "198e59905d18e280e5f0258ef8cabacd1f734b516de53f3ee23ec82a4b9f6e9c"
+  },
+  {
+    "project": "pmvlvn2j393a7db",
+    "direction": "front",
+    "width": 640,
+    "height": 640,
+    "duration": 4.041667,
+    "frames": 97,
+    "distinct_sample_frames": 5,
+    "sha256": "e450e550b4f7ad3daaba7a58d0acc8a261fa80f9cdd8b78045246491c9ea2dac"
+  },
+  {
+    "project": "pmvlvn2j393a7db",
+    "direction": "left",
+    "width": 640,
+    "height": 640,
+    "duration": 4.041667,
+    "frames": 97,
+    "distinct_sample_frames": 5,
+    "sha256": "a5d7c45b35d610d3d8214309f658d090f96e2c6fc2a74caaf821ea9ecc1eea7c"
+  },
+  {
+    "project": "pmvlvn2j393a7db",
+    "direction": "right",
+    "width": 640,
+    "height": 640,
+    "duration": 4.041667,
+    "frames": 97,
+    "distinct_sample_frames": 5,
+    "sha256": "5c353fa997c0c79a7c7fd421873aa972e884250af9e7530e43265b2aa8de7a40"
+  },
+  {
+    "project": "pmvlvn2j393a7db",
+    "direction": "upLeft",
+    "width": 640,
+    "height": 640,
+    "duration": 4.041667,
+    "frames": 97,
+    "distinct_sample_frames": 5,
+    "sha256": "96734406647f43fe02cd50917183b3f8c2c5a5fd9ec348eedf437e6184ef3215"
+  },
+  {
+    "project": "pmvlvn2j393a7db",
+    "direction": "upRight",
+    "width": 640,
+    "height": 640,
+    "duration": 4.041667,
+    "frames": 97,
+    "distinct_sample_frames": 5,
+    "sha256": "1e3f88f0bacf8199c21caa6ae967694b20ebf29b2ba096d1a046eb6b9a70ac95"
+  },
+  {
+    "project": "pmvlwkp5b8e70ac",
+    "direction": "turn",
+    "width": 640,
+    "height": 640,
+    "duration": 4.041667,
+    "frames": 97,
+    "distinct_sample_frames": 5,
+    "sha256": "71ca68ec83fa4b6ecedfc85ef6ebc38bfd8a7906b5260d1e819e1a5736318a27"
+  }
+]

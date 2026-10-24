@@ -1,0 +1,120 @@
+{
+  "base": "22f5ed4d26be90833d36d95bdf58352a1d3b6b5c",
+  "suite_count": 25,
+  "passed": 22,
+  "rows": [
+    {
+      "test": "toapis",
+      "exit_code": 0
+    },
+    {
+      "test": "host",
+      "exit_code": 0
+    },
+    {
+      "test": "client",
+      "exit_code": 0
+    },
+    {
+      "test": "tools",
+      "exit_code": 0
+    },
+    {
+      "test": "pipeline",
+      "exit_code": 0
+    },
+    {
+      "test": "feedback",
+      "exit_code": 0
+    },
+    {
+      "test": "i18n",
+      "exit_code": 0
+    },
+    {
+      "test": "comfy",
+      "exit_code": 0
+    },
+    {
+      "test": "custom-image",
+      "exit_code": 0
+    },
+    {
+      "test": "music",
+      "exit_code": 0
+    },
+    {
+      "test": "music-score",
+      "exit_code": 1
+    },
+    {
+      "test": "music-gateway",
+      "exit_code": 0
+    },
+    {
+      "test": "music-client",
+      "exit_code": 0
+    },
+    {
+      "test": "sfx",
+      "exit_code": 0
+    },
+    {
+      "test": "sfx-gateway",
+      "exit_code": 0
+    },
+    {
+      "test": "sfx-client",
+      "exit_code": 0
+    },
+    {
+      "test": "rig-runtime",
+      "exit_code": 0
+    },
+    {
+      "test": "iso",
+      "exit_code": 0
+    },
+    {
+      "test": "iso-pipeline",
+      "exit_code": 1
+    },
+    {
+      "test": "iso-gateway",
+      "exit_code": 0
+    },
+    {
+      "test": "iso-client",
+      "exit_code": 0
+    },
+    {
+      "test": "map",
+      "exit_code": 0
+    },
+    {
+      "test": "map-pipeline",
+      "exit_code": 0
+    },
+    {
+      "test": "map-gateway",
+      "exit_code": 0
+    },
+    {
+      "test": "map-client",
+      "exit_code": 1
+    }
+  ],
+  "additional_offline_checks": {
+    "native_alpha_white_matte_zip": true,
+    "real_windows_file_lock": true,
+    "lock_recovery_ms": 478
+  },
+  "toapis_assertions": 43,
+  "feedback_assertions": 217,
+  "failures": {
+    "music-score": "Windows fake Python helper detection (also reproduced on untouched earlier upstream)",
+    "iso-pipeline": "unzip executable missing on Windows; PNG/JSON/zip creation succeeded before archive-listing step",
+    "map-client": "Existing test reads undefined penNode.props at line 1189 (also reproduced on untouched earlier upstream)"
+  },
+  "fresh_paid_calls_in_regressions": 0
+}

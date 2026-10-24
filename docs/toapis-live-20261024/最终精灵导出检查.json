@@ -1,0 +1,80 @@
+{
+  "project": "pmvlvn2j393a7db",
+  "size": [
+    1024,
+    1024
+  ],
+  "cell": [
+    128,
+    128
+  ],
+  "grid": [
+    8,
+    8
+  ],
+  "alpha_extrema": [
+    0,
+    255
+  ],
+  "ui_download_byte_equal": true,
+  "sha256": "4819391a894ced16fb987fd3f69f90cb67249232a6e2d12d7ea4bd75218e7818",
+  "rows": [
+    {
+      "direction": "back",
+      "nonempty_cells": 8,
+      "distinct_frames": 8,
+      "foreground_fraction_min": 0.2896728515625,
+      "foreground_fraction_max": 0.29443359375
+    },
+    {
+      "direction": "upRight",
+      "nonempty_cells": 8,
+      "distinct_frames": 8,
+      "foreground_fraction_min": 0.27764892578125,
+      "foreground_fraction_max": 0.3004150390625
+    },
+    {
+      "direction": "right",
+      "nonempty_cells": 8,
+      "distinct_frames": 8,
+      "foreground_fraction_min": 0.21453857421875,
+      "foreground_fraction_max": 0.26531982421875
+    },
+    {
+      "direction": "downRight",
+      "nonempty_cells": 8,
+      "distinct_frames": 8,
+      "foreground_fraction_min": 0.27099609375,
+      "foreground_fraction_max": 0.28680419921875
+    },
+    {
+      "direction": "front",
+      "nonempty_cells": 8,
+      "distinct_frames": 8,
+      "foreground_fraction_min": 0.28216552734375,
+      "foreground_fraction_max": 0.28863525390625
+    },
+    {
+      "direction": "downLeft",
+      "nonempty_cells": 8,
+      "distinct_frames": 8,
+      "foreground_fraction_min": 0.27337646484375,
+      "foreground_fraction_max": 0.2900390625
+    },
+    {
+      "direction": "left",
+      "nonempty_cells": 8,
+      "distinct_frames": 8,
+      "foreground_fraction_min": 0.20037841796875,
+      "foreground_fraction_max": 0.25830078125
+    },
+    {
+      "direction": "upLeft",
+      "nonempty_cells": 8,
+      "distinct_frames": 8,
+      "foreground_fraction_min": 0.2681884765625,
+      "foreground_fraction_max": 0.27447509765625
+    }
+  ],
+  "note": "GIF is derived from the actual exported sheet; not a recording of DSH keyboard interaction."
+}

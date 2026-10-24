@@ -1,0 +1,237 @@
+{
+  "site": "https://toapis.cn",
+  "task_count": 19,
+  "settled_usd": "0.704402",
+  "unsettled_tasks": 9,
+  "rows": [
+    {
+      "task_ref": "7ecd098b5ca7ba41",
+      "kind": "images",
+      "model": "gpt-image-2-vip",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "unavailable",
+        "cost_usd": null,
+        "credits": null
+      }
+    },
+    {
+      "task_ref": "c22e0379f46e198a",
+      "kind": "images",
+      "model": "gpt-image-2-vip",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "unavailable",
+        "cost_usd": null,
+        "credits": null
+      }
+    },
+    {
+      "task_ref": "2b7c0034f8a5150f",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.070116",
+        "credits": "14.0232"
+      }
+    },
+    {
+      "task_ref": "f73790920b3509d5",
+      "kind": "images",
+      "model": "gpt-image-2-vip",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "unavailable",
+        "cost_usd": null,
+        "credits": null
+      }
+    },
+    {
+      "task_ref": "18f78bab65a44dfd",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.070116",
+        "credits": "14.0232"
+      }
+    },
+    {
+      "task_ref": "d28116a886d089a9",
+      "kind": "images",
+      "model": "gpt-image-2-vip",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "unavailable",
+        "cost_usd": null,
+        "credits": null
+      }
+    },
+    {
+      "task_ref": "ebcf71676a12a58f",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.070116",
+        "credits": "14.0232"
+      }
+    },
+    {
+      "task_ref": "45adef6bdf510e24",
+      "kind": "images",
+      "model": "gpt-image-2-vip",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "unavailable",
+        "cost_usd": null,
+        "credits": null
+      }
+    },
+    {
+      "task_ref": "ee80799a7ad36690",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.070116",
+        "credits": "14.0232"
+      }
+    },
+    {
+      "task_ref": "3edad92963022fa8",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.070116",
+        "credits": "14.0232"
+      }
+    },
+    {
+      "task_ref": "ed562a6ea5588199",
+      "kind": "images",
+      "model": "gpt-image-2-vip",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "unavailable",
+        "cost_usd": null,
+        "credits": null
+      }
+    },
+    {
+      "task_ref": "936cd80ded451baa",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.070116",
+        "credits": "14.0232"
+      }
+    },
+    {
+      "task_ref": "18c17a047553d0a9",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.070116",
+        "credits": "14.0232"
+      }
+    },
+    {
+      "task_ref": "46cb8097621b8709",
+      "kind": "images",
+      "model": "gpt-image-2-vip",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "unavailable",
+        "cost_usd": null,
+        "credits": null
+      }
+    },
+    {
+      "task_ref": "6a84d6a82da6fd15",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.073358",
+        "credits": "14.6716"
+      }
+    },
+    {
+      "task_ref": "272241dec3799c2e",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.070116",
+        "credits": "14.0232"
+      }
+    },
+    {
+      "task_ref": "d9fae58c64eca026",
+      "kind": "images",
+      "model": "gpt-image-2-vip",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "unavailable",
+        "cost_usd": null,
+        "credits": null
+      }
+    },
+    {
+      "task_ref": "d506ce982536cacc",
+      "kind": "images",
+      "model": "gpt-image-2-vip",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "unavailable",
+        "cost_usd": null,
+        "credits": null
+      }
+    },
+    {
+      "task_ref": "042eb81b460610ac",
+      "kind": "videos",
+      "model": "seedance-2-mini",
+      "status": "completed",
+      "delivered": true,
+      "billing": {
+        "status": "settled",
+        "cost_usd": "0.070116",
+        "credits": "14.0232"
+      }
+    }
+  ],
+  "prices_are_not_actual_cost": true
+}

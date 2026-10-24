@@ -655,3 +655,7 @@ The screenshots in this document were taken by Playwright against the real UI; t
 Configure ToAPIs in settings, then select ToAPIs as the image backend and/or enable its video option. Ark/MiniMax remain the defaults; ComfyUI, custom protocols and local processing remain available. Use `https://toapis.cn/v1` in China or `https://toapis.com/v1` internationally. ToAPIs uses asynchronous media endpoints, not a drop-in synchronous OpenAI image URL.
 
 [Configuration, billing and task recovery](https://github.com/universe-st/dsh-game-material-master/blob/main/docs/TOAPIS.md). Keys stay on the host; generation is billable. Check account pricing and model settings first.
+
+## ToAPIs
+
+ToAPIs is an optional image/video provider using your own key. Homepages: [China](https://toapis.cn/) / [International](https://toapis.com/); Base URLs: `https://toapis.cn/v1` / `https://toapis.com/v1`. [Configuration, scoped pricing and quick reuse](https://github.com/universe-st/dsh-game-material-master/blob/main/docs/TOAPIS.md) · [Real DSH eight-direction and sprite export acceptance](https://github.com/universe-st/dsh-game-material-master/blob/main/docs/toapis-live-20261024/README.md). See the guide for native transparent GPT Image, square videos and actual screenshots; availability depends on merge/release status.

@@ -343,7 +343,7 @@ const api = new Proxy(
  */
 const EXPECTED_HOOKS = {
   StudioPanel: 21,
-  ImageModule: 16,
+  ImageModule: 17,
   SequenceModule: 17
 };
 
@@ -1507,6 +1507,44 @@ section("草稿合并：轮询不许覆盖用户正在输入的内容");
     // 宿主回包缺字段（老版本）时不能把草稿里的键吞掉判断成「改过」——缺的键直接用宿主的。
     check("草稿里没有的字段直接用宿主的值", mergeDrafts({}, oldSettings, nextSettings, false).count === 8);
   }
+}
+
+
+section("图片提示词保存与生成时序");
+{
+  const job = makeImageJob({ prompt: "previous saved prompt" });
+  const calls = [];
+  let releaseFirst, signalGenerated;
+  const firstSave = new Promise(resolve => { releaseFirst = resolve; });
+  const generated = new Promise(resolve => { signalGenerated = resolve; });
+  const apiQueued = {
+    saveImageJob: async payload => {
+      calls.push({ type: "save", prompt: payload.prompt });
+      if (calls.filter(x => x.type === "save").length === 1) await firstSave;
+      job.prompt = payload.prompt;
+      return { ok: true };
+    },
+    runImageJob: async () => {
+      calls.push({ type: "generate", prompt: job.prompt });
+      signalGenerated();
+      return { started: true };
+    },
+    getImageJob: async () => job,
+    listImageJobs: async () => ({ jobs: [job] })
+  };
+  HOOK.slots = [0, [job], job.id, job, null, false, "latest typed prompt", "", {...job.settings}, {...job.keying}, undefined, {}, null];
+  HOOK.cursor = 0;
+  const tree = ImageModule({ api: apiQueued });
+  const prompt = byTag(tree, "textarea").find(node => node.props.placeholder === "描述你要生成的图片…");
+  const generate = byTag(tree, "button").find(node => (/^生成 [0-9]+ 张$/).test(textOf(node)));
+  check("真渲染中存在提示词和生成入口", Boolean(prompt && generate));
+  prompt.props.onBlur();
+  generate.props.onClick();
+  await new Promise(resolve => setImmediate(resolve));
+  check("失焦保存未完成时不提交生成", calls.length === 1 && calls[0].type === "save", JSON.stringify(calls));
+  releaseFirst();
+  await generated;
+  check("所有保存完成后才使用最新提示词生成", calls.map(x=>x.type).join(",") === "save,save,generate" && calls.at(-1).prompt === "latest typed prompt", JSON.stringify(calls));
 }
 
 report();

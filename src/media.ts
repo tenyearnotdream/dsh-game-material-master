@@ -342,7 +342,12 @@ export async function fileSize(file: string): Promise<number> {
  * 把一张图转成 JPEG data URI，给 MiniMax 当首帧图用。
  * 同时落一份 JPEG 到 `jpegOut`，方便排查「模型到底看到了什么」。
  */
-export async function toJpegDataUri(source: string, jpegOut: string, maxEdge = 1280, quality = 3): Promise<string> {
+export async function toJpegDataUri(source: string, jpegOut: string, maxEdge = 1280, quality = 3, matte?: "white"): Promise<string> {
+  // MP4 has no alpha. Explicitly matte transparent PNGs before sending to a video backend;
+  // otherwise invisible source RGB can become a black halo or unpredictable background.
+  const filter = matte === "white"
+    ? `format=rgba,split[fg][canvas];[canvas]lutrgb=r=255:g=255:b=255,colorchannelmixer=aa=1[bg];[bg][fg]overlay=shortest=1:format=auto,scale='min(${maxEdge},iw)':-2:flags=lanczos`
+    : `scale='min(${maxEdge},iw)':-2:flags=lanczos`;
   await run(
     ffmpegPath(),
     [
@@ -350,7 +355,8 @@ export async function toJpegDataUri(source: string, jpegOut: string, maxEdge = 1
       "-loglevel", "error",
       "-y",
       "-i", source,
-      "-vf", `scale='min(${maxEdge},iw)':-2:flags=lanczos`,
+      "-vf", filter,
+      "-frames:v", "1",
       "-q:v", String(quality),
       "-f", "image2",
       jpegOut
