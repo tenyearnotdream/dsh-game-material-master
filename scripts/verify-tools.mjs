@@ -568,17 +568,17 @@ async function main() {
   const knownMethods = new Set([...Object.keys(METHOD_MODULE), ...SHARED_TOOL_METHODS]);
   check("归类表里没有多余 / 打错的方法名", [...knownMethods].every((method) => exposed.includes(method)), [...knownMethods].filter((method) => !exposed.includes(method)).join("、"));
 
-  const hiddenConfig = await studio.saveConfig({ hiddenModules: ["tile", "rig", "nope"] });
+  const hiddenConfig = await studio.saveConfig({ hiddenModules: ["iso", "rig", "nope"] });
   check(
     "hiddenModules 收敛成合法子集并按固定顺序排列",
-    JSON.stringify(hiddenConfig.hiddenModules) === JSON.stringify(["rig", "tile"]),
+    JSON.stringify(hiddenConfig.hiddenModules) === JSON.stringify(["rig", "iso"]),
     JSON.stringify(hiddenConfig.hiddenModules)
   );
   check("读回来的配置里有 hiddenModules", Array.isArray((await studio.getConfig()).hiddenModules));
 
-  await expectThrow("隐藏模块的远程方法被拒绝", () => run("game_material_call", { method: "listTileProjects" }), "已被用户");
+  await expectThrow("隐藏模块的远程方法被拒绝", () => run("game_material_call", { method: "listIsoProjects" }), "已被用户");
   await expectThrow("隐藏模块（骨骼）同样被拒绝", () => run("game_material_call", { method: "runRigSheet", payload: { jobId: "r1" } }), "隐藏");
-  await expectThrow("setReviewMode 也按 payload 里的模块拦", () => run("game_material_call", { method: "setReviewMode", payload: { module: "tile", id: "t1", reviewMode: "auto" } }), "隐藏");
+  await expectThrow("setReviewMode 也按 payload 里的模块拦", () => run("game_material_call", { method: "setReviewMode", payload: { module: "iso", id: "g1234567", reviewMode: "auto" } }), "隐藏");
   await expectThrow(
     "工具面不允许改功能可见性（否则模型能自己放出来）",
     () => run("game_material_call", { method: "saveConfig", payload: { hiddenModules: [] } }),
@@ -587,27 +587,27 @@ async function main() {
   const visibleCall = await run("game_material_call", { method: "listProjects" });
   check("没被隐藏的模块照常可用", visibleCall.ok === true, JSON.stringify(visibleCall).slice(0, 60));
 
-  await expectThrow("intake 对隐藏模块直接拒绝", () => run("game_material_intake", { module: "tile" }), "隐藏");
+  await expectThrow("intake 对隐藏模块直接拒绝", () => run("game_material_intake", { module: "iso" }), "隐藏");
   await expectThrow("upload 对隐藏模块直接拒绝", () => run("game_material_upload", { module: "rig", id: "r1", kind: "source", path: sourcePath }), "隐藏");
-  await expectThrow("reviewMode 对隐藏模块直接拒绝", () => run("game_material_reviewMode", { module: "tile", id: "t1", reviewMode: "auto" }), "隐藏");
+  await expectThrow("reviewMode 对隐藏模块直接拒绝", () => run("game_material_reviewMode", { module: "iso", id: "g1234567", reviewMode: "auto" }), "隐藏");
   // 「先拦后查」：这几个 id 根本不存在，但被隐藏的模块要先报「隐藏」，
   // 否则模型会以为「只是没找到」，转头换个 id 继续试。
-  await expectThrow("status 先报隐藏、再谈找不找得到", () => run("game_material_status", { id: "tdeadbeef" }), "隐藏");
-  await expectThrow("status 只给 module 时也拦", () => run("game_material_status", { module: "tile" }), "隐藏");
-  await expectThrow("review 对隐藏模块直接拒绝", () => run("game_material_review", { id: "tdeadbeef" }), "隐藏");
+  await expectThrow("status 先报隐藏、再谈找不找得到", () => run("game_material_status", { id: "gdeadbeef" }), "隐藏");
+  await expectThrow("status 只给 module 时也拦", () => run("game_material_status", { module: "iso" }), "隐藏");
+  await expectThrow("review 对隐藏模块直接拒绝", () => run("game_material_review", { id: "gdeadbeef" }), "隐藏");
   await expectThrow("wait 对隐藏模块直接拒绝", () => run("game_material_wait", { id: "rdeadbeef", timeoutSeconds: 1 }), "隐藏");
-  await expectThrow("approve 对隐藏模块直接拒绝", () => run("game_material_approve", { id: "tdeadbeef", approved: true }), "隐藏");
+  await expectThrow("approve 对隐藏模块直接拒绝", () => run("game_material_approve", { id: "gdeadbeef", approved: true }), "隐藏");
 
   const hiddenStatus = await run("game_material_status", {});
-  check("status 里列出当前被隐藏的模块", JSON.stringify(hiddenStatus.hiddenModules) === JSON.stringify(["rig", "tile"]), JSON.stringify(hiddenStatus.hiddenModules));
+  check("status 里列出当前被隐藏的模块", JSON.stringify(hiddenStatus.hiddenModules) === JSON.stringify(["rig", "iso"]), JSON.stringify(hiddenStatus.hiddenModules));
   check(
     "status 不再列出被隐藏模块的清单",
-    Array.isArray(hiddenStatus.tileProjects) && hiddenStatus.tileProjects.length === 0 && hiddenStatus.rigJobs.length === 0,
-    `${hiddenStatus.tileProjects?.length} / ${hiddenStatus.rigJobs?.length}`
+    Array.isArray(hiddenStatus.isoProjects) && hiddenStatus.isoProjects.length === 0 && hiddenStatus.rigJobs.length === 0,
+    `${hiddenStatus.isoProjects?.length} / ${hiddenStatus.rigJobs?.length}`
   );
   check(
     "status 不再给被隐藏模块的深链接",
-    hiddenStatus.links?.tile === undefined && hiddenStatus.links?.rig === undefined,
+    hiddenStatus.links?.iso === undefined && hiddenStatus.links?.rig === undefined,
     Object.keys(hiddenStatus.links ?? {}).join("、")
   );
   check("可见模块的深链接还在", typeof hiddenStatus.links?.sprite === "string", String(hiddenStatus.links?.sprite));
@@ -618,23 +618,23 @@ async function main() {
   check("status 的文本渲染里点明了隐藏项", hiddenStatusText.includes("已隐藏的功能"), hiddenStatusText.slice(0, 90).replace(/\n/g, " | "));
 
   // 手册也要跟着隐藏：overview / methods 不能泄露被隐藏模块的能力与深链接。
-  await expectThrow("guide 对隐藏模块直接拒绝", () => run("game_material", { action: "guide", topic: "tile" }), "隐藏");
+  await expectThrow("guide 对隐藏模块直接拒绝", () => run("game_material", { action: "guide", topic: "iso" }), "隐藏");
   const hiddenOverview = await run("game_material", { action: "guide", topic: "overview" });
   check(
     "overview 不泄露被隐藏模块",
-    !hiddenOverview.text.includes("45°地图地块生成") && !hiddenOverview.text.includes("骨骼动画生成"),
+    !hiddenOverview.text.includes("45°地图编辑器") && !hiddenOverview.text.includes("骨骼动画生成"),
     hiddenOverview.text.slice(0, 120)
   );
   const hiddenMethods = await run("game_material", { action: "guide", topic: "methods" });
   check(
     "methods 不泄露被隐藏模块的方法",
-    !hiddenMethods.text.includes("runTileItems") && !hiddenMethods.text.includes("runRigSheet"),
+    !hiddenMethods.text.includes("runIsoGenerate") && !hiddenMethods.text.includes("runRigSheet"),
     ""
   );
 
   // 取消隐藏必须**立刻**生效，不需要重启宿主（配置是内存缓存，工具每次现读）。
   await studio.saveConfig({ hiddenModules: [] });
-  const restored = await run("game_material_call", { method: "listTileProjects" });
+  const restored = await run("game_material_call", { method: "listIsoProjects" });
   check("取消隐藏后立刻恢复可调用", restored.ok === true, JSON.stringify(restored).slice(0, 60));
   check(
     "恢复后 status 重新给出全部链接",
@@ -648,7 +648,7 @@ async function main() {
   check("面板 id 与客户端一致", links.PANEL_KEY === "gameStudio", links.PANEL_KEY);
   check(
     "模块名与界面一致（按 STUDIO_MODULES 派生，不写死个数）",
-    links.STUDIO_MODULES.join(",") === "sprite,image,sequence,rig,tile,map,music,sfx",
+    links.STUDIO_MODULES.join(",") === "sprite,image,sequence,rig,iso,map,music,sfx",
     links.STUDIO_MODULES.join(",")
   );
 
@@ -877,53 +877,43 @@ async function main() {
   }
 
   // ── 11. 模块五在**对话调用面**上真的能用 ────────────────────────────────
-  //
-  // 这一节补的是真机验证暴露出来的盲区：verify-tools 原来只比对模块名，
-  // 一个 tile 工具都没真调过。而 intake 里用了一批**中文属性名**
-  // （`known.几何由代码保证` 之类）—— 那种写法一旦有非法标识符字符就会静默
-  // 变成运行时问题（`②` 就真的编译不过）。所以这里真调一遍。
   {
     check("单一工具同时承载 intake / status / review / call", typeof onlyTool.execute === "function");
 
-    // ① 先建一个真实的地图地块项目（走真实网关，数据落在临时 DSH_HOME）
-    const created = await studio.createTileProject({ name: "对话面验证", lang: "zh" });
-    const tileId = created.id;
+    const created = await studio.createIsoProject({ name: "对话面验证", cell: { width: 64, height: 96 }, cols: 8, rows: 8, wrap: true });
+    const isoId = created.id;
     try {
-      check("tile 项目 id 被判为 tile 模块", moduleForId(tileId) === "tile", moduleForId(tileId));
+      check("iso 项目 id 被判为 iso 模块", moduleForId(isoId) === "iso", moduleForId(isoId));
 
-      // ② intake：必须能渲染出来，且把「四个阶段」与「只有第①步花钱」讲清楚
-      const intake = await run("game_material_intake", { module: "tile", id: tileId });
+      const intake = await run("game_material_intake", { module: "iso", id: isoId });
       const intakeText = typeof intake === "string" ? intake : JSON.stringify(intake);
-      check("intake 对 tile 不抛异常且返回了内容", intakeText.length > 50, `${intakeText.length} 字符`);
-      check("intake 讲清了四个阶段", /生成.*验收.*拼.*导出/s.test(intakeText.replace(/\\n/g, " ")) || /四个阶段/.test(intakeText));
-      check("intake 点明了只有第②步花钱", /只有一个?钱|计费|花钱/.test(intakeText));
-      check("intake 问了画风与地块清单", /画风/.test(intakeText) && /地块/.test(intakeText));
-      check("intake 带上了 openUrl 深链接", /openUrl/.test(intakeText) && /module=tile/.test(intakeText));
+      check("intake 对 iso 不抛异常且返回了内容", intakeText.length > 50, `${intakeText.length} 字符`);
+      check("intake 讲清了三个阶段", /素材.*地图.*导出/s.test(intakeText.replace(/\\n/g, " ")) || /三个阶段/.test(intakeText));
+      check("intake 点明了全本地不花钱", /不花钱|免费|零计费|API Key/.test(intakeText));
+      check("intake 问了素材与地图尺寸", /素材/.test(intakeText) && /地图/.test(intakeText));
+      check("intake 带上了 openUrl 深链接", /openUrl/.test(intakeText) && /module=iso/.test(intakeText));
 
-      // ③ status：不给 id 时要列出 tile 项目；给 id 时要回几何与产物 URL
-      const listed = await run("game_material_status", { module: "tile" });
-      check("status 不给 id 时列出 tile 项目", JSON.stringify(listed).includes(tileId));
+      const listed = await run("game_material_status", { module: "iso" });
+      check("status 不给 id 时列出 iso 项目", JSON.stringify(listed).includes(isoId));
 
-      const detail = await run("game_material_status", { module: "tile", id: tileId });
+      const detail = await run("game_material_status", { module: "iso", id: isoId });
       const detailText = JSON.stringify(detail);
-      check("status 给了 id 时返回该 project 的快照", detailText.includes(tileId) || detail?.id === tileId);
+      check("status 给了 id 时返回该 project 的快照", detailText.includes(isoId) || detail?.id === isoId);
       check("status 的快照里有 assetBase（界面据此拼产物 URL）",
-        detailText.includes("tile-assets") || detail?.assetBase !== undefined);
+        detailText.includes("iso-assets") || detail?.assetBase !== undefined);
 
-      // ④ review：没产物时也要给出可读的结论，而不是崩
-      const review = await run("game_material_review", { module: "tile", id: tileId });
+      const review = await run("game_material_review", { module: "iso", id: isoId });
       const reviewText = JSON.stringify(review);
       check("review 对空项目不抛异常", reviewText.length > 20, `${reviewText.length} 字符`);
       check("review 带了 openUrl", reviewText.includes("openUrl") || typeof review?.openUrl === "string");
 
-      // ⑤ call：tile 的远程方法要通过 call 通道可达（guide 的模块手册里有它）
-      const tileGuide = (await onlyTool.execute({ action: "guide", topic: "tile" }, {})).text;
-      const tileMethods = ["listTileProjects", "createTileProject", "getTileProject",
-        "runTileItems", "setTileApproved", "runTileMap", "runTileExport"];
-      const missingTile = tileMethods.filter((m) => !tileGuide.includes(m));
-      check("地图地块的远程方法都写进了 tile 手册", missingTile.length === 0, missingTile.join("、"));
+      const isoGuide = (await onlyTool.execute({ action: "guide", topic: "iso" }, {})).text;
+      const isoMethods = ["listIsoProjects", "createIsoProject", "importIsoTileset",
+        "applyIsoOps", "runIsoGenerate", "runIsoExport", "setIsoApproved"];
+      const missingIso = isoMethods.filter((m) => !isoGuide.includes(m));
+      check("45° 地图编辑器的远程方法都写进了 iso 手册", missingIso.length === 0, missingIso.join("、"));
     } finally {
-      await studio.deleteTileProject({ projectId: tileId });
+      await studio.deleteIsoProject({ projectId: isoId });
     }
   }
 

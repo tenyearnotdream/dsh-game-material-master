@@ -2,8 +2,8 @@
  * 图像编解码与基础像素操作 —— **全插件共用**（原名 `tilemedia.ts`）。
  *
  * 这一层只做「字节 ↔ RGBA 缓冲区」和几个与业务无关的原语
- * （PNG 头、颜色统计、前景/背景掩码、包围盒）。地块几何在 `tilegeom.ts`、
- * 拼图在 `tilemap.ts`、地图编辑器在 `mapgeom.ts` / `maprender.ts` ——
+ * （PNG 头、颜色统计、前景/背景掩码、包围盒）。地块几何在 `isogeom.ts`、
+ * 拼图在 `mapgeom.ts` / `maprender.ts` ——
  * 它们都只是这里的调用方，所以这个文件不叫 `tile*`。
  *
  * 为什么 PNG 解码走 ffmpeg：仓库**没有任何运行时依赖**（见 AGENTS.md），

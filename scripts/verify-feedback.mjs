@@ -1164,15 +1164,15 @@ section("功能管理（隐藏模块）");
   // 收敛口径：只留已知模块，顺序固定 —— 与宿主 normalizeHiddenModules 同口径。
   check(`空数组 = 全部 ${MODULE_COUNT} 个模块可见`, visibleModulesOf([]).length === MODULE_COUNT, `${visibleModulesOf([]).length}`);
   check(
-    "隐藏 rig / tile 后剩下的都还在（顺序固定）",
-    JSON.stringify(visibleModulesOf(["rig", "tile"]).map((entry) => entry.key)) ===
-      JSON.stringify(MODULE_KEYS.filter((key) => key !== "rig" && key !== "tile")),
-    JSON.stringify(visibleModulesOf(["rig", "tile"]).map((entry) => entry.key))
+    "隐藏 rig / iso 后剩下的都还在（顺序固定）",
+    JSON.stringify(visibleModulesOf(["rig", "iso"]).map((entry) => entry.key)) ===
+      JSON.stringify(MODULE_KEYS.filter((key) => key !== "rig" && key !== "iso")),
+    JSON.stringify(visibleModulesOf(["rig", "iso"]).map((entry) => entry.key))
   );
   check(
     "不认识的 key 被丢掉、顺序固定",
-    JSON.stringify(normalizeHiddenKeys(["nope", "tile", "sprite"])) === JSON.stringify(["sprite", "tile"]),
-    JSON.stringify(normalizeHiddenKeys(["nope", "tile", "sprite"]))
+    JSON.stringify(normalizeHiddenKeys(["nope", "iso", "sprite"])) === JSON.stringify(["sprite", "iso"]),
+    JSON.stringify(normalizeHiddenKeys(["nope", "iso", "sprite"]))
   );
 
   const tabs = (tree) => byClass(tree, "SPR_module").map((node) => node.props?.["data-module"]);
@@ -1180,9 +1180,9 @@ section("功能管理（隐藏模块）");
   check(`默认 ${MODULE_COUNT} 个页签都在`, tabs(all.tree).length === MODULE_COUNT, tabs(all.tree).join("、"));
   check("默认没有「已隐藏」提示", byClass(all.tree, "SPR_modulesHiddenNote").length === 0);
 
-  const some = renderStage(makeProject(), "images", makeTasks(), ["rig", "tile"]);
-  check("隐藏后对应页签不再渲染", !tabs(some.tree).includes("rig") && !tabs(some.tree).includes("tile"), tabs(some.tree).join("、"));
-  const visibleKeys = MODULE_KEYS.filter((key) => key !== "rig" && key !== "tile");
+  const some = renderStage(makeProject(), "images", makeTasks(), ["rig", "iso"]);
+  check("隐藏后对应页签不再渲染", !tabs(some.tree).includes("rig") && !tabs(some.tree).includes("iso"), tabs(some.tree).join("、"));
+  const visibleKeys = MODULE_KEYS.filter((key) => key !== "rig" && key !== "iso");
   check(`其余页签保留（${visibleKeys.length} 个）`, tabs(some.tree).join("、") === visibleKeys.join("、"), tabs(some.tree).join("、"));
   check("出现「已隐藏 N 个功能」提示", byClass(some.tree, "SPR_modulesHiddenNote").length === 1);
 

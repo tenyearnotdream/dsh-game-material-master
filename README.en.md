@@ -46,20 +46,20 @@ and move on automatically, or stop at every step and wait for your go-ahead.
 | **① Eight-direction sprite sheet** | One character sheet → 8 directions × 8 frames (default "turn capture": eight directions cut from one rotation video; both videos can also be **a local file of your own**) | A walk spritesheet you can drive with WASD (every intermediate image can be saved individually or as one zip) |
 | **② Image generation** | Prompt (optionally with reference images) → images → green-screen keying | Clean transparent PNG character art / props |
 | **③ Sequence frames** | First/last frame or a reference video → generate video → extract frames → key | A horizontally laid out, loopable sequence |
-| **⑤ Map tile generation** | Isometric tiles → assemble a whole map | A tile pack (PNGs) + map PNG + layout JSON |
-| **⑥ Map editor** (**fully local, zero cost**) | Pick a tileset → paint directly (rebuilt after AsLib's RPG Map Maker: one screen, icon-only, no jargon; three default layers — terrain / decor / buildings — that you can rename and reorder; a **marker layer**: one nameable marker per cell, drawn as a numbered circle; **Generate with AI** lives in the assets window: give a prompt, a name, a frame count, a method and a usage, and the plugin **opens a new chat** to generate it — it picks the tile type (plain / whole-cell / quadrant) from the prompt itself, asks the model for **one seamless tile** and assembles all 16 connections / 5 shape rows in code (so the tiles actually line up on the map). Animated assets use quadrant tiles (frames become variants, still auto-connecting) or plain tiles (flipbook), and each asset can be given its own playback speed in "Add asset" (otherwise it follows the global speed in Settings) plus a **clarity** mode for the 2K-to-32px downscale (area average / nearest / average + sharpen) , a **loop mode** (forward / reverse / ping-pong), and **stamps** (one picture stamping N x M cells at once - statues, murals, carpets - rotated with a right-click, green screen keyed to transparency, with per-cell walkability set at import), a **tile size** choice when creating a project (16 / 32 / 48 / 64 - pick 48 / 64 for sharper AI assets) and automatic trimming of the white border models like to add; whole-cell tiles are just 16 connection cases with no animation, so the dialog locks the frame count and the video model, then posts a link; click it and the image and its usage are already filled in on "Add asset") | PNG + save-file JSON (wrapping map, auto-tiling, animated tiles, markers); tick what to export and multiple files come as one ZIP download |
+| **⑤ 45° map editor** (**fully local, zero cost**) | Import your own 45° diamond tiles (or use the built-in set) → paint ground / auto-connecting tiles / multi-cell objects / markers on a 2:1 isometric canvas → export. Asset properties are fixed at import time; afterwards only name / playback speed / loop mode can change. Built-in set: grass, dirt, stone, water, shoreline autotile, tree / rock / bush / barrel / stone house | PNG + save-file JSON (isometric grid, auto-connect, animated tiles, multi-cell objects, markers, passability); tick what to export and multiple files come as one ZIP |
+| **⑥ Top-down map editor** (**fully local, zero cost**) | Pick a tileset → paint directly (rebuilt after AsLib's RPG Map Maker: one screen, icon-only, no jargon; three default layers — terrain / decor / buildings — that you can rename and reorder; a **marker layer**: one nameable marker per cell, drawn as a numbered circle; **Generate with AI** lives in the assets window: give a prompt, a name, a frame count, a method and a usage, and the plugin **opens a new chat** to generate it — it picks the tile type (plain / whole-cell / quadrant) from the prompt itself, asks the model for **one seamless tile** and assembles all 16 connections / 5 shape rows in code (so the tiles actually line up on the map). Animated assets use quadrant tiles (frames become variants, still auto-connecting) or plain tiles (flipbook), and each asset can be given its own playback speed in "Add asset" (otherwise it follows the global speed in Settings) plus a **clarity** mode for the 2K-to-32px downscale (area average / nearest / average + sharpen) , a **loop mode** (forward / reverse / ping-pong), and **stamps** (one picture stamping N x M cells at once - statues, murals, carpets - rotated with a right-click, green screen keyed to transparency, with per-cell walkability set at import), a **tile size** choice when creating a project (16 / 32 / 48 / 64 - pick 48 / 64 for sharper AI assets) and automatic trimming of the white border models like to add; whole-cell tiles are just 16 connection cases with no animation, so the dialog locks the frame count and the video model, then posts a link; click it and the image and its usage are already filled in on "Add asset") | PNG + save-file JSON (wrapping map, auto-tiling, animated tiles, markers); tick what to export and multiple files come as one ZIP download |
 | **⑦ Music generation & editing** (Puyue AI) | An inspiration prompt or full lyrics → a new chat that is **not attached to any project**; the agent there reads the built-in creation guide, expands the prompt, chooses Suno / Mureka / MiniMax / ACE-Step and a mode, generates → back in the UI, trim / adjust gain / fade / normalize → save versions and export. Also **Compose mode**: analyse the idea, present a style/key/section/instrumentation plan, write MIDI with scoremill, render a local preview, revise version by version, then optionally hand it to Suno | MP3 / WAV / M4A (multiple outputs can be zipped); compose mode also exports a score bundle (MIDI / preview / plan / compose.py). The original is kept and every edit or score version is new |
 | **⑧ Sound effects** (Volcengine Seed-Audio) | Describe the source / environment / intensity / duration → sound effects, ambience, UI sounds, creature roars or character voices; optionally 1 reference image or up to 3 reference audio clips (mutually exclusive); every run adds a take without overwriting earlier ones | WAV / MP3 / Ogg Opus; export one take or zip all. Up to 120 seconds per run; every generation is billed |
 | ~~④ Rigged animation~~ | Part extraction → assembly → skeletal animation → Spine / DragonBones atlas | **Experimental, not covered in this document** |
 
-> 💡 **Module ⑤ "Map tile generation" is built on one idea: geometry by code, content by AI.**
-> The diamond template is rendered locally (strict 2:1 isometric) and the AI only fills its interior with the
-> requested terrain. Each result is then measured and affine-aligned back to the standard diamond, and the map
-> is assembled locally on the isometric grid. Geometry is therefore always exact — tiles never show seams, and
-> re-assembling with the same seed is pixel-identical. Measured: letting the model draw the diamond freely
-> gives ratios of 1.03–1.55 (nowhere near 2:1), while template filling hits 100%.
+> 💡 **Module ⑤ "45° map editor" gets its geometry from code and its content from your images.**
+> The 2:1 step, diamond placement, object base centre and occlusion order are all computed on the host;
+> the UI only executes the drawing plan, so preview and export cannot drift apart. Auto-connect is an exact
+> 4×4 = 16 tile layout (N/E/S/W bits), objects may rise above their cell (tree canopy / roof), and ground,
+> markers and auto-connect neighbours wrap around the edges.
+> **Not a single model call — completely free.**
 
-> 💡 **Module ⑥ "Map editor" is modelled after the RPG Map Maker in [AsPJT/AsLib](https://github.com/AsPJT/AsLib/tree/master) and rebuilt as one screen, icon-only, with no jargon.**
+> 💡 **Module ⑥ "Top-down map editor" is modelled after the RPG Map Maker in [AsPJT/AsLib](https://github.com/AsPJT/AsLib/tree/master) and rebuilt as one screen, icon-only, with no jargon.**
 > The asset palette and twelve icon buttons sit on the left, the canvas on the right. **Pick one tileset image and start
 > painting**. "Assets" opens a **list of images plus an "Add image" button**: the dialog asks for the
 > **image file / name / cell size / usage / animation** (hover any control for an explanation) and the properties
@@ -334,7 +334,7 @@ Generate (billed).
 
 ## Driving it from chat
 
-**Every feature of all eight modules** (including the experimental rigged animation and map tiles) **is available through
+**Every feature of all eight modules** (including the experimental rigged animation and the fully local 45° map editor) **is available through
 chat**. The plugin registers exactly **one** tool, `game_material`: first read the guide for the topic, then call the
 methods it lists. Detailed workflows, method tables and parameters are loaded **on demand**, so unrelated tasks do
 not pay for them in context.
@@ -546,14 +546,15 @@ Everything in the UI that you can click, change or approve is bilingual.
 ├── image-jobs/<id>/    image generation
 ├── sequence-jobs/<id>/ sequence frames
 ├── rig-jobs/<id>/      rigged animation (experimental: sheet / parts / layout / rig / atlas)
-├── tile-jobs/<id>/     map tiles (template / raw / cell / decor / map / export)
+├── iso-jobs/<id>/      45° map editor (project.json / map.json / tilesets / preview / export)
 ├── map-jobs/<id>/      map editor (project.json / map.json / tilesets / ai / preview / export)
 ├── music-jobs/<id>/    music generation & editing (songs / versions / peaks / tools / out)
 └── sfx-jobs/<id>/      sound effects (refs / takes / out)
 ```
 
-> Map tiles keep the **raw generation output** in `raw/`: after changing regularisation parameters such as
-> the cell size you can re-run regularisation for free, without paying to generate again.
+> The old "map tile generation" `tile-jobs/` directory is **no longer read** and is left on disk for manual archiving;
+> the new module stores data in `iso-jobs/` with no migration.
+
 
 ## Development
 
@@ -612,7 +613,7 @@ The screenshots in this document were taken by Playwright against the real UI; t
 
 ## Credits
 
-- **Module ⑥ "Map editor" is modelled after the RPG Map Maker in
+- **Module ⑥ "Top-down map editor" is modelled after the RPG Map Maker in
   [AsPJT/AsLib](https://github.com/AsPJT/AsLib/tree/master).** What was borrowed is its **interaction and
   layout** (one screen: tile palette plus an icon toolbar on the left, canvas on the right; the pen / eraser /
   bucket / pipette / hand tools together with single-layer preview, layer up-down and undo-redo; click a

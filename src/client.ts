@@ -813,10 +813,10 @@
       "保存参数与提示词": "Save settings and prompt",
       "留空则使用内置的网格拆件提示词（要求模型按 4×4 网格摆放 16 个标准人形部件）": "Leave empty to use the built-in grid part-sheet prompt (it asks the model to lay out 16 standard humanoid parts in a 4×4 grid)",
       "生图模型正在拆件…": "The image model is generating the part sheet…",
+      "把「{n0}」改成什么名字？\n（名字决定骨骼层级，标准名如 head / torso / hip / left-upper-arm / left-lower-leg / right-foot，见拆件提示词里的网格表）": "Rename \"{n0}\" to what?\n(The name determines the bone hierarchy; standard names are head / torso / hip / left-upper-arm / left-lower-leg / right-foot — see the grid table in the part-sheet prompt.)",
       "先上传角色参考图。": "Upload the character reference image first.",
       "还没有拆件图：点上面的「生成拆件图」，或者用上面的上传框直接给现成部件 PNG。": "No part sheet yet: click \"Generate part sheet\" above, or use the upload box above to supply ready-made part PNGs directly.",
       "部件（{n0}）——逐件验收，摆错的可单独重跑": "Parts ({n0}) — accept them one by one; any misplaced part can be re-run on its own",
-      "把「{n0}」改成什么名字？\n（名字决定骨骼层级，标准名如 head / torso / hip / left-upper-arm / left-lower-leg / right-foot，见拆件提示词里的网格表）": "Rename \"{n0}\" to what?\n(The name determines the bone hierarchy; standard names are head / torso / hip / left-upper-arm / left-lower-leg / right-foot — see the grid table in the part-sheet prompt.)",
       "已改名为「{n0}」": "Renamed to \"{n0}\"",
       "已重新定位「{n0}」": "Repositioned \"{n0}\"",
       "第①步已通过": "Step ① approved",
@@ -880,7 +880,7 @@
       "配置已保存": "Configuration saved",
       "配置生图 / 生视频的模型与整条流水线的默认参数。Key 只保存在本机 DSH 数据目录下的 game-material-master/config.json（真实路径见文末「数据位置」），界面里始终脱敏显示。": "Configure the image/video models and the default parameters for the whole pipeline. Keys are stored only in game-material-master/config.json under your local DSH data directory (see \"Data location\" at the end for the real path) and are always masked in the UI.",
       "生图后端": "Image backend",
-      "八方向图、图片生成、骨骼动画、45°地图地块的生图都走这里选的后端；图生视频（MiniMax）不受影响。": "Sprite sheets, image generation, rigged animation and 45° map tiles all generate images through the backend selected here; image-to-video (MiniMax) is unaffected.",
+      "八方向图、图片生成、骨骼动画的生图都走这里选的后端；图生视频（MiniMax）不受影响。": "Sprite sheets, image generation and rigged animation generate images through the backend selected here; image-to-video (MiniMax) is unaffected.",
       "当前使用": "In use",
       "火山方舟 Seedream（云端，开箱即用）": "Volcengine Ark Seedream (cloud, works out of the box)",
       "自定义生图模型（OpenAI / ComfyUI / SD WebUI）": "Custom image model (OpenAI / ComfyUI / SD WebUI)",
@@ -960,140 +960,17 @@
       "{n0}: 深链接引导": "{n0}: deep link guidance",
 
       // ── 45° 地图地块生成（模块五）──
-      "45°地图地块生成": "45° map tile generation",
-      "45° 等距地块 → 拼成地图：几何交给代码，内容交给 AI": "45° isometric tiles → a whole map: geometry by code, content by AI",
-      "45°地图地块生成仍在开发中": "45° map tile generation is still in development",
-      "45°地图地块生成（实验性）": "45° map tile generation (experimental)",
-      "几何是可靠的：等距参考图、拼图与裁剪全部由本地代码计算，并有像素级自检兜底 —— 菱形比例、底面中心、包围盒都不会跑偏。": "The geometry is solid: the isometric reference images, map assembly and cropping are all computed by local code with pixel-level self-checks — diamond ratio, base centre and bounding box will not drift.",
-      "不稳定的是**造型**：生图模型能否照着参考图的占格形状画出正确的建筑，取决于模型本身。实测非矩形占地（L 形、3×1 长条）经常需要反复重跑才可接受。": "What is unstable is the **artwork**: whether the image model can draw a correct building from the footprint shape in the reference image depends on the model itself. In practice non-rectangular footprints (L-shapes, 3x1 strips) often need several re-runs before they are acceptable.",
-      "参考图（自动生成，免费）": "Reference image (auto-generated, free)",
-      "待生成": "Pending",
-      "还没生成 —— 点「生成全部地块」时会自动渲染": "Not generated yet — it will be rendered automatically when you click Generate all tiles",
-      "按②里每个地块的占格形状渲染；改了形状或格子尺寸，下次生成时自动重做": "Rendered from each tile footprint shape; re-done automatically on the next generate if a shape or the cell size changed",
-      "正在准备参考图…": "Preparing the reference images…",
-      "还没有参考图 —— 点「生成全部地块」时会自动渲染（免费）。": "No reference images yet — they are rendered automatically (free) when you click Generate all tiles.",
-      "生成一个变体 = 一次 Seedream 调用。参考图按每个地块的占格形状自动渲染，不用手动准备。": "One variant = one Seedream call. The reference image is rendered automatically from each tile footprint shape; there is nothing to prepare by hand.",
-      "① 生成地块": "① Generate tiles",
-      "按占格形状自动渲染等距参考图交给 Seedream 填内容。这一步真实计费，每个变体一次调用": "An isometric reference image is rendered automatically from each footprint shape and handed to Seedream to fill in. This step is billed: one call per variant",
-      "② 验收": "② Review",
-      "逐项看几何报告与成品，不满意的单张重跑": "Check the geometry report and the result per item; re-run any single one you dislike",
-      "③ 拼成地图": "③ Assemble map",
-      "本地按等距网格铺图，按类别随机抽变体。免费，可反复换种子": "Lay tiles on the isometric grid locally, picking variants at random per family. Free, re-seed as often as you like",
-      "④ 导出": "④ Export",
-      "导出地块包与地图 PNG / JSON": "Export the tile pack plus map PNG / JSON",
-      "未命名地图": "Untitled map",
-      "项目": "Project",
-      "（未选择）": "(none selected)",
-      "新项目名称": "New project name",
-      "已生成 {n0} / {n1}，已验收 {n2}": "Generated {n0} / {n1}, approved {n2}",
-      "还没有地图地块项目——取个名字点「新建项目」开始。": "No map tile project yet — name one and click 'New project' to start.",
-      "停止": "Stop",
-      "单格模板（1×1 地形用）": "Single-cell template (for 1x1 terrain)",
-      "{n0}×{n1} 建筑模板": "{n0}x{n1} building template",
-      "异形模板 · {n0} 格 {n1}": "Custom-shape template · {n0} cells {n1}",
-      "模板几何": "Template geometry",
-      "统一画风": "Shared style",
-      "保存画风": "Save style",
-      "改画风会让已生成的地块全部作废（重跑要花钱）": "Changing the style invalidates every generated tile (re-running costs money)",
-      "生成全部": "Generate all",
-      "生成全部地块": "Generate all tiles",
-      "补缺": "Fill gaps",
-      "所有地块都已经生成过了": "Every tile has already been generated",
-      "只补没生成的": "Only fill missing ones",
       "排队中": "Queued",
-      "重跑": "Re-run",
-      "逐项看成品与几何报告。几何正常的地块拼起来不会有缝；标「模板几何」说明这张没量准，建议重跑。": "Check each result and its geometry report. Tiles with correct geometry will not show seams; a 'template geometry' badge means the measurement failed, so re-running is recommended.",
-      "验收": "Review",
       "行": "Rows",
       "列": "Cols",
       "种子": "Seed",
-      "装饰密度": "Decor density",
-      "拼图": "Assemble",
-      "铺成地图（免费）": "Assemble map (free)",
-      "换种子": "Re-seed",
-      "换个种子重铺": "Re-roll with a new seed",
-      "地图": "Map",
-      "还没有拼图——点「铺成地图」立刻看到结果（不花钱）。": "No map assembled yet — click 'Assemble map' to see the result immediately (no cost).",
-      "导出地块包（每张 PNG）+ 地图 PNG + 布局 JSON。全部本地计算。": "Export the tile pack (one PNG each) plus map PNG and layout JSON. All computed locally.",
       "导出": "Export",
-      "导出到 export/": "Export to export/",
-      "打开产物目录": "Open output folder",
-      "正在生成地块…": "Generating tiles…",
 
       // ── 地图地块：地块清单编辑 ──
-      "已保存「{n0}」——提示词变了，这个地块的产物已作废，需要重跑": "Saved '{n0}' — the prompt changed, so this tile's output was discarded and needs a re-run",
-      "已保存「{n0}」——提示词没变，产物保住了": "Saved '{n0}' — the prompt is unchanged, so its output was kept",
-      "至少要留一个地块": "Keep at least one tile",
-      "已删除「{n0}」": "Deleted '{n0}'",
-      "地块标识只能用英文小写字母开头，后接小写字母 / 数字 / 下划线（2~24 位）——它会当文件名用":
-        "A tile id must start with a lowercase letter followed by lowercase letters, digits or underscores (2-24 chars) — it is used as a file name",
-      "已经有同名地块了：{n0}": "A tile with that id already exists: {n0}",
-      "已新增地块「{n0}」": "Added tile '{n0}'",
-      "已恢复默认地块清单（已生成的地块会作废）": "Restored the default tile list (generated tiles are discarded)",
-      "标识（key，只读）": "Id (key, read-only)",
-      "用途": "Role",
-      "地形（占 1 格）": "Terrain (1 cell)",
-      "装饰（占 1 格、按锚点摆放）": "Decor (1 cell, placed on an anchor)",
-      "建筑（跨格）": "Building (spans cells)",
-      "模板填充（地形）": "Template filling (terrain)",
-      "白底单图（装饰）": "White-background single image (decor)",
-      "2×2 地基网格（建筑）": "2x2 foundation grid (building)",
-      "变体数（每个变体一次计费调用）": "Variants (one billed call each)",
-      "类别（铺图时按它随机抽变体）": "Family (variants are drawn from it at random when assembling)",
-      "占格形状（点格子增删，支持 L 形）": "Footprint shape (click cells to add/remove; L-shapes supported)",
-      "锚点（左上角，必选）": "Anchor (top-left, always on)",
-      "点格子增删占格（{n0} 格）；左上角是锚点": "Click cells to add/remove tiles ({n0} so far); the top-left cell is the anchor",
-      "生成提示词（只描述「菱形里面是什么」；形状 / 角度 / 透视由代码保证，不要写）":
-        "Prompt (describe only what is inside the diamond; shape, angle and perspective are guaranteed by code, do not write them)",
-      "提示词与生成方式有改动 —— 保存后这个地块的已生成产物会作废（重跑要花钱）":
-        "The prompt or generation mode changed — saving discards this tile's existing output (re-running costs money)",
-      "只改名称 / 类别 / 变体数不会作废产物": "Changing only the name, family or variant count keeps existing output",
-      "看最终提示词": "Show the final prompt",
-      "保存地块": "Save tile",
       "保存": "Save",
-      "移除地块": "Remove tile",
-      "删除这个地块": "Delete this tile",
-      "＋ 新增地块": "+ Add tile",
-      "恢复默认清单": "Restore defaults",
-      "标识（英文小写，会当文件名）": "Id (lowercase, used as a file name)",
-      "灰色岩壁": "Grey cliff",
-      "生成提示词（只描述「菱形里面是什么」）": "Prompt (describe only what is inside the diamond)",
-      "留空即用标识": "Leave empty to reuse the id",
-      "下面的预览就是当前草稿：涂一格立刻变，不用先保存。": "The preview below shows the current draft: paint a cell and it updates instantly, no need to save first.",
-      "重跑中…": "Re-running…",
-      "已撤销。": "Undone.",
-      "已重做。": "Redone.",
       "撤销": "Undo",
-      "快捷键：Ctrl+Z 撤销 / Ctrl+Shift+Z 重做；Esc 放下笔刷；在地图上按住 Ctrl 滚轮切笔刷。":
-        "Shortcuts: Ctrl+Z undo / Ctrl+Shift+Z redo; Esc puts the brush down; hold Ctrl and scroll over the map to cycle brushes.",
-      "超出地图范围": "Outside the map",
-      "放不下：占 {n0}×{n1} 格，这里会超出边界": "Does not fit: needs {n0}x{n1} cells and would go past the edge",
-      "放不下：会压到 ({n0},{n1}) 那栋建筑": "Does not fit: would overlap the building at ({n0},{n1})",
       "地面": "Ground",
-      "装饰": "Decor",
-      "建筑": "Building",
-      "{n0} · 占 {n1}×{n2} 格": "{n0} · takes {n1}x{n2} cells",
-      "{n0}（{n1}/{n2}）": "{n0} ({n1}/{n2})",
-      "新增地块": "Add tile",
-      "新增": "Add",
-      "编辑": "Edit",
       // ── 地图地块：手动编辑布局 ──      "布局已保存。点「铺成地图」重新出图。": "Layout saved. Click 'Assemble map' to render it again.",
-      "布局已保存。点「铺成地图」重新出图。": "Layout saved. Click 'Assemble map' to render it again.",
-      "空格": "empty",
-      "铺图全在本地：按等距网格铺、按类别随机抽变体、按 (r+c) 顺序遮挡。同种子 + 同布局 = 逐像素一致。也可以手动改：挑一个地块当笔刷，点格子涂上去。":
-        "Assembly is entirely local: laid on the isometric grid, variants drawn per family, painted in (r+c) order. Same seed + same layout = pixel-identical. You can also edit by hand: pick a tile as a brush and click cells to paint.",
-      "笔刷（点格子刷上去）": "Brush (click cells to paint)",
-      "橡皮擦": "Eraser",
-      "已取出当前布局，开始涂改（改完点「保存布局」）": "Loaded the current layout — start painting, then click 'Save layout'",
-      "开始编辑布局": "Start editing the layout",
-      "全刷成当前笔刷": "Fill all with the brush",
-      "全部清空": "Clear all",
-      "保存布局": "Save layout",
-      "放弃修改": "Discard changes",
-      "共 {n0} 行 × {n1} 列": "{n0} rows x {n1} cols",
-      "正在编辑 {n0} · 当前是「{n1}」": "Editing {n0} · currently '{n1}'",
-      "涂改只改草稿，点「保存布局」才写回项目；之后再点「铺成地图」出图。手动改布局不会作废已生成的地块。":
-        "Painting only changes a draft; click 'Save layout' to write it back, then 'Assemble map' to render. Editing the layout never discards generated tiles.",
 
       // ── 功能管理 / 侧栏快捷菜单 ──
       "功能菜单": "Feature menu",
@@ -1113,9 +990,68 @@
       "所有功能都已被隐藏。请到「设置 → 游戏素材大师 → 功能管理」里打开至少一个。":
         "Every feature is hidden. Turn at least one back on in \"Settings → Game Material Master → Feature management\".",
 
-      // ── 地图编辑器（模块六）────────────────────────────────────────────
-      "地图编辑器":
-        "Map editor",
+      // ── 45° 地图编辑器（模块五 · iso）────────────────────────────────────
+      "45°地图编辑器": "45° map editor",
+      "导入菱形地块 → 自动连接 → 画 45° 等距地图 → 导出 PNG": "Import diamond tiles → auto-connect → paint a 45° isometric map → export PNG",
+      "油漆桶只能铺地面层，先选一块地面素材。": "The bucket only works on ground layers; pick a ground tile first.",
+      "先在左边选一个物件。": "Pick an object on the left first.",
+      "新建 45° 地图": "New 45° map",
+      "先选至少一块地面素材。": "Pick at least one ground tile first.",
+      "地面（网格图块）": "Ground (grid tiles)",
+      "自动连接（4×4 = 16 块）": "Auto-connect (4×4 = 16 tiles)",
+      "物件（一张完整图，可占多格）": "Object (one complete image, may span cells)",
+      "源图每格宽": "Source cell width",
+      "源图每格高": "Source cell height",
+      "会动（每一行是一帧）": "Animated (each row is a frame)",
+      "占几格宽": "Footprint width",
+      "占几格高": "Footprint height",
+      "通行性": "Passability",
+      "可通过 · 角色在上面": "Walkable · character drawn on top",
+      "不可通过": "Blocked",
+      "可通过 · 物件盖住角色": "Walkable · object covers the character",
+      "抠掉绿幕背景": "Key out the green background",
+      "名字": "Name",
+      "{n0} 帧/秒": "{n0} fps",
+      "格子宽": "Cell width",
+      "格子高": "Cell height",
+      "地图四周环绕": "Wrap the map around the edges",
+      "还没有 45° 地图项目。": "No 45° map project yet.",
+      "建一个项目就能直接画；自带一套 45° 素材，不用先准备图。": "Create a project and start painting; a 45° asset set is included.",
+      "这一层还没有可用的笔刷。点「素材」导入，或换到另一层。": "No brushes on this layer yet. Import one under Assets, or switch layers.",
+      "物件": "Object",
+      "物件调色板": "Object palette",
+      "地面调色板": "Ground palette",
+      "确定删除素材「{n0}」？它切出来的块和放下的物件会一起删掉。": "Delete the asset \"{n0}\"? Its tiles and every object placed with it will be removed too.",
+      "地面层 {n0}": "Ground layer {n0}",
+      "加地面层": "Add ground layer",
+      "物件层 {n0}": "Object layer {n0}",
+      "加物件层": "Add object layer",
+      "清掉这一层？": "Clear this layer?",
+      "清空当前层": "Clear current layer",
+      "删掉这一层和它上面的内容？": "Delete this layer and everything on it?",
+      "生成预览图": "Generate preview",
+      "预览图": "Preview image",
+      "跟地图计划默认": "Use the map plan default",
+      "区域": "Areas",
+      "图层与标记": "Layers & markers",
+      "现在缩得太小，画布只画了一部分（放大一点）。": "Zoomed out too far: only part of the map is drawn (zoom in).",
+      "怎么铺": "How to fill",
+      "迷宫（需要两块素材）": "Maze (needs two tiles)",
+      "大陆（需要四块素材）": "Continent (needs four tiles)",
+      "用当前选中的地面笔刷铺；多选（Shift / Ctrl）可按顺序当墙 / 通路 / 地貌。同种子结果完全一样。": "Fills with the selected ground brushes; multi-select (Shift / Ctrl) maps them to wall / path / terrain in order. The same seed gives the same result.",
+      "自动连接": "Auto-connect",
+      "地面：整张图按格子切开。静态时每个格子都是一个笔刷；勾「会动」时每一列是一个笔刷，每一行是一帧。": "Ground: the image is cut into cells. Static sheets give one brush per cell; with Animated on, each column is a brush and each row is a frame.",
+      "菱形在每一格里居中；格子宽 = 菱形宽，格子高 = 菱形高 + 上方留给高处物件的空间。": "The diamond is centred in each cell: cell width = diamond width, cell height = diamond height plus the space above for tall objects.",
+      "自动连接：严格 4×4 = 16 块，行优先排列。": "Auto-connect: exactly 4×4 = 16 tiles, laid out row by row.",
+      "位序：N=1 / E=2 / S=4 / W=8。屏幕上 N 是右上、E 是右下、S 是左下、W 是左上。第 0 块四周都不连，第 15 块四周都连。": "Bits: N=1 / E=2 / S=4 / W=8. On screen N is up-right, E is down-right, S is down-left and W is up-left. Tile 0 connects on no side; tile 15 connects on all four.",
+      "物件：一张完整图，不要切成格子。": "Object: one complete image, never cut into cells.",
+      "图片底边中点是落地点；可以高出一格（树冠 / 屋顶）。占几格只影响占地与遮挡，不改图片本身。多帧时竖排，同一张图按帧播放。": "The bottom-centre of the image is the anchor point; it may rise above the cell (tree canopy / roof). The footprint only affects occupied cells and occlusion, not the image itself. Multiple frames are stacked vertically and played in order.",
+
+      // ── 俯视地图编辑器（模块六）────────────────────────────────────────────
+      "俯视地图编辑器":
+        "Top-down map editor",
+      "导入自己的素材图 → 自动连接 → 俯视画布上直接画 → 导出 PNG":
+        "Import your own tile image → auto-connect → paint directly on the top-down canvas → export PNG",
 
       "画笔":
         "Brush",
@@ -1140,15 +1076,13 @@
       "任务进行中…":
         "A job is running…",
 
-      // 模块⑥「地图编辑器」已经是正式功能：这里不再需要它的实验性说明词条。
+      // 模块⑥「俯视地图编辑器」已经是正式功能：这里不再需要它的实验性说明词条。
 
       "已删除项目": "Project deleted",
       "已改地图尺寸": "Map resized",
       "换一组": "Roll again",
 
-      // ── 地图编辑器（模块六）：一屏零术语，AsLib RPG Map Maker 同款 ────────
-      "导入自己的素材图 → 自动连接 → 直接画 → 导出 PNG":
-        "Import your own tile image → auto-connect → paint → export PNG",
+      // ── 俯视地图编辑器（模块六）：一屏零术语，AsLib RPG Map Maker 同款 ────────
       "先在左边点一块图当笔刷。":
         "Pick a tile on the left first.",
       "图层 2":
@@ -1549,7 +1483,7 @@
       "生图模型：按同一个提示词出多张图。动作没有视频模型连贯，但更省。": "Image model: several images from the same prompt. Less smooth motion than the video model, but cheaper.",
       "没取到刚生成的那张图（{n0}）。你可以自己选一张，或者回对话里再要一次。": "Could not fetch the image that was just generated ({n0}). Pick one yourself, or ask for it again in the chat.",
       "【游戏素材大师 · AI 生成素材】": "[Game Material Master · Generate with AI]",
-      "这是「地图编辑器 → 素材 → AI 生成素材」自动发起的一次任务：参数已经全部确定，不要调用 game_material({action:'intake'}) 追问、不要停下来问用户，直接做完。": "This task was started automatically by \"Map editor → Assets → Generate with AI\". Every parameter is already decided: do not call game_material({action:'intake'}) to ask follow-up questions and do not stop to ask the user - just finish it.",
+      "这是「俯视地图编辑器 → 素材 → AI 生成素材」自动发起的一次任务：参数已经全部确定，不要调用 game_material({action:'intake'}) 追问、不要停下来问用户，直接做完。": "This task was started automatically by \"Top-down map editor → Assets → Generate with AI\". Every parameter is already decided: do not call game_material({action:'intake'}) to ask follow-up questions and do not stop to ask the user - just finish it.",
       "先读手册：game_material({action:'guide', topic:'{n0}'})；下面所有远程方法都通过 game_material({action:'call', method:'<名>', payload:{…}}) 调用，wait/upload 用同工具的对应 action。": "First read the guide: game_material({action:'guide', topic:'{n0}'}). Every remote method below is called through game_material({action:'call', method:'<name>', payload:{...}}); use the same tool's wait/upload actions for those steps.",
       "目标地图项目：{n0}（projectId={n1}，地图网格 {n2} 像素，素材按这个格子输出）": "Target map project: {n0} (projectId={n1}, map grid {n2} px; the asset must be produced at this tile size)",
       "素材名字：{n0}": "Asset name: {n0}",
@@ -1580,7 +1514,7 @@
       "    要求：四边都能与自己相接 —— 成片铺开（一大片草地 / 水面）时看不到接缝；画面均匀，不要有只出现一次的图案或强渐变；不要画边框、收口、阴影。": "    Requirements: all four edges must meet themselves, so a large patch (a field of grass, a body of water) shows no seam; keep it even, with no one-off shapes or strong gradients; no borders, caps or shadows.",
       "    5 种接法（哪几边连、哪几边断）和边缘的收口，由插件从这一块砖的像素自己拼出来。": "    The 5 connection cases (which sides connect and which are cut) and the edge caps are assembled by the plugin from this single tile's pixels.",
       "    帧数 = 变体数：一共 {n0} 张（每张一块砖），插件会拼成 {n0} 列；各张之间只让「该动的地方」不同，其余保持一致。": "    Frames = variants: {n0} images in total (one tile each), which the plugin joins into {n0} columns; keep everything except the moving part consistent between tiles.",
-      "  **shape 必须是你这次选定的那个**：宿主按它把这一块砖拼成地图编辑器要的几何（普通裁成方格竖排；整格用同一块砖拼出 16 种接法、断口由它加收口；拼块每个变体一块砖拼成 N 列 × 5 行）。": "  **shape must be the one you chose**: the host builds the map editor's geometry from that single tile (plain crops cells and stacks them; corner16 assembles all 16 connection cases from the same tile with code-drawn caps; a2quad assembles one tile per variant into N columns x 5 rows).",
+      "  **shape 必须是你这次选定的那个**：宿主按它把这一块砖拼成俯视地图编辑器要的几何（普通裁成方格竖排；整格用同一块砖拼出 16 种接法、断口由它加收口；拼块每个变体一块砖拼成 N 列 × 5 行）。": "  **shape must be the one you chose**: the host builds the top-down map editor's geometry from that single tile (plain crops cells and stacks them; corner16 assembles all 16 connection cases from the same tile with code-drawn caps; a2quad assembles one tile per variant into N columns x 5 rows).",
       "⚠️ 用户那边选了「{n0} / {n1} 帧」，但整格没有帧这一维（4×4 全是接法，动画行也是接法行）—— 这次按静态做。**请在回答里明确告诉他这一点**，并说明想要会动的自动连接素材可以改选「拼块」（拼块的帧数就是变体）。": "The user picked \"{n0} / {n1} frames\", but whole-cell tiles have no frame axis (the 4x4 grid is all connection cases, and the animation rows are connection rows too) - build this one as a static asset. **Say so explicitly in your answer** and mention that an animated self-connecting asset needs the \"quadrant\" usage instead (its frame count becomes variants).",
       "⚠️ 用户要的是**会动的**素材（帧数 > 1 或选了视频模型）：如果你判断成「整格」，请**改用「拼块」**（拼块靠变体动画，同样能自动连接），并在回答里说清为什么没用整格。整格只有 16 种接法、做不出动画。": "The user wants an **animated** asset (more than one frame, or the video model): if you conclude \"whole-cell\", **switch to \"quadrant\"** instead (quadrant tiles animate by swapping variants and still auto-connect), and explain in your answer why whole-cell was not used. Whole-cell has only 16 connection cases and cannot animate.",
       "整格没有动画，帧数固定 1、生成方式固定生图模型（设了也不会动，只是白多一次计费）。想要会动的自动连接素材，把「这块素材怎么用」改成「拼块」。": "Whole-cell tiles cannot animate: frames are fixed at 1 and the method is fixed to the image model (setting them would only cost you one extra paid call). For an animated self-connecting asset, switch \"how this asset is used\" to quadrant.",
@@ -1595,7 +1529,7 @@
       "① 先出一张静态首帧图：createImageJob({name}) → saveImageJob({jobId, prompt:<上面的主题 + 画法要求 + 排布>}) → runImageJob({jobId, count:1}) → game_material({action:'wait', id:jobId})；": "1) First make one static first frame: createImageJob({name}) -> saveImageJob({jobId, prompt:<subject + rendering requirements + layout above>}) -> runImageJob({jobId, count:1}) -> game_material({action:'wait', id:jobId});",
       "   然后 getImageJob({jobId}) 取 dir 与 items[0].file，首帧绝对路径 = dir + '/' + file。": "   then getImageJob({jobId}) and read dir and items[0].file; the absolute path of the first frame is dir + '/' + file.",
       "用图片生成模块：createImageJob({name}) → saveImageJob({jobId, prompt:<上面的主题 + 画法要求 + 排布>}) → runImageJob({jobId, count:{n0}}) → game_material({action:'wait', id:jobId})；": "Use the image module: createImageJob({name}) -> saveImageJob({jobId, prompt:<subject + rendering requirements + layout above>}) -> runImageJob({jobId, count:{n0}}) -> game_material({action:'wait', id:jobId});",
-      "  把这次调用返回的 openUrl **原样**贴成 Markdown 链接（例如 [回到地图编辑器](…)）：点开就回到地图编辑器，素材窗口已展开、": "  Post the openUrl returned by that call **verbatim** as a Markdown link (for example [Back to the map editor](...)): it returns to the map editor, opens the assets window and",
+      "  把这次调用返回的 openUrl **原样**贴成 Markdown 链接（例如 [回到俯视地图编辑器](…)）：点开就回到俯视地图编辑器，素材窗口已展开、": "  Post the openUrl returned by that call **verbatim** as a Markdown link (for example [Back to the top-down map editor](...)): it returns to the top-down map editor, opens the assets window and",
       "「新增素材」里这张图与「这块素材怎么用」都已经预选好，用户点「确定」才真的导入。": "\"Add asset\" already has this image and \"how it is used\" preselected; only when the user clicks \"OK\" is it actually imported.",
       "⚠️ 如果 composeMapAsset 的 notes 里出现「这块砖自己接不上自己」，**不要**自动重跑（重跑要花真钱）：照常把链接贴出来，并在回答里把这句原样告诉用户，让他决定要不要重画一张更均匀的无缝材质。": "If composeMapAsset notes mention that the tile does not meet itself, do NOT re-run on your own (a re-run costs real money): post the link as usual and quote that line to the user so they can decide whether to repaint a more even seamless texture.",
       "自动判断": "Decide automatically",
@@ -2066,9 +2000,6 @@
         MODULES = make_MODULES();
       },
       () => {
-        TILE_STAGES = make_TILE_STAGES();
-      },
-      () => {
         STAGES = make_STAGES();
       },
       () => {
@@ -2394,7 +2325,7 @@
             : null;
       const lines = [
         T("【游戏素材大师 · AI 生成素材】"),
-        T("这是「地图编辑器 → 素材 → AI 生成素材」自动发起的一次任务：参数已经全部确定，不要调用 game_material({action:'intake'}) 追问、不要停下来问用户，直接做完。"),
+        T("这是「俯视地图编辑器 → 素材 → AI 生成素材」自动发起的一次任务：参数已经全部确定，不要调用 game_material({action:'intake'}) 追问、不要停下来问用户，直接做完。"),
         guideFirstLine("ai-asset"),
         T("目标地图项目：{n0}（projectId={n1}，地图网格 {n2} 像素，素材按这个格子输出）", { n0: input.projectName, n1: input.projectId, n2: cell }),
         T("素材名字：{n0}", { n0: input.name }),
@@ -2520,9 +2451,9 @@
         shape === "stamp" || !fixed
           ? T("  整图还要多给「占几格」：shape:'stamp', stampCols:{n0}, stampRows:{n1}（每张源图 = 一帧的整张画；区域留给用户在导入时点）。", { n0: String(stampCols), n1: String(stampRows) })
           : null,
-        T("  **shape 必须是你这次选定的那个**：宿主按它把这一块砖拼成地图编辑器要的几何（普通裁成方格竖排；整格用同一块砖拼出 16 种接法、断口由它加收口；拼块每个变体一块砖拼成 N 列 × 5 行）。"),
+        T("  **shape 必须是你这次选定的那个**：宿主按它把这一块砖拼成俯视地图编辑器要的几何（普通裁成方格竖排；整格用同一块砖拼出 16 种接法、断口由它加收口；拼块每个变体一块砖拼成 N 列 × 5 行）。"),
         T("  别自己先拼多格排布再传进来：模型画的多格是各自独立的，拼到地图上每一处交界都会有缝 —— 这次就是因为这个返工的。"),
-        T("  把这次调用返回的 openUrl **原样**贴成 Markdown 链接（例如 [回到地图编辑器](…)）：点开就回到地图编辑器，素材窗口已展开、"),
+        T("  把这次调用返回的 openUrl **原样**贴成 Markdown 链接（例如 [回到俯视地图编辑器](…)）：点开就回到俯视地图编辑器，素材窗口已展开、"),
         T("「新增素材」里这张图与「这块素材怎么用」都已经预选好，用户点「确定」才真的导入。"),
         T("⚠️ 如果 composeMapAsset 的 notes 里出现「这块砖自己接不上自己」，**不要**自动重跑（重跑要花真钱）：照常把链接贴出来，并在回答里把这句原样告诉用户，让他决定要不要重画一张更均匀的无缝材质。"),
         "",
@@ -2829,19 +2760,26 @@
       // 界面表现是「点了没反应 + 一行错误」，不会崩，所以很容易漏过去。
       // scripts/verify-tools.mjs 现在会把两边的 payload 布尔逐条比对（见该文件的
       // 「客户端清单的 payload 标记」），这类错配不会再溜过。
-      ["listTileProjects", false],
-      ["createTileProject", true],
-      ["getTileProject", true],
-      ["deleteTileProject", true],
-      ["saveTileProject", true],
-      ["runTileItems", true],
-      ["runTileItem", true],
-      ["setTileApproved", true],
-      ["runTileMap", true],
-      ["saveTileMapCells", true],
-      ["runTileExport", true],
-      ["cancelTileJob", true],
-      ["revealTileProject", true],
+      ["listIsoProjects", false],
+      ["createIsoProject", true],
+      ["getIsoProject", true],
+      ["saveIsoProject", true],
+      ["deleteIsoProject", true],
+      ["importIsoTileset", true],
+      ["importIsoSampleTileset", true],
+      ["saveIsoTileset", true],
+      ["removeIsoTileset", true],
+      ["saveIsoDoc", true],
+      ["applyIsoOps", true],
+      ["isoUndo", true],
+      ["isoRedo", true],
+      ["isoPlan", true],
+      ["runIsoGenerate", true],
+      ["runIsoPreview", true],
+      ["runIsoExport", true],
+      ["cancelIsoJob", true],
+      ["setIsoApproved", true],
+      ["revealIsoProject", true],
       // 地图编辑器（模块六）。同样：第二个字段是「收不收 payload」。
       ["listMapProjects", false],
       ["createMapProject", true],
@@ -3013,23 +2951,7 @@
     }
     let RIG_EXPERIMENTAL_POINTS = make_RIG_EXPERIMENTAL_POINTS();
 
-    /**
-     * 模块⑤「45°地图地块生成」也是实验性功能。
-     *
-     * 为什么标实验性：几何管线（参考图、拼图、裁剪）全部是本地代码算的、有像素级自检，
-     * 这块可靠；**不稳定的是「AI 能不能照着占格形状画出对的造型」** ——
-     * 实测非矩形占地（L 形、3×1 长条）经常要人工反复重跑才能接受。
-     */
-    function make_TILE_EXPERIMENTAL_POINTS() {
-      return [
-      T("几何是可靠的：等距参考图、拼图与裁剪全部由本地代码计算，并有像素级自检兜底 —— 菱形比例、底面中心、包围盒都不会跑偏。"),
-      T("不稳定的是**造型**：生图模型能否照着参考图的占格形状画出正确的建筑，取决于模型本身。实测非矩形占地（L 形、3×1 长条）经常需要反复重跑才可接受。"),
-      T("发现问题或有改进想法，欢迎到 GitHub 仓库一起开发。")
-    ];
-    }
-    let TILE_EXPERIMENTAL_POINTS = make_TILE_EXPERIMENTAL_POINTS();
-
-    // 模块⑥「地图编辑器」**已经不再是实验性功能**：链路全本地、零计费，几何与导出
+    // 模块⑥「俯视地图编辑器」**已经不再是实验性功能**：链路全本地、零计费，几何与导出
     // 都有像素级自检兜底（`verify-map*` 四件），界面上与导出的 PNG 执行同一份绘制计划。
     // 所以它没有实验性角标、没有进入弹窗、模块内也没有常驻提示条
     // —— 留下任何一条都会让「正式」这个说法名不副实。
@@ -3041,25 +2963,13 @@
       { key: "image", title: T("图片生成"), hint: T("按提示词出图，可带参考图，支持抠绿幕导出 PNG") },
       { key: "sequence", title: T("序列帧生成"), hint: T("图/视频参考生成视频 → 抽帧 → 抠像 → 合成与播放预览") },
       { key: "rig", title: T("骨骼动画生成"), hint: T("拆件 → 装配定位 → 推骨骼与动画 → 打包 Spine 图集"), experimental: true },
-      { key: "tile", title: T("45°地图地块生成"), hint: T("45° 等距地块 → 拼成地图：几何交给代码，内容交给 AI"), experimental: true },
-      { key: "map", title: T("地图编辑器"), hint: T("导入自己的素材图 → 自动连接 → 直接画 → 导出 PNG") },
+      { key: "iso", title: T("45°地图编辑器"), hint: T("导入菱形地块 → 自动连接 → 画 45° 等距地图 → 导出 PNG") },
+      { key: "map", title: T("俯视地图编辑器"), hint: T("导入自己的素材图 → 自动连接 → 俯视画布上直接画 → 导出 PNG") },
       { key: "music", title: T("音乐生成编辑"), hint: T("灵感/歌词 → 对话里生成 → 回界面裁剪、调音量、淡入淡出与导出") },
       { key: "sfx", title: T("音效生成"), hint: T("一句话描述 → 音效 / 环境音 / 角色配音（火山引擎 Seed-Audio）") }
     ];
     }
     let MODULES = make_MODULES();
-
-
-    /** 地图地块的四个阶段（对齐宿主 src/links.ts 的 TILE_STAGES）。 */
-    function make_TILE_STAGES() {
-      return [
-      { key: "generate", title: T("① 生成地块"), hint: T("按占格形状自动渲染等距参考图交给 Seedream 填内容。这一步真实计费，每个变体一次调用") },
-      { key: "review", title: T("② 验收"), hint: T("逐项看几何报告与成品，不满意的单张重跑") },
-      { key: "map", title: T("③ 拼成地图"), hint: T("本地按等距网格铺图，按类别随机抽变体。免费，可反复换种子") },
-      { key: "export", title: T("④ 导出"), hint: T("导出地块包与地图 PNG / JSON") }
-    ];
-    }
-    let TILE_STAGES = make_TILE_STAGES();
 
 
     function make_STAGES() {
@@ -3215,7 +3125,7 @@
     // http(s) 链接加 target="_blank"，不拦就会真的新开一个标签页。
     // 只按 `dsh-gmm` 参数识别自己的链接，其它链接（含站外的）一律放行。
     const OPEN_QUERY_KEY = "dsh-gmm";
-    const OPEN_MODULES = new Set(["sprite", "image", "sequence", "rig", "tile", "map", "music", "sfx"]);
+    const OPEN_MODULES = new Set(["sprite", "image", "sequence", "rig", "iso", "map", "music", "sfx"]);
     /** `dialog` 允许的取值（宿主 `links.ts` 的 `OPEN_DIALOGS`，改一处要同步）。 */
     const OPEN_DIALOGS = new Set(["add"]);
     /** `shape` 允许的取值（宿主 `links.ts` 的 `OPEN_SHAPES`，改一处要同步）。 */
@@ -3513,14 +3423,6 @@
 .SPR_tileAsset-pending{opacity:.62}
 .SPR_thumb-pending{display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;color:var(--dsw-alias-label-tertiary);background:var(--dsw-alias-bg-layer-2);border:1px dashed var(--dsw-alias-border-l2);border-radius:8px;min-width:96px;min-height:96px;box-sizing:border-box}
 /* 形状编辑器：小网格点选占格。左上角是锚点（恒亮、不可取消）。 */
-.SPR_shapeEditor{display:flex;flex-direction:column;gap:4px}
-.SPR_shapeGrid{display:inline-block;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:3px;background:var(--dsw-alias-bg-layer-2)}
-.SPR_shapeRow{display:flex;gap:3px}
-.SPR_shapeRow+.SPR_shapeRow{margin-top:3px}
-.SPR_shapeCell{width:22px;height:22px;padding:0;border-radius:4px;cursor:pointer;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);transition:background .08s}
-.SPR_shapeCell:hover:not(:disabled){border-color:var(--dsw-alias-brand-primary)}
-.SPR_shapeCell-on{background:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary)}
-.SPR_shapeCell-anchor{cursor:default;box-shadow:inset 0 0 0 2px var(--dsw-alias-bg-layer-1)}
 .SPR_mapEditorWrap{overflow:auto;max-height:460px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-3);padding:8px}
 /* 缩放容器：外层占的是**缩放后**的尺寸，内层用 transform 缩放整张叠层 */
 .SPR_mapEditorFit{position:relative;margin:0 auto;overflow:hidden}
@@ -4098,6 +4000,72 @@
 .SPR_scoreScript summary{cursor:pointer}
 .SPR_scoreScript pre{margin:5px 0 0;max-height:260px;overflow:auto;white-space:pre-wrap;font:inherit;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary)}
 @media (max-width:720px){.SPR_musicGrid2{grid-template-columns:1fr}}
+/* ── 45° 地图编辑器（模块五 · iso）────────────────────────────────────── */
+.SPR_isoRoot{display:flex;flex-direction:column;flex:1;min-height:0;border-radius:12px;overflow:hidden;background:#424242;color:#f2efe9;border:1px solid var(--dsw-alias-border-l2)}
+.SPR_isoTop{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#383838;border-bottom:1px solid #232323;flex:none}
+.SPR_isoProjWrap{position:relative;min-width:0}
+.SPR_isoProj{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:600;max-width:280px;cursor:pointer;color:#f7f3ec;background:transparent;border:1px solid transparent;border-radius:8px;padding:4px 8px}
+.SPR_isoProj:hover{background:#4a4a4a}
+.SPR_isoProjName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.SPR_isoMenu{position:absolute;top:calc(100% + 4px);left:0;z-index:30;min-width:200px;max-height:60vh;overflow:auto;display:flex;flex-direction:column;padding:4px;background:#2f2f2f;border:1px solid #1c1c1c;border-radius:10px;box-shadow:0 10px 26px rgba(0,0,0,.45)}
+.SPR_isoMenuItem{font:inherit;font-size:12px;text-align:left;cursor:pointer;color:#ece7df;background:transparent;border:none;border-radius:6px;padding:6px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.SPR_isoMenuItem:hover{background:#454545}
+.SPR_isoMenuItem[data-on="true"]{background:#4d4d4d;color:#8ab4f8}
+.SPR_isoMenuLabel{font-size:10px;color:#9d968c;padding:8px 9px 2px}
+.SPR_isoBody{display:flex;flex:1;min-height:0}
+.SPR_isoSide{width:28.5%;min-width:240px;max-width:340px;flex:none;display:flex;flex-direction:column;gap:6px;padding:8px;box-sizing:border-box;background:#3b3b3b;border-right:1px solid #232323;min-height:0}
+.SPR_isoSideTitle{font-size:11px;color:#a9a29a;padding-left:2px}
+.SPR_isoPalette{flex:1;min-height:120px;overflow:auto;background:#2d2d2d;border:1px solid #232323;border-radius:6px;padding:4px}
+.SPR_isoPaletteGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.SPR_isoTile{aspect-ratio:1/1.2;padding:0;border:1px solid #262626;border-radius:4px;background-color:#1f1f1f;background-repeat:no-repeat;cursor:pointer}
+.SPR_isoTile:hover{border-color:#d9a95f}
+.SPR_isoTile[data-on="true"]{outline:2px solid #e23b2b;outline-offset:-2px;border-color:#e23b2b}
+.SPR_isoTools{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;flex:none}
+.SPR_isoTool{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;color:#3a2a12;background:linear-gradient(#e6bd7d,#c9974f);border:1px solid #6b4a22;border-radius:4px}
+.SPR_isoTool:hover{background:linear-gradient(#f2d29a,#d6a761)}
+.SPR_isoTool[data-on="true"]{background:linear-gradient(#fbe3ad,#e0b268);box-shadow:inset 0 0 0 2px #d23b2c}
+.SPR_isoTool:disabled{opacity:.4;cursor:default}
+.SPR_isoLayerBtn{flex-direction:column;gap:0;padding:1px;font:inherit;font-size:11px;line-height:1.1}
+.SPR_isoLayerBtn small{font-size:8px;font-weight:400}
+.SPR_isoStage{position:relative;flex:1;min-width:0;min-height:360px;background:#3a3a3a;overflow:hidden}
+.SPR_isoCanvas{display:block;width:100%;height:100%;image-rendering:pixelated;touch-action:none;cursor:crosshair}
+.SPR_isoEmpty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;flex:1;min-height:320px;padding:30px 20px;text-align:center;background:#424242;border-radius:12px}
+.SPR_isoEmptyTitle{margin:0;font-size:15px;font-weight:600}
+.SPR_isoHint{margin:0;font-size:11px;line-height:1.7;color:#c9c4bb}
+.SPR_isoWarn{margin:0;font-size:11px;line-height:1.7;color:#ffc400}
+.SPR_isoRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.SPR_isoCardWrap{position:absolute;right:18px;top:58px;z-index:40;max-height:calc(100vh - 120px);overflow:auto}
+.SPR_isoCard{width:340px;max-width:calc(100vw - 48px);box-sizing:border-box;padding:12px;background:#2f2f2f;border:1px solid #6b4a22;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:8px}
+.SPR_isoCardHead{display:flex;align-items:center;gap:8px;font-size:13px;color:#ffd79a}
+.SPR_isoClose{width:24px;height:24px;padding:0;border:none;border-radius:4px;background:transparent;color:#c9bda8;font-size:18px;line-height:1;cursor:pointer}
+.SPR_isoClose:hover{background:#4a4a4a;color:#fff}
+.SPR_isoDlgMask{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.42)}
+.SPR_isoDlg{width:380px;max-width:calc(100vw - 32px);max-height:calc(100vh - 96px);overflow:auto;padding:12px;box-sizing:border-box;background:#2f2f2f;border:1px solid #6b4a22;border-radius:8px;color:#f3e7d3;display:flex;flex-direction:column;gap:8px}
+.SPR_isoDlgHead{display:flex;align-items:center;gap:8px}
+.SPR_isoLabel{display:block;font-size:11px;color:#c9bda8;margin-top:4px}
+.SPR_isoInput{width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #6b4a22;border-radius:4px;background:#1f1f1f;color:#f3e7d3;font:inherit;font-size:12px;outline:none}
+.SPR_isoInput:focus{border-color:#d9a95f}
+.SPR_isoCheck{display:flex;align-items:center;gap:6px;font-size:12px;color:#e6e1d8}
+.SPR_isoPreview{max-width:100%;max-height:160px;object-fit:contain;background:#1b1b1b;border:1px solid #4a443c;border-radius:6px}
+.SPR_isoAssetList{display:flex;flex-direction:column;gap:4px;max-height:420px;overflow:auto}
+.SPR_isoAssetRow{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid #4a443c;border-radius:6px;background:rgba(0,0,0,.18)}
+.SPR_isoAssetName{flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:none;color:#ffd79a;font:inherit;font-size:12px;cursor:pointer}
+.SPR_isoAssetMeta{flex:1;min-width:0;font-size:10px;color:#b9b3a8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.SPR_isoBadge{font-size:10px;padding:0 5px;border-radius:999px;border:1px solid #6b4a22;color:#c9bda8}
+.SPR_isoMini{padding:1px 6px;border:1px solid #6b4a22;border-radius:4px;background:rgba(0,0,0,.25);color:#e8d7bb;font:inherit;font-size:11px;line-height:18px;cursor:pointer}
+.SPR_isoMini:hover:not(:disabled){background:rgba(230,189,125,.25)}
+.SPR_isoMini:disabled{opacity:.35;cursor:default}
+.SPR_isoLayerRow{display:flex;align-items:center;gap:4px;padding:3px 5px;border:1px solid #6b4a22;border-radius:4px;background:rgba(0,0,0,.18)}
+.SPR_isoLayerRow[data-on="true"]{border-color:#e6bd7d;background:rgba(230,189,125,.18)}
+.SPR_isoLayerIdx{width:15px;flex:none;text-align:center;font-size:11px;color:#c9bda8}
+.SPR_isoLayerName{flex:1;min-width:0;text-align:left;background:transparent;border:1px dashed transparent;border-radius:3px;color:#f3e7d3;font:inherit;font-size:12px;cursor:text;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 4px}
+.SPR_isoLayerName:hover{border-color:#6b4a22}
+.SPR_isoMarkerRow{display:flex;align-items:center;gap:5px;padding:3px 5px;border:1px solid #6b4a22;border-radius:4px;background:rgba(0,0,0,.18)}
+.SPR_isoMarkerDot{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center;border:1.5px solid #f0c040;border-radius:50%;background:#14161e;color:#fff;font-size:11px;font-weight:700}
+.SPR_isoMarkerName{flex:1;min-width:0;text-align:left;background:transparent;border:none;color:#f3e7d3;font:inherit;font-size:12px;cursor:text;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.SPR_isoFile{display:block;font-size:11px;color:#8ab4f8;word-break:break-all}
+.SPR_isoGuide{width:420px}
+
 `;
 
     // ── 小工具 ───────────────────────────────────────────────────────────
@@ -4249,138 +4217,6 @@
      * `cell.png` → 单格；`grid{C}x{R}.png` → C×R 矩形；
      * `shape-{格子}.png` → 非矩形（把格子坐标列出来，用户能对上是哪个形状）。
      */
-    /**
-     * 把占格形状写成人话（预览用）。
-     *
-     * ⚠️ 这是宿主 `tilegen.describeShape` 的**客户端复刻**：浏览器半区是经典脚本，
-     * 不能 import 宿主代码。两边一致性由 `verify-tile-client.mjs` 的对照断言钉住
-     * （同一份形状下两侧的描述必须一致）。
-     *
-     * ⚠️ 方位词只用**行列序号**，不用「左上 / 右上」：等轴测视角下屏幕上的左右
-     * 和格子的行列不是一回事，说「右上角」会让模型猜错。
-     */
-    function describeShapePreview(shape) {
-      if (!Array.isArray(shape) || shape.length === 0) return undefined;
-      let maxR = 0;
-      let maxC = 0;
-      for (const cell of shape) {
-        if (!Array.isArray(cell) || cell.length < 2) continue;
-        if (Number(cell[0]) > maxR) maxR = Number(cell[0]);
-        if (Number(cell[1]) > maxC) maxC = Number(cell[1]);
-      }
-      const cols = maxC + 1;
-      const rows = maxR + 1;
-      // ★ 实心矩形**也要写**：等距投影下 `3×1` 与 `2×2` 是同一个形状
-      // （半宽都是 cellWidth，模板逐字节相同），行列数只能靠文字交代。
-      if (shape.length === cols * rows) {
-        return `⚠️ 占地形状：地基是 ${cols}×${rows} 的等距菱形，**共 ${cols * rows} 格**` +
-          `（沿两条斜边分别 ${cols} 格、${rows} 格）。` +
-          `建筑的底面必须覆盖这个范围内的**全部 ${cols * rows} 格**，不要缩小成单格，也不要超出边界。`;
-      }
-      const missing = [];
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          if (!shape.some((cell) => Number(cell[0]) === r && Number(cell[1]) === c)) {
-            missing.push(`第 ${r + 1} 行第 ${c + 1} 列`);
-          }
-        }
-      }
-      return `⚠️ 占地形状：地基区域是 ${cols}×${rows} 格、共 ${cols * rows} 格，` +
-        `但**这栋建筑只占其中 ${shape.length} 格**，` +
-        `${missing.join("、")}那${missing.length > 1 ? "几" : ""}格是空地，不属于建筑。` +
-        `参考图上那几格没有洋红轮廓、是透空的，成品里也必须完全透明。` +
-        `不要把空地当成天井或内院围起来 —— 建筑的墙要沿着**洋红轮廓**拐进去，` +
-        `底面必须与洋红轮廓逐格重合（以参考图的洋红轮廓为准）。`;
-    }
-
-    function templateLabel(name) {
-      if (name === "cell.png") return T("单格模板（1×1 地形用）");
-      const grid = /^grid(\d+)x(\d+)\.png$/.exec(name);
-      if (grid !== null) return T("{n0}×{n1} 建筑模板", { n0: grid[1], n1: grid[2] });
-      const shape = /^shape-(.+)\.png$/.exec(name);
-      if (shape !== null) {
-        const cells = shape[1].split("_").map((p) => {
-          const [r, c] = p.split("-");
-          return `(${r},${c})`;
-        });
-        return T("异形模板 · {n0} 格 {n1}", { n0: String(cells.length), n1: cells.join(" ") });
-      }
-      return name;
-    }
-
-    function shapeFromRect(fw, fh) {      const out = [];
-      for (let r = 0; r < Math.max(1, fh); r++) {
-        for (let c = 0; c < Math.max(1, fw); c++) out.push([r, c]);
-      }
-      return out;
-    }
-    /** 形状 → 包围矩形 `[列, 行]`（`footprint` 只是它的兼容副本）。 */
-    function footprintOfShape(shape) {
-      let fw = 1;
-      let fh = 1;
-      for (const [r, c] of shape ?? []) {
-        if (c + 1 > fw) fw = c + 1;
-        if (r + 1 > fh) fh = r + 1;
-      }
-      return [fw, fh];
-    }
-
-    /**
-     * 形状编辑器：在网格里点选格子，配出任意占地（L 形、T 形、线形…）。
-     *
-     * - 左上角那格是**锚点**，恒亮、不可取消（形状必须含 `[0,0]`）。
-     * - 网格大小 = 形状包围矩形 + 一圈空格（方便往外扩）。
-     * - 格子数**不设上限**，但网格上限 12×12，免得铺出一张没人画得出来的图。
-     *
-     * ⚠️ 形状一律按**相对锚点的格子集合**存，不是「几列几行」——
-     * 后者表达不了 L 形。`footprint` 只当包围矩形一起回传，供老版本读。
-     */
-    function ShapeEditor({ shape, onChange, disabled }) {
-      const cells = Array.isArray(shape) && shape.length > 0 ? shape : [[0, 0]];
-      const has = (r, c) => cells.some(([rr, cc]) => rr === r && cc === c);
-      let maxR = 0;
-      let maxC = 0;
-      for (const [r, c] of cells) {
-        if (r > maxR) maxR = r;
-        if (c > maxC) maxC = c;
-      }
-      const gridR = Math.min(12, maxR + 2);
-      const gridC = Math.min(12, maxC + 2);
-      const toggle = (r, c) => {
-        if (disabled === true) return;
-        if (r === 0 && c === 0) return;            // 锚点不能取消
-        const next = has(r, c)
-          ? cells.filter(([rr, cc]) => !(rr === r && cc === c))
-          : [...cells, [r, c]];
-        next.sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
-        onChange(next);
-      };
-      const rows = [];
-      for (let r = 0; r < gridR; r++) {
-        const row = [];
-        for (let c = 0; c < gridC; c++) {
-          const on = has(r, c);
-          const anchor = r === 0 && c === 0;
-          row.push(h("button", {
-            key: `s${r},${c}`,
-            type: "button",
-            disabled: disabled === true || anchor,
-            className: `SPR_shapeCell${on ? " SPR_shapeCell-on" : ""}${anchor ? " SPR_shapeCell-anchor" : ""}`,
-            title: anchor ? T("锚点（左上角，必选）") : `${r},${c}`,
-            "data-shape-cell": `${r},${c}`,
-            "data-on": on ? "1" : "0",
-            onClick: () => toggle(r, c)
-          }, ""));
-        }
-        rows.push(h("div", { key: `r${r}`, className: "SPR_shapeRow" }, ...row));
-      }
-      return h("div", { className: "SPR_shapeEditor" },
-        h("div", { className: "SPR_shapeGrid", "data-shape-cells": String(cells.length) }, ...rows),
-        h("span", { className: "SPR_muted" },
-          T("点格子增删占格（{n0} 格）；左上角是锚点", { n0: String(cells.length) }))
-      );
-    }
-
     function NumField({ label, value, onChange, min, max, step, hint, disabled, testId }) {
       const [text, setText] = React.useState(String(value ?? ""));
       const [focused, setFocused] = React.useState(false);
@@ -4670,26 +4506,6 @@
      * 长任务（生成地块一轮几十秒）绝不能盖整块面板：用户要能切阶段、
      * 去别的模块干活，而且「停止」按钮得点得到。
      */
-    function TileProgressBar({ job, text }) {
-      const targets = Array.isArray(job?.targets) ? job.targets : [];
-      const done = Array.isArray(job?.done) ? job.done : [];
-      const total = targets.length;
-      const pct = total === 0 ? 0 : Math.min(100, Math.round((done.length / total) * 100));
-      return h("div", { className: "SPR_progress", role: "status", "aria-live": "polite" },
-        h("div", { className: "SPR_progressHead" },
-          h("span", { className: "SPR_spinSm" }),
-          h("span", { className: "SPR_progressText" },
-            total === 0
-              ? text ?? T("处理中…")
-              : T("{n0}（{n1}/{n2}）", { n0: text ?? T("处理中…"), n1: done.length, n2: total })),
-          job?.running ? h("span", { className: "SPR_progressNow" }, job.running) : null
-        ),
-        h("div", { className: "SPR_progressTrack" },
-          h("div", { className: "SPR_progressFill", style: { width: `${pct}%` } })
-        )
-      );
-    }
-
     /**
      * 一张图 / 一段视频的预览位：内容 + 可选遮罩。
      * 原来各阶段的 `<img className="SPR_thumb">` 直接放在节点卡片里，
@@ -5528,8 +5344,8 @@
             ? h(ImageModule, { api })
             : activeModule === "sequence"
               ? h(SequenceModule, { api })
-              : activeModule === "tile"
-                ? h(TileModule, { api })
+              : activeModule === "iso"
+                ? h(IsoModule, { api })
                 : activeModule === "map"
                   ? h(MapModule, { api, studioCtx: props.studioCtx })
                   : activeModule === "music"
@@ -13609,117 +13425,170 @@
     const K_IMG_UPLOAD = "img:upload";
     const K_IMG_CREATE = "img:create";
 
-    /**
-     * 模块五 · 地图地块生成。
-     *
-     * 与其它模块最大的不同：**几何由本地代码保证**。
-     * 菱形模板是本地渲染的（严格 2:1 等距），AI 只负责把菱形内部填成指定地貌；
-     * 生成完之后再本地量一次、仿射对齐到标准菱形。所以每一步都要把
-     * 「几何报告」摆出来给用户看 —— 那是判断这批地块能不能拼起来的第一依据。
-     */
-    function TileModule(props) {
+    // ── 模块五 · 45° 地图编辑器（iso）──────────────────────────────────────
+    //
+    // 与模块六同样的纪律：宿主下发绘制计划，客户端只 drawImage / 按 z 排序；
+    // 客户端唯一复刻的是命中测试用的四个坐标函数（黄金对照盯着）。
+
+    function ISO_pointToCellRaw(layout, x, y) {
+      const cReal = (x / layout.stepX + y / layout.stepY) / 2;
+      const rReal = (y / layout.stepY - x / layout.stepX) / 2;
+      const c = Math.floor(cReal + 0.5);
+      const r = Math.floor(rReal + 0.5);
+      return { r, c, inMap: r >= 0 && c >= 0 && r < layout.rows && c < layout.cols };
+    }
+
+    function ISO_wrapIndex(value, size) {
+      if (!(size > 0)) return value;
+      const rest = value % size;
+      return rest < 0 ? rest + size : rest;
+    }
+
+    function ISO_pointToCell(layout, x, y) {
+      const raw = ISO_pointToCellRaw(layout, x, y);
+      if (layout.wrap !== true) return raw;
+      return { r: ISO_wrapIndex(raw.r, layout.rows), c: ISO_wrapIndex(raw.c, layout.cols), inMap: true };
+    }
+
+    function ISO_cellCenter(layout, r, c) {
+      return { x: (c - r) * layout.stepX, y: (c + r) * layout.stepY };
+    }
+
+    function ISO_cellTopLeft(layout, r, c, width, height) {
+      const center = ISO_cellCenter(layout, r, c);
+      return { x: center.x - width / 2, y: center.y - height / 2 };
+    }
+
+    function ISO_lineCells(r0, c0, r1, c1) {
+      const out = [];
+      let r = Math.round(r0);
+      let c = Math.round(c0);
+      const rEnd = Math.round(r1);
+      const cEnd = Math.round(c1);
+      const dr = Math.abs(rEnd - r);
+      const dc = Math.abs(cEnd - c);
+      const sr = r < rEnd ? 1 : -1;
+      const sc = c < cEnd ? 1 : -1;
+      let err = dr - dc;
+      for (;;) {
+        out.push({ r, c });
+        if (r === rEnd && c === cEnd) break;
+        const e2 = 2 * err;
+        if (e2 > -dc) {
+          err -= dc;
+          r += sr;
+        }
+        if (e2 < dr) {
+          err += dr;
+          c += sc;
+        }
+        if (out.length > 20000) break;
+      }
+      return out;
+    }
+
+    function IsoModule(props) {
       useLocaleTick();
       const api = props.api;
-      const [projects, setProjects] = React.useState([]);
-      const [projectId, setProjectId] = React.useState(null);
-      const [project, setProject] = React.useState(null);
-      const [notice, setNotice] = React.useState(null);
-      const [stage, setStage] = React.useState("generate");
-      const [styleDraft, setStyleDraft] = React.useState("");
-      const [nameDraft, setNameDraft] = React.useState("");
-      const [mapRows, setMapRows] = React.useState(14);
-      const [mapCols, setMapCols] = React.useState(14);
-      const [mapSeed, setMapSeed] = React.useState(20261004);
-      const [decorDensity, setDecorDensity] = React.useState(0.08);
-      const [creating, setCreating] = React.useState(false);
-      /**
-       * 实验性进入提示：TileModule 就是「进入了模块⑤」，页签切换与深链接都会
-       * 重新挂载它，所以放在这里等于「每次进入都弹」；勾过「本次会话不再提示」就不弹。
-       *
-       * ⚠️ Hook 必须在**任何提前 return 之前**（下面 `project === null` 那条
-       * 早返回会绕过它）—— 顺序一变就是 React error #310，整块白屏。
-       * `verify-tile-client.mjs` 的 Hook 顺序契约会拦。
-       */
-      const [gateOpen, setGateOpen] = React.useState(experimentalGateMuted.tile !== true);
-      const closeGate = React.useCallback(() => setGateOpen(false), []);
-      /** 正在编辑哪个地块（key）；null = 没有在编辑。 */
-      const [editingKey, setEditingKey] = React.useState(null);
-      /** 该地块的草稿（点「保存」才提交，避免每敲一个字就作废产物）。 */
-      const [itemDraft, setItemDraft] = React.useState(null);
-      /** 新增地块的草稿；non-null 时显示新增表单。 */
-      const [newItem, setNewItem] = React.useState(null);
-      /** 地图笔刷：选中的地块 key（点格子就刷它）。 */
-      const [brushKey, setBrushKey] = React.useState(null);
-      /** 正在编辑的地图格子（"r,c"）与其草稿。 */
-      const [cellKey, setCellKey] = React.useState(null);
-      /** 地图布局草稿（点格子/擦除都只改它，点「保存布局」才提交）。 */
-      const [mapDraft, setMapDraft] = React.useState(null);
-      /**
-       * 光标停在哪一格（`"r,c"`）。
-       *
-       * 红警盖房子那种「幽灵预览」要用它：选了 2×2 的建筑笔刷后，
-       * 鼠标移到哪就把**整块占格**高亮出来，并当场告诉用户能不能放
-       * —— 只高亮一格的话，用户根本不知道这一下会盖多大一片。
-       */
-      const [hoverCell, setHoverCell] = React.useState(null);
-      /**
-       * 撤销 / 重做栈。
-       *
-       * 放在 `useRef` 里而不是 `useState`：它只在提交草稿时读写，
-       * 不需要触发重渲染，放 state 里只会多一个 Hook 槽位、还容易漏同步。
-       *
-       * 跨格摆放已经在改结构了 —— 误放一栋 2×2 却只能「放弃修改」整份丢掉重来，
-       * 那是不能接受的。
-       *
-       * ⚠️ **必须放在所有 `return` 之前**。组件下面有个 `if (project === null) return`，
-       * 把 Hook 放到它后面会让「有没有项目」改变 Hook 数量 —— React 直接抛
-       * error #310（Rendered more hooks than during the previous render），
-       * 整个面板白屏。实测踩过。
-       */
-      const historyRef = React.useRef({ stack: [], index: -1 });
-      /**
-       * 建筑贴图的**实测尺寸标定**：`{ 'r,c': { top: px, left: px } }`（1× 未裁坐标）。
-       *
-       * 为什么需要：界面算包围盒要知道贴图的自然高宽比，而那是异步才知道的；
-       * 它只能拿 `preview.buildings[].ratio` 估。估出来的高度与真贴图差一截时
-       * （尤其**刚放下、还没保存**的那栋 —— 它不在 preview 里，只能按比例 1 估），
-       * `trimTop` 就跟着变，表现是**整张预览在保存前后跳一下**
-       * （真机反馈的「保存后中世纪房屋上移一格」）。
-       *
-       * 所以贴图加载完就量一次真实尺寸，把包围盒修正成跟宿主一致的精确值，
-       * 并按项目缓存，避免每帧重测。
-       */
-      const spriteCalibRef = React.useRef({ project: null, map: {} });
-      /** 标定完成后 +1，逼一次重渲染让包围盒用上真尺寸。 */
-      const [calibTick, setCalibTick] = React.useState(0);
-      const tasks = usePendingTasks();
       const intent = useStudioIntent();
+      const [projects, setProjects] = React.useState([]);
+      const [view, setView] = React.useState(null);
+      const [notice, setNotice] = React.useState(null);
+      const [menuOpen, setMenuOpen] = React.useState(false);
+      const [openCard, setOpenCard] = React.useState(null);
+      const [busyKey, setBusyKey] = React.useState(null);
+      const [zoom, setZoom] = React.useState(1);
+      const [pan, setPan] = React.useState({ x: 0, y: 0 });
+      const [viewport, setViewport] = React.useState({ w: 900, h: 520 });
+      const [measured, setMeasured] = React.useState(false);
+      const [planOps, setPlanOps] = React.useState(new Map());
+      const [visibleKeys, setVisibleKeys] = React.useState([]);
+      const [planMarkers, setPlanMarkers] = React.useState([]);
+      const [planLegend, setPlanLegend] = React.useState([]);
+      const [planPass, setPlanPass] = React.useState([]);
+      const [planMeta, setPlanMeta] = React.useState({ fps: 1, fpsMax: 1, frameCount: 1 });
+      const [planWarnings, setPlanWarnings] = React.useState([]);
+      const [truncated, setTruncated] = React.useState(false);
+      const [planEpoch, setPlanEpoch] = React.useState(0);
+      const [previewTick, setPreviewTick] = React.useState(0);
+      const [animFps, setAnimFps] = React.useState(null);
+      const [animElapsed, setAnimElapsed] = React.useState(0);
+      const [imagesReady, setImagesReady] = React.useState(0);
+      const [tool, setTool] = React.useState("pen");
+      const [brush, setBrush] = React.useState(null);
+      const [multi, setMulti] = React.useState([]);
+      const [layerIndex, setLayerIndex] = React.useState(0);
+      const [single, setSingle] = React.useState(false);
+      const [showGrid, setShowGrid] = React.useState(false);
+      const [showPass, setShowPass] = React.useState(false);
+      const [hover, setHover] = React.useState(null);
+      const [markerSel, setMarkerSel] = React.useState(null);
+      const [layerDraft, setLayerDraft] = React.useState(null);
+      const [markerDraft, setMarkerDraft] = React.useState(null);
+      const [genKind, setGenKind] = React.useState("random");
+      const [genSeed, setGenSeed] = React.useState(20261024);
+      const [exportScale, setExportScale] = React.useState(1);
+      const [exportFormats, setExportFormats] = React.useState({ png: true, json: true, tilesets: false });
+      const [nameAsk, setNameAsk] = React.useState(null);
+      const [addDraft, setAddDraft] = React.useState(null);
+      const [tsEdit, setTsEdit] = React.useState(null);
+      const [guidePage, setGuidePage] = React.useState(null);
+      const [addPreview, setAddPreview] = React.useState(null);
+      const planRef = React.useRef(new Map());
+      const pendingRef = React.useRef([]);
+      const previewKeys = React.useRef(new Set());
+      const strokeRef = React.useRef(null);
+      const pointersRef = React.useRef(new Map());
+      const spaceRef = React.useRef(false);
+      const fittedRef = React.useRef("");
+      const canvasRef = React.useRef(null);
+      const stageRef = React.useRef(null);
+      const imageRefs = React.useRef({});
+      const addFileRef = React.useRef(null);
 
-      React.useEffect(() => {
-        if (intent === null) return;
-        if (intent.module === "tile" && typeof intent.jobId === "string") setProjectId(intent.jobId);
-        if (intent.module === "tile" && typeof intent.stage === "string") setStage(intent.stage);
-      }, [intent]);
+      const activeLayer = view === null ? null : view.layers[Math.max(0, Math.min(view.layers.length - 1, layerIndex))] ?? null;
+      const layout =
+        view === null
+          ? null
+          : {
+              cell: view.cell,
+              cols: view.cols,
+              rows: view.rows,
+              wrap: view.wrap,
+              stepX: view.layout.stepX,
+              stepY: view.layout.stepY
+            };
+      const activeFps = animFps === null ? (planMeta.fps > 0 ? planMeta.fps : 1) : animFps;
+      const legendMap = React.useMemo(() => new Map((planLegend.length > 0 ? planLegend : view?.legend ?? []).map((entry) => [entry.index, entry])), [planLegend, view?.legend]);
+      const objectList = view?.objectList ?? [];
+      const paletteEntries = React.useMemo(() => {
+        if (view === null || activeLayer === null) return [];
+        const out = [];
+        for (const tileset of view.tilesets) {
+          if (activeLayer.kind === "object" ? tileset.kind !== "object" : tileset.kind === "object") continue;
+          for (const item of tileset.palette ?? []) {
+            out.push({ tilesetId: tileset.id, name: tileset.name, kind: tileset.kind, index: item.index, rect: item.rect, tileset });
+          }
+        }
+        return out;
+      }, [view?.id, view?.tilesets, activeLayer?.id, activeLayer?.kind]);
 
-      const busy = project !== null && project.job !== null && project.job !== undefined && project.job.running !== null;
-      /**
-       * 「这一张」是不是本次作业的目标。
-       *
-       * ⚠️ 单张重跑的按钮必须按**这一张**判忙，不能按整个项目判忙。
-       * 以前每个「重跑」都绑 `busy`（= 项目里有任何作业在跑），于是点一张重跑，
-       * **整屏按钮一起转圈、一起变灰**，看着就像所有地块都在重跑 ——
-       * 宿主其实只跑了那一张（`job.targets` 只有 `key#vN`）。
-       * 判据用 `job.running`：它就是当前正在处理的那个 `key#vN`。
-       */
-      const isVariantRunning = (key, index) =>
-        busy && project.job?.running === `${key}#v${index + 1}`;
-      /** 这一张在本次作业的目标里吗（含还没轮到的）—— 「排队中」用它。 */
-      const isVariantTargeted = (key, index) =>
-        busy === true && (project.job?.targets ?? []).includes(`${key}#v${index + 1}`);
+      const msg = (error) => (error instanceof Error ? error.message : String(error));
+
+      const clearPlan = () => {
+        planRef.current = new Map();
+        pendingRef.current = [];
+        previewKeys.current = new Set();
+        setPlanOps(new Map());
+        setVisibleKeys([]);
+        setPlanMarkers([]);
+        setPlanWarnings([]);
+        setTruncated(false);
+      };
 
       const refreshProjects = React.useCallback(async () => {
         try {
-          const result = await api.listTileProjects();
+          const result = await api.listIsoProjects();
           setProjects(result.projects ?? []);
           return result.projects ?? [];
         } catch (error) {
@@ -13728,1831 +13597,1182 @@
         }
       }, [api]);
 
-      /**
-       * 重新读项目。
-       *
-       * ⚠️ 这个函数会被**轮询**调用（有任务在跑时每 1.5 秒一次），所以它**绝不能**
-       * 重置编辑草稿 —— 否则用户正在涂的地图布局、正在改的提示词会被定时器冲掉。
-       * 实测踩过：拼完图 `load()` 一跑，界面上的可点格子就整片消失了。
-       * 「切项目时清草稿」由下面的 effect 按 projectId 变化来做。
-       */
-      const reload = React.useCallback(async (id) => {
-        if (id === null) return;
-        try {
-          const next = await api.getTileProject(id);
-          setProject(next);
-          setStyleDraft((current) => (current === "" ? (next.style ?? "") : current));
-          setMapRows(next.map?.rows ?? 14);
-          setMapCols(next.map?.cols ?? 14);
-          setMapSeed(next.map?.seed ?? 20261004);
-          setBrushKey((current) => {
-            const keys = (next.items ?? []).map((item) => item.key);
-            if (current === "__erase__") return current;
-            return current !== null && keys.includes(current) ? current : (keys[0] ?? null);
-          });
-        } catch (error) {
-          setNotice({ kind: "error", text: msg(error) });
-        }
-      }, [api]);
+      const loadProject = React.useCallback(
+        async (id, keepCamera = false) => {
+          if (id === null || id === undefined) return;
+          try {
+            const next = await api.getIsoProject({ projectId: id });
+            setView((current) => {
+              if (current === null || current.id !== next.id) {
+                setLayerIndex(0);
+                setBrush(null);
+                setMulti([]);
+              }
+              return next;
+            });
+            clearPlan();
+            setPlanEpoch((value) => value + 1);
+            if (keepCamera !== true) fittedRef.current = "";
+          } catch (error) {
+            setNotice({ kind: "error", text: msg(error) });
+          }
+        },
+        [api]
+      );
 
-      /** 切项目时把草稿清干净，免得把 A 项目的编辑存到 B 项目。 */
-      const load = React.useCallback(async (id) => {
-        setEditingKey(null);
-        setItemDraft(null);
-        setNewItem(null);
-        setCellKey(null);
-        setMapDraft(null);
-        setHoverCell(null);
-        setNameDraft("");
-        setStyleDraft("");
-        await reload(id);
-      }, [reload]);
-
-      React.useEffect(() => { void refreshProjects(); }, [refreshProjects]);
-      React.useEffect(() => { void load(projectId); }, [projectId, load]);
-
-      // 有任务在跑时轮询：进度要能自己往前走，不能等用户手动刷新。
-      // ⚠️ 这里必须用 `reload`（不动草稿）而不是 `load`（清草稿）——
-      // 用 load 的话每 1.5 秒就会把用户正在涂的地图布局冲掉。
       React.useEffect(() => {
-        if (!busy) return undefined;
-        const timer = setInterval(() => { void reload(projectId); }, 1500);
-        return () => clearInterval(timer);
-      }, [busy, projectId, reload]);
-
-      /**
-       * 键盘交互 —— 常见地图编辑器都有的那几件。
-       *
-       * 只在**编辑态**生效（`mapDraft !== null`），而且光标在输入框里时一律让路：
-       * 不然用户在地图格子里打字（重命名之类）时按 Esc / Ctrl+Z 会误伤。
-       *
-       * 撤销/重做的实现先从这个 effect 里内联，别去调下面定义的 `undoSave`——
-       * 那些 const 在早退之后，而**这个 effect 必须在早退之前**
-       * （Hook 顺序，见 `verify-client.mjs` 的「Hook 全在早退之前」契约）。
-       */
-      React.useEffect(() => {
-        if (typeof window === "undefined") return undefined;
-        const onKey = (event) => {
-          if (mapDraft === null) return;
-          const tag = String(event.target?.tagName ?? "").toLowerCase();
-          if (tag === "input" || tag === "textarea" || tag === "select") return;
-          if (event.key === "Escape") {
-            // Esc：收起幽灵预览 + 放下笔刷（等于「我不放了」）
-            setHoverCell(null);
-            setBrushKey(null);
+        void (async () => {
+          const list = await refreshProjects();
+          if (intent !== null && intent.module === "iso" && typeof intent.jobId === "string") {
+            await loadProject(intent.jobId);
+            if (intent.stage === "export") setOpenCard("export");
             return;
           }
-          const meta = event.ctrlKey || event.metaKey;
-          if (!meta) return;
-          const key = String(event.key ?? "").toLowerCase();
-          const isUndo = key === "z" && !event.shiftKey;
-          const isRedo = (key === "z" && event.shiftKey) || key === "y";
-          if (!isUndo && !isRedo) return;
-          const h = historyRef.current;
-          const target = isRedo ? h.index + 1 : h.index - 1;
-          if (target < 0 || target >= h.stack.length) return;
-          event.preventDefault();
-          h.index = target;
-          setMapDraft(h.stack[target]);
-          setNotice({ kind: "info", text: isRedo ? T("已重做。") : T("已撤销。") });
+          if (list.length > 0) await loadProject(list[0].id);
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+
+      React.useEffect(() => {
+        if (intent === null || intent.module !== "iso" || typeof intent.jobId !== "string") return;
+        void loadProject(intent.jobId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [intent]);
+
+      // 画布尺寸：用 ResizeObserver 量，不量之前不发计划请求。
+      React.useEffect(() => {
+        const element = stageRef.current;
+        if (element === null || element === undefined) return undefined;
+        const measure = () => {
+          const rect = element.getBoundingClientRect();
+          setViewport({ w: Math.max(160, Math.round(rect.width)), h: Math.max(120, Math.round(rect.height)) });
+          setMeasured(true);
         };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-      }, [mapDraft]);
+        measure();
+        if (typeof ResizeObserver !== "function") return undefined;
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        return () => observer.disconnect();
+      }, [view?.id]);
 
-      /**
-       * 贴图加载完就把**真尺寸**记下来（给包围盒用）。
-       *
-       * ⚠️ 必须在 effect 里做，不能在 `ref` 回调里 `setState` ——
-       * `ref` 回调发生在渲染阶段，在渲染期改状态会触发 React 警告甚至死循环。
-       * 这里读 DOM 上那几张建筑贴图的自然尺寸，变了才记，并在渲染后同步一次。
-       *
-       * ⚠️ 这个 Hook 也必须在 `if (project === null)` **之前**
-       * （Hook 顺序契约，见 `verify-client.mjs`）；所以它读的是渲染闭包里的
-       * `mapDraft` / `project`，而不是下面那些派生常量。
-       */
-      React.useLayoutEffect(() => {
-        if (typeof document === "undefined") return;
-        const store = spriteCalibRef.current;
-        if (store.project !== project?.id) {
-          store.project = project?.id ?? null;
-          store.map = {};
-        }
-        let dirty = false;
-        for (const bd of mapDraft?.buildings ?? []) {
-          const el = document.querySelector(`img[data-sprite="${bd.r},${bd.c}"]`) as HTMLImageElement | null;
-          const nw = el?.naturalWidth ?? 0;
-          const nh = el?.naturalHeight ?? 0;
-          if (nw <= 0 || nh <= 0) continue;
-          const key = `${bd.r},${bd.c}`;
-          const prev = store.map[key];
-          if (prev !== undefined && prev.naturalW === nw && prev.naturalH === nh) continue;
-          store.map[key] = { naturalW: nw, naturalH: nh };
-          dirty = true;
-        }
-        if (dirty) setCalibTick((n) => n + 1);
-      }, [project, mapDraft]);
+      // 换项目 / 改尺寸后把整张地图摆回视野中央。
+      React.useEffect(() => {
+        if (view === null || layout === null) return;
+        const key = `${view.id}:${view.cols}x${view.rows}:${layout.stepX}`;
+        if (fittedRef.current === key) return;
+        fittedRef.current = key;
+        const bounds = view.bounds;
+        const scale = Math.min(1, viewport.w / Math.max(1, bounds.width), viewport.h / Math.max(1, bounds.height));
+        const nextZoom = Math.min(4, Math.max(0.2, Number.isFinite(scale) && scale > 0 ? scale * 0.94 : 1));
+        setZoom(nextZoom);
+        setPan({
+          x: bounds.originX + (bounds.width - viewport.w / nextZoom) / 2,
+          y: bounds.originY + (bounds.height - viewport.h / nextZoom) / 2
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [view?.id, layout === null ? "" : `${layout.cols}x${layout.rows}x${layout.stepX}`, viewport.w, viewport.h]);
 
-      const run = React.useCallback(async (label, fn) => {
-        setNotice(null);
-        try {
-          const result = await tasks.run(`tile:${label}`, label, fn);
-          if (result !== undefined && result !== null && typeof result === "object" && "started" in result && result.started === false) {
-            setNotice({ kind: "error", text: result.reason ?? T("任务没有启动") });
+      // 图片预载
+      React.useEffect(() => {
+        if (view === null) return undefined;
+        let live = true;
+        const images = {};
+        for (const tileset of view.tilesets) {
+          if (tileset.file === "") continue;
+          const image = new Image();
+          image.onload = () => {
+            if (live) setImagesReady((value) => value + 1);
+          };
+          image.src = `${view.assetBase}${tileset.file}?v=${tileset.rev ?? 0}`;
+          images[tileset.id] = image;
+        }
+        imageRefs.current = images;
+        return () => {
+          live = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [view?.id, (view?.tilesets ?? []).map((tileset) => `${tileset.id}:${tileset.rev}`).join("|")]);
+
+      // 计划查询
+      React.useEffect(() => {
+        if (view === null || layout === null || measured !== true) return undefined;
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+          const pending = pendingRef.current;
+          const have = pending.length > 0 ? [] : [...planRef.current.keys()];
+          try {
+            const result = await api.isoPlan({
+              projectId: view.id,
+              view: { x: pan.x, y: pan.y, width: viewport.w / zoom, height: viewport.h / zoom },
+              have,
+              pending: pending.length > 0 ? pending : undefined,
+              layerIds: single === true ? [layerIndex] : undefined,
+              pass: showPass === true
+            });
+            if (cancelled) return;
+            if (pending.length > 0) {
+              planRef.current = new Map();
+              previewKeys.current = new Set(result.visibleKeys ?? []);
+            }
+            for (const chunk of result.chunks ?? []) planRef.current.set(chunk.key, chunk.ops ?? []);
+            if (planRef.current.size > 512) {
+              const keep = new Set(result.visibleKeys ?? []);
+              for (const key of [...planRef.current.keys()]) if (!keep.has(key)) planRef.current.delete(key);
+            }
+            setPlanOps(new Map(planRef.current));
+            setVisibleKeys(result.visibleKeys ?? []);
+            setPlanMarkers(result.markers ?? []);
+            setPlanLegend(result.legend ?? []);
+            setPlanPass(result.pass ?? []);
+            setPlanMeta({ fps: result.fps ?? 1, fpsMax: result.fpsMax ?? 1, frameCount: Math.max(1, result.frameCount ?? 1) });
+            setPlanWarnings(result.warnings ?? []);
+            setTruncated(result.truncated === true);
+          } catch (error) {
+            if (!cancelled) setNotice({ kind: "error", text: msg(error) });
           }
-          // 用 reload（不清草稿）：保存一个地块之后，用户可能还在涂地图布局
-          await reload(projectId);
-          await refreshProjects();
+        }, pendingRef.current.length > 0 ? 60 : 20);
+        return () => {
+          cancelled = true;
+          clearTimeout(timer);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [view?.id, viewport.w, viewport.h, zoom, pan.x, pan.y, planEpoch, previewTick, single, layerIndex, showPass, measured, api]);
+
+      // 动画时钟
+      React.useEffect(() => {
+        if (planMeta.frameCount <= 1) {
+          setAnimElapsed(0);
+          return undefined;
+        }
+        const started = Date.now();
+        const timer = setInterval(() => setAnimElapsed((Date.now() - started) / 1000), 90);
+        return () => clearInterval(timer);
+      }, [planMeta.frameCount, view?.id]);
+
+      // 作业进行中轮询（预览 / 导出）
+      React.useEffect(() => {
+        if (view === null || view.busy !== true) return undefined;
+        const timer = setInterval(() => void loadProject(view.id, true), 1500);
+        return () => clearInterval(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [view?.id, view?.busy, api]);
+
+      const clampPan = (next) => {
+        if (view === null) return next;
+        const bounds = view.bounds;
+        const visibleW = viewport.w / zoom;
+        const visibleH = viewport.h / zoom;
+        const x = bounds.width <= visibleW ? bounds.originX + (bounds.width - visibleW) / 2 : Math.max(bounds.originX, Math.min(bounds.originX + bounds.width - visibleW, next.x));
+        const y = bounds.height <= visibleH ? bounds.originY + (bounds.height - visibleH) / 2 : Math.max(bounds.originY, Math.min(bounds.originY + bounds.height - visibleH, next.y));
+        return { x, y };
+      };
+
+      const zoomAt = React.useCallback(
+        (clientX, clientY, factor) => {
+          const element = stageRef.current;
+          if (element === null || element === undefined || view === null) return;
+          const rect = element.getBoundingClientRect();
+          const localX = clientX - rect.left;
+          const localY = clientY - rect.top;
+          const nextZoom = Math.min(8, Math.max(0.2, zoom * factor));
+          const worldX = pan.x + localX / zoom;
+          const worldY = pan.y + localY / zoom;
+          setZoom(nextZoom);
+          setPan(clampPan({ x: worldX - localX / nextZoom, y: worldY - localY / nextZoom }));
+        },
+        [zoom, pan.x, pan.y, view?.id, viewport.w, viewport.h]
+      );
+
+      const bindCanvas = React.useCallback(
+        (node) => {
+          if (canvasRef.current !== null && canvasRef.current !== undefined && canvasRef.current.__isoWheelOff) {
+            canvasRef.current.__isoWheelOff();
+          }
+          canvasRef.current = node ?? null;
+          if (node === null || node === undefined) return;
+          const handler = (event) => {
+            event.preventDefault();
+            if (event.ctrlKey || event.metaKey) {
+              const list = [...paletteEntries];
+              if (list.length === 0) return;
+              const at = list.findIndex((entry) => brush !== null && entry.index === brush.index && entry.tilesetId === brush.tilesetId);
+              const step = event.deltaY > 0 ? -1 : 1;
+              const next = list[(at + step + list.length) % list.length];
+              selectBrush(next, false);
+              return;
+            }
+            zoomAt(event.clientX, event.clientY, event.deltaY < 0 ? 1.15 : 1 / 1.15);
+          };
+          node.addEventListener("wheel", handler, { passive: false });
+          node.__isoWheelOff = () => node.removeEventListener("wheel", handler);
+        },
+        [paletteEntries, brush?.index, brush?.tilesetId, zoomAt]
+      );
+
+      const cellFromEvent = (event) => {
+        const element = stageRef.current;
+        if (element === null || element === undefined || layout === null) return null;
+        const rect = element.getBoundingClientRect();
+        const x = pan.x + (event.clientX - rect.left) / zoom;
+        const y = pan.y + (event.clientY - rect.top) / zoom;
+        const hit = ISO_pointToCellRaw(layout, x, y);
+        if (hit.inMap !== true) return null;
+        return hit;
+      };
+
+      const objectAtCell = (r, c, layerId) => {
+        for (const object of objectList) {
+          if (object.layerId !== layerId) continue;
+          if (r >= object.r && r < object.r + object.rows && c >= object.c && c < object.c + object.cols) return object;
+        }
+        return undefined;
+      };
+
+      const selectBrush = (entry, additive) => {
+        if (entry === undefined || entry === null) return;
+        setBrush({ index: entry.index, tilesetId: entry.tilesetId, kind: entry.kind });
+        setMarkerSel(null);
+        if (additive === true) {
+          setMulti((current) => (current.includes(entry.index) ? current.filter((value) => value !== entry.index) : [...current, entry.index]));
+        } else {
+          setMulti([entry.index]);
+        }
+      };
+
+      const applyOps = async (ops, stroke, opts: any = {}) => {
+        if (view === null || api === undefined || ops.length === 0) return undefined;
+        try {
+          const result = await api.applyIsoOps({
+            projectId: view.id,
+            ops,
+            stroke,
+            have: [...planRef.current.keys()]
+          });
+          if (result !== undefined && Array.isArray(result.skipped) && result.skipped.length > 0) {
+            setNotice({ kind: "info", text: result.skipped.join("；") });
+          }
+          for (const key of result?.dropKeys ?? []) planRef.current.delete(key);
+          if (opts.reload !== false) await loadProject(view.id, true);
+          setPlanEpoch((value) => value + 1);
+          return result;
         } catch (error) {
           setNotice({ kind: "error", text: msg(error) });
+          return undefined;
         }
-      }, [tasks, reload, projectId, refreshProjects]);
+      };
 
-      const createProject = React.useCallback(async () => {
-        setCreating(true);
-        setNotice(null);
+      const commitPending = async (strokeId) => {
+        const ops = pendingRef.current;
+        pendingRef.current = [];
+        if (ops.length === 0 || view === null) return;
+        await applyOps(ops, strokeId, { reload: true });
+      };
+
+      const paintPending = (r, c, tile) => {
+        if (activeLayer === null || activeLayer.kind !== "ground") return;
+        pendingRef.current.push({ kind: "paint", layerId: activeLayer.id, cells: [{ r, c, tile }] });
+        setPreviewTick((value) => value + 1);
+      };
+
+      const doUndo = async () => {
+        if (view === null) return;
+        const result = await api.isoUndo({ projectId: view.id, have: [...planRef.current.keys()] }).catch((error) => {
+          setNotice({ kind: "error", text: msg(error) });
+          return undefined;
+        });
+        if (result === undefined) return;
+        for (const key of result.dropKeys ?? []) planRef.current.delete(key);
+        clearPlan();
+        await loadProject(view.id, true);
+      };
+
+      const doRedo = async () => {
+        if (view === null) return;
+        const result = await api.isoRedo({ projectId: view.id, have: [...planRef.current.keys()] }).catch((error) => {
+          setNotice({ kind: "error", text: msg(error) });
+          return undefined;
+        });
+        if (result === undefined) return;
+        for (const key of result.dropKeys ?? []) planRef.current.delete(key);
+        clearPlan();
+        await loadProject(view.id, true);
+      };
+
+      const onPointerDown = async (event) => {
+        if (view === null || layout === null) return;
+        if (event.button === 2) return;
+        const hit = cellFromEvent(event);
+        if (hit === null) return;
+        const panMode = tool === "hand" || spaceRef.current === true || event.button === 1;
+        if (panMode) {
+          strokeRef.current = { mode: "pan", pan: { x: pan.x, y: pan.y }, clientX: event.clientX, clientY: event.clientY };
+          return;
+        }
+        if (tool === "marker") {
+          const existing = view.markers.find((marker) => marker.r === hit.r && marker.c === hit.c);
+          if (existing !== undefined) {
+            setMarkerSel(existing.id);
+            strokeRef.current = { mode: "marker", id: existing.id, from: { r: hit.r, c: hit.c } };
+          } else {
+            await applyOps([{ kind: "marker", op: "add", r: hit.r, c: hit.c, name: "" }], undefined, { reload: true });
+            setMarkerSel(null);
+          }
+          return;
+        }
+        if (tool === "eraser") {
+          if (activeLayer?.kind === "object") {
+            const object = objectAtCell(hit.r, hit.c, activeLayer.id);
+            if (object !== undefined) await applyOps([{ kind: "object", op: "remove", id: object.id }], undefined, { reload: true });
+          } else {
+            paintPending(hit.r, hit.c, 0);
+            strokeRef.current = { mode: "paint", from: hit, tile: 0, id: `stroke-${Date.now()}` };
+          }
+          return;
+        }
+        if (tool === "bucket") {
+          if (activeLayer?.kind !== "ground" || brush === null) return setNotice({ kind: "info", text: T("油漆桶只能铺地面层，先选一块地面素材。") });
+          await applyOps([{ kind: "fill", layerId: activeLayer.id, r: hit.r, c: hit.c, tile: brush.index }], undefined, { reload: true });
+          return;
+        }
+        if (tool === "pipette") {
+          const entry = [...planOps.values()].flat().find((op) => op.r === hit.r && op.c === hit.c && (single === true || op.l === layerIndex));
+          if (entry !== undefined) {
+            const owner = view.tilesets.find((tileset) => (tileset.palette ?? []).some((item) => item.index === entry.t));
+            const paletteEntry = owner?.palette?.find((item) => item.index === entry.t) ?? owner?.palette?.[0];
+            if (owner !== undefined && paletteEntry !== undefined) selectBrush({ index: paletteEntry.index, tilesetId: owner.id, kind: owner.kind }, false);
+          }
+          return;
+        }
+        if (activeLayer?.kind === "object") {
+          if (brush === null || brush.kind !== "object") return setNotice({ kind: "info", text: T("先在左边选一个物件。") });
+          await applyOps([{ kind: "object", op: "add", layerId: activeLayer.id, tilesetId: brush.tilesetId, r: hit.r, c: hit.c }], undefined, { reload: true });
+          return;
+        }
+        if (brush === null) return setNotice({ kind: "info", text: T("先在左边点一块图当笔刷。") });
+        paintPending(hit.r, hit.c, brush.index);
+        strokeRef.current = { mode: "paint", from: hit, tile: brush.index, id: `stroke-${Date.now()}` };
+      };
+
+      const onPointerMove = (event) => {
+        if (layout === null) return;
+        const hit = cellFromEvent(event);
+        setHover((current) => (current !== null && hit !== null && current.r === hit.r && current.c === hit.c ? current : hit));
+        const stroke = strokeRef.current;
+        if (stroke === null || stroke === undefined) return;
+        if (stroke.mode === "pan") {
+          setPan(clampPan({ x: stroke.pan.x - (event.clientX - stroke.clientX) / zoom, y: stroke.pan.y - (event.clientY - stroke.clientY) / zoom }));
+          return;
+        }
+        if (stroke.mode === "marker" && hit !== null && (stroke.from.r !== hit.r || stroke.from.c !== hit.c)) {
+          stroke.from = { r: hit.r, c: hit.c };
+          void applyOps([{ kind: "marker", op: "move", id: stroke.id, r: hit.r, c: hit.c }], undefined, { reload: false });
+          return;
+        }
+        if (stroke.mode === "paint" && hit !== null && (stroke.from.r !== hit.r || stroke.from.c !== hit.c)) {
+          const cells = ISO_lineCells(stroke.from.r, stroke.from.c, hit.r, hit.c);
+          for (const cell of cells) paintPending(cell.r, cell.c, stroke.tile);
+          stroke.from = hit;
+        }
+      };
+
+      const onPointerUp = () => {
+        const stroke = strokeRef.current;
+        strokeRef.current = null;
+        if (stroke !== null && stroke !== undefined && stroke.mode === "marker") {
+          void commitPending(undefined).then(() => { if (view !== null) void loadProject(view.id, true); });
+          return;
+        }
+        if (stroke !== null && stroke !== undefined && stroke.mode === "paint") void commitPending(stroke.id);
+        else if (stroke?.mode === "pan") void commitPending(undefined);
+      };
+
+      // 快捷键
+      React.useEffect(() => {
+        const editable = (target) => target !== null && target !== undefined && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || "");
+        const onKeyDown = (event) => {
+          if (String(event.key) === " ") {
+            spaceRef.current = true;
+            if (editable(event.target) !== true && typeof event.preventDefault === "function") event.preventDefault();
+            return;
+          }
+          const meta = event.metaKey === true || event.ctrlKey === true;
+          if (meta === true) {
+            if (editable(event.target) === true) return;
+            const key = String(event.key).toLowerCase();
+            if (key === "z" && event.shiftKey === true) {
+              event.preventDefault();
+              void doRedo();
+              return;
+            }
+            if (key === "z" || key === "y") {
+              event.preventDefault();
+              void doUndo();
+            }
+            return;
+          }
+          if (editable(event.target) === true) return;
+          const key = String(event.key).toLowerCase();
+          if (key === "b") setTool("pen");
+          else if (key === "e") setTool("eraser");
+          else if (key === "g") setTool("bucket");
+          else if (key === "i") setTool("pipette");
+          else if (key === "h") setTool("hand");
+          else if (key === "m") setTool("marker");
+          else if (key === "v") setSingle((value) => value !== true);
+          else if (key === "escape") setBrush(null);
+        };
+        const onKeyUp = (event) => {
+          if (String(event.key) === " ") spaceRef.current = false;
+        };
+        window.addEventListener("keydown", onKeyDown);
+        window.addEventListener("keyup", onKeyUp);
+        return () => {
+          window.removeEventListener("keydown", onKeyDown);
+          window.removeEventListener("keyup", onKeyUp);
+        };
+      });
+
+      // 画布绘制
+      const draw = React.useCallback(() => {
+        const canvas = canvasRef.current;
+        if (canvas === null || canvas === undefined || layout === null) return;
+        const ctx = canvas.getContext("2d");
+        if (ctx === null || ctx === undefined) return;
+        const width = Math.max(1, Math.round(viewport.w));
+        const height = Math.max(1, Math.round(viewport.h));
+        const dpr = Math.max(1, Math.min(3, (typeof window !== "undefined" && window.devicePixelRatio) || 1));
+        const backingWidth = Math.round(width * dpr);
+        const backingHeight = Math.round(height * dpr);
+        if (canvas.width !== backingWidth) canvas.width = backingWidth;
+        if (canvas.height !== backingHeight) canvas.height = backingHeight;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, backingWidth, backingHeight);
+        ctx.imageSmoothingEnabled = false;
+        const scale = zoom * dpr;
+        ctx.setTransform(scale, 0, 0, scale, -pan.x * scale, -pan.y * scale);
+        if (single === true) {
+          ctx.fillStyle = "rgb(40, 92, 52)";
+          ctx.fillRect(pan.x, pan.y, width / zoom, height / zoom);
+        }
+        const list = [];
+        for (const key of visibleKeys) {
+          const ops = planOps.get(key);
+          if (ops !== undefined) for (const op of ops) list.push(op);
+        }
+        list.sort((a, b) => a.z - b.z || a.r - b.r || a.c - b.c);
+        let drawn = 0;
+        for (const op of list) {
+          const opFps = typeof op.fps === "number" && op.fps > 0 ? op.fps : activeFps;
+          const frame = op.cycle === undefined || op.cycle.length === 0 ? op.t : op.cycle[Math.floor(animElapsed * opFps) % op.cycle.length];
+          const entry = legendMap.get(frame);
+          if (entry === undefined) continue;
+          const image = imageRefs.current[entry.tilesetId];
+          if (image === undefined || image === null) continue;
+          ctx.globalAlpha = op.a === undefined ? 1 : op.a;
+          ctx.drawImage(image, entry.rect.x, entry.rect.y, entry.rect.width, entry.rect.height, op.x, op.y, entry.rect.width, entry.rect.height);
+          drawn++;
+        }
+        ctx.globalAlpha = 1;
+        // 网格线：菱形边框，按可见范围画，数量有上限。
+        if (showGrid === true) {
+          const corners = [
+            { x: pan.x, y: pan.y },
+            { x: pan.x + width / zoom, y: pan.y },
+            { x: pan.x, y: pan.y + height / zoom },
+            { x: pan.x + width / zoom, y: pan.y + height / zoom }
+          ].map((point) => ISO_pointToCellRaw(layout, point.x, point.y));
+          const r0 = Math.max(0, Math.min(...corners.map((hit) => hit.r)) - 1);
+          const c0 = Math.max(0, Math.min(...corners.map((hit) => hit.c)) - 1);
+          const r1 = Math.min(view.rows - 1, Math.max(...corners.map((hit) => hit.r)) + 1);
+          const c1 = Math.min(view.cols - 1, Math.max(...corners.map((hit) => hit.c)) + 1);
+          if ((r1 - r0 + 1) * (c1 - c0 + 1) < 5000) {
+            const thin = 1 / zoom;
+            ctx.strokeStyle = "rgba(255,255,255,0.22)";
+            ctx.lineWidth = thin;
+            ctx.beginPath();
+            for (let r = r0; r <= r1; r++) {
+              for (let c = c0; c <= c1; c++) {
+                const center = ISO_cellCenter(layout, r, c);
+                ctx.moveTo(center.x, center.y - layout.stepY);
+                ctx.lineTo(center.x + layout.stepX, center.y);
+                ctx.lineTo(center.x, center.y + layout.stepY);
+                ctx.lineTo(center.x - layout.stepX, center.y);
+                ctx.closePath();
+              }
+            }
+            ctx.stroke();
+          }
+        }
+        // 通行区域
+        if (showPass === true) {
+          const colors = ["rgba(226,59,43,0.30)", "rgba(52,120,246,0.28)", "rgba(52,190,120,0.28)"];
+          for (const cell of planPass) {
+            const center = ISO_cellCenter(layout, cell.r, cell.c);
+            ctx.beginPath();
+            ctx.moveTo(center.x, center.y - layout.stepY);
+            ctx.lineTo(center.x + layout.stepX, center.y);
+            ctx.lineTo(center.x, center.y + layout.stepY);
+            ctx.lineTo(center.x - layout.stepX, center.y);
+            ctx.closePath();
+            ctx.fillStyle = colors[cell.kind] ?? colors[0];
+            ctx.fill();
+          }
+        }
+        // 标记
+        for (const marker of planMarkers) {
+          ctx.beginPath();
+          ctx.arc(marker.x, marker.y, marker.radius, 0, Math.PI * 2);
+          ctx.fillStyle = marker.id === markerSel ? "rgba(210,59,44,0.92)" : "rgba(20,22,30,0.86)";
+          ctx.fill();
+          ctx.lineWidth = Math.max(1, marker.radius * 0.16);
+          ctx.strokeStyle = "#f0c040";
+          ctx.stroke();
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `700 ${marker.font}px sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(String(marker.n), marker.x, marker.y);
+        }
+        // 悬停菱形 / 物件占格幽灵
+        if (hover !== null) {
+          const thickness = 2 / zoom;
+          const drawDiamond = (r, c, color, filled) => {
+            const center = ISO_cellCenter(layout, r, c);
+            ctx.beginPath();
+            ctx.moveTo(center.x, center.y - layout.stepY);
+            ctx.lineTo(center.x + layout.stepX, center.y);
+            ctx.lineTo(center.x, center.y + layout.stepY);
+            ctx.lineTo(center.x - layout.stepX, center.y);
+            ctx.closePath();
+            if (filled === true) {
+              ctx.fillStyle = color;
+              ctx.fill();
+            } else {
+              ctx.strokeStyle = color;
+              ctx.lineWidth = thickness;
+              ctx.stroke();
+            }
+          };
+          const fp = brush !== null && brush.kind === "object" ? view.tilesets.find((tileset) => tileset.id === brush.tilesetId)?.footprint : undefined;
+          if (activeLayer?.kind === "object" && fp !== undefined) {
+            for (let dr = 0; dr < fp.rows; dr++) for (let dc = 0; dc < fp.cols; dc++) drawDiamond(hover.r + dr, hover.c + dc, "rgba(240,192,64,0.28)", true);
+          }
+          drawDiamond(hover.r, hover.c, "#e23b2b", false);
+          // 悬停标记名字
+          let found;
+          let best = Infinity;
+          for (const marker of planMarkers) {
+            const distance = Math.hypot(marker.x - (pan.x + (hover.worldX ?? 0)), marker.y - (pan.y + (hover.worldY ?? 0)));
+            if (distance < best) {
+              best = distance;
+              found = marker;
+            }
+          }
+          void found;
+        }
+        if (planMarkers.length > 0 && hover !== null) {
+          const target = planMarkers.find((marker) => marker.r === hover.r && marker.c === hover.c);
+          if (target !== undefined && target.name !== "") {
+            const font = Math.max(12 / zoom, target.font * 0.85);
+            ctx.font = `600 ${font}px sans-serif`;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "rgba(20,22,30,0.9)";
+            ctx.fillRect(target.x + target.radius + 3 / zoom, target.y - font, font * target.name.length + 8 / zoom, font * 1.6);
+            ctx.fillStyle = "#f3e7d3";
+            ctx.fillText(target.name, target.x + target.radius + 5 / zoom, target.y);
+          }
+        }
+        if (typeof window !== "undefined" && (window as any).__isoDebug === true) {
+          (window as any).__isoDrawStats = { drawn, ops: list.length, keys: [...visibleKeys], frame: Math.floor(animElapsed * activeFps) % planMeta.frameCount };
+          (window as any).__isoCamera = { pan: { x: pan.x, y: pan.y }, zoom, viewport: { w: viewport.w, h: viewport.h } };
+        }
+      }, [layout, viewport, zoom, pan, planOps, visibleKeys, planMarkers, markerSel, legendMap, single, showGrid, showPass, planPass, hover, brush, activeLayer, animElapsed, activeFps, planMeta.frameCount, view?.id]);
+
+      React.useEffect(() => {
+        draw();
+      }, [draw, imagesReady]);
+
+      // ── 项目动作 ─────────────────────────────────────────────────────────
+      const requestNewProject = () =>
+        setNameAsk({
+          mode: "create",
+          title: T("新建 45° 地图"),
+          value: T("我的地图"),
+          cellW: 64,
+          cellH: 96,
+          cols: 32,
+          rows: 32,
+          wrap: true
+        });
+
+      const submitNameAsk = async () => {
+        const ask = nameAsk;
+        if (ask === null) return;
+        setNameAsk(null);
+        if (ask.mode === "rename") {
+          if (view === null) return;
+          await api.saveIsoProject({ projectId: view.id, name: ask.value }).catch((error) => setNotice({ kind: "error", text: msg(error) }));
+          await loadProject(view.id, true);
+          return;
+        }
+        setBusyKey("create");
         try {
-          const created = await api.createTileProject({ name: nameDraft.trim() === "" ? T("未命名地图") : nameDraft.trim() });
-          setProjectId(created.id);
-          setStage("generate");
-          await refreshProjects();
+          const created = await api.createIsoProject({
+            name: ask.value.trim() === "" ? T("我的地图") : ask.value.trim(),
+            cell: { width: Number(ask.cellW) || 64, height: Number(ask.cellH) || 96 },
+            cols: Number(ask.cols) || 32,
+            rows: Number(ask.rows) || 32,
+            wrap: ask.wrap !== false
+          });
+          if (created !== undefined && created.id !== undefined) {
+            await api.importIsoSampleTileset({ projectId: created.id }).catch(() => undefined);
+            await refreshProjects();
+            await loadProject(created.id);
+            setOpenCard("assets");
+          }
         } catch (error) {
           setNotice({ kind: "error", text: msg(error) });
         } finally {
-          setCreating(false);
+          setBusyKey(null);
         }
-      }, [api, nameDraft, refreshProjects]);
+      };
 
-      // ── 顶部：项目选择 / 新建 ──────────────────────────────────────────
-      const header = h("div", { className: "SPR_tileHeader" },
-        h("span", { className: "SPR_fieldLabel" }, T("项目")),
-        h("select", {
-          className: "SPR_input",
-          value: projectId ?? "",
-          onChange: (event) => setProjectId(event.target.value === "" ? null : event.target.value)
-        },
-          h("option", { value: "" }, T("（未选择）")),
-          projects.map((entry) => h("option", { key: entry.id, value: entry.id },
-            `${entry.name} · ${entry.generatedCount}/${entry.expectedCount}`))
-        ),
-        h("input", {
-          className: "SPR_input",
-          placeholder: T("新项目名称"),
-          value: nameDraft,
-          onChange: (event) => setNameDraft(event.target.value)
-        }),
-        h(BusyBtn, {
-          busy: creating,
-          className: "SPR_btn",
-          onClick: () => void createProject()
-        }, T("新建项目")),
-        project === null ? null : h("span", { className: "SPR_muted" },
-          T("已生成 {n0} / {n1}，已验收 {n2}", {
-            n0: project.progress?.generated ?? 0,
-            n1: project.progress?.expected ?? 0,
-            n2: project.progress?.approved ?? 0
-          }))
+      const deleteProject = async () => {
+        if (view === null) return;
+        if (typeof window !== "undefined" && !window.confirm(T("确定删除项目「{n0}」？项目目录会被整个移除，无法撤销。", { n0: view.name }))) return;
+        try {
+          await api.deleteIsoProject({ projectId: view.id });
+          const list = await refreshProjects();
+          if (list.length > 0) await loadProject(list[0].id);
+          else {
+            setView(null);
+            clearPlan();
+          }
+        } catch (error) {
+          setNotice({ kind: "error", text: msg(error) });
+        }
+      };
+
+      const restoreSamples = async () => {
+        if (view === null) return;
+        setBusyKey("sample");
+        try {
+          const result = await api.importIsoSampleTileset({ projectId: view.id });
+          const added = Array.isArray(result?.tilesets) ? result.tilesets.length : 0;
+          setNotice({ kind: "info", text: added > 0 ? T("已恢复 {n0} 张默认素材", { n0: String(added) }) : T("默认素材都在。") });
+          await loadProject(view.id, true);
+        } catch (error) {
+          setNotice({ kind: "error", text: msg(error) });
+        } finally {
+          setBusyKey(null);
+        }
+      };
+
+      const saveLayerName = async (id, value) => {
+        setLayerDraft(null);
+        const name = String(value ?? "").trim();
+        if (name === "" || view === null) return;
+        await api.saveIsoDoc({ projectId: view.id, layers: [{ id, name }] }).catch((error) => setNotice({ kind: "error", text: msg(error) }));
+        await loadProject(view.id, true);
+      };
+
+      const saveMarkerName = async (id, value) => {
+        setMarkerDraft(null);
+        if (view === null) return;
+        await applyOps([{ kind: "marker", op: "rename", id, name: String(value ?? "") }], undefined, { reload: true });
+      };
+
+      const centerOnCell = (r, c) => {
+        if (layout === null) return;
+        const center = ISO_cellCenter(layout, r, c);
+        setPan(clampPan({ x: center.x - viewport.w / (2 * zoom), y: center.y - viewport.h / (2 * zoom) }));
+      };
+
+      const runExport = async () => {
+        if (view === null) return;
+        if (exportFormats.png !== true && exportFormats.json !== true && exportFormats.tilesets !== true) {
+          setNotice({ kind: "error", text: T("至少勾一项要导出的内容。") });
+          return;
+        }
+        setBusyKey("export");
+        try {
+          await api.runIsoExport({ projectId: view.id, scale: exportScale, formats: { ...exportFormats } });
+          await loadProject(view.id, true);
+        } catch (error) {
+          setNotice({ kind: "error", text: msg(error) });
+        } finally {
+          setBusyKey(null);
+        }
+      };
+
+      const runPreview = async () => {
+        if (view === null) return;
+        setBusyKey("preview");
+        try {
+          await api.runIsoPreview({ projectId: view.id });
+          await loadProject(view.id, true);
+        } catch (error) {
+          setNotice({ kind: "error", text: msg(error) });
+        } finally {
+          setBusyKey(null);
+        }
+      };
+
+      const runGenerate = async () => {
+        if (view === null || activeLayer === null) return;
+        const tiles = multi.length > 0 ? multi : brush === null ? [] : [brush.index];
+        if (tiles.length === 0) {
+          setNotice({ kind: "error", text: T("先选至少一块地面素材。") });
+          return;
+        }
+        setBusyKey("gen");
+        try {
+          const result = await api.runIsoGenerate({ projectId: view.id, kind: genKind, tiles, seed: genSeed, layerId: activeLayer.id });
+          if (result !== undefined && Number.isFinite(Number(result.seed)) && Number(result.seed) !== genSeed) setGenSeed(Number(result.seed));
+          clearPlan();
+          await loadProject(view.id, true);
+        } catch (error) {
+          setNotice({ kind: "error", text: msg(error) });
+        } finally {
+          setBusyKey(null);
+        }
+      };
+
+      const importAsset = async () => {
+        if (view === null || addDraft === null) return;
+        setBusyKey("import");
+        try {
+          const base64 = addDraft.base64;
+          if (base64 === "") throw new Error(T("先选一张素材图。"));
+          const pass = addDraft.kind === "object" ? new Array(Math.max(1, Number(addDraft.footprint.cols)) * Math.max(1, Number(addDraft.footprint.rows))).fill(Number(addDraft.passMode) || 1) : undefined;
+          const result = await api.importIsoTileset({
+            projectId: view.id,
+            name: addDraft.name,
+            data: base64,
+            kind: addDraft.kind,
+            sourceCell: { width: Number(addDraft.sourceW) || view.cell.width, height: Number(addDraft.sourceH) || view.cell.height },
+            animRows: addDraft.animRows === true,
+            frames: Number(addDraft.frames) || 1,
+            footprint: addDraft.kind === "object" ? { cols: Number(addDraft.footprint.cols) || 1, rows: Number(addDraft.footprint.rows) || 1 } : undefined,
+            pass,
+            keyGreen: addDraft.keyGreen === true,
+            clarity: addDraft.clarity
+          });
+          if (result !== undefined && Array.isArray(result.warnings) && result.warnings.length > 0) setNotice({ kind: "info", text: result.warnings.join("；") });
+          setAddDraft(null);
+          await loadProject(view.id, true);
+        } catch (error) {
+          setNotice({ kind: "error", text: msg(error) });
+        } finally {
+          setBusyKey(null);
+        }
+      };
+
+      const addDialog = addDraft === null ? null : h(
+        "div",
+        { className: "SPR_isoDlgMask", onClick: () => (busyKey === "import" ? undefined : setAddDraft(null)) },
+        h(
+          "div",
+          { className: "SPR_isoDlg", onClick: (event) => event.stopPropagation() },
+          h("div", { className: "SPR_isoDlgHead" }, h("b", null, T("新增素材")), h("span", { style: { flex: 1 } }), h("button", { type: "button", className: "SPR_isoClose", onClick: () => setAddDraft(null) }, "×")),
+          h("label", { className: "SPR_isoLabel" }, T("素材图")),
+          h("input", { ref: addFileRef, type: "file", accept: "image/*", onChange: (event) => {
+            const file = event.target.files?.[0];
+            if (file === undefined || file === null) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              const data = String(reader.result ?? "");
+              const base64 = data.includes(",") ? data.slice(data.indexOf(",") + 1) : data;
+              setAddDraft((current) => (current === null ? current : { ...current, base64, name: current.name === "" ? file.name.replace(/\.[^.]+$/, "") : current.name }));
+              setAddPreview(data);
+            };
+            reader.readAsDataURL(file);
+            event.target.value = "";
+          } }),
+          addPreview === null ? null : h("img", { className: "SPR_isoPreview", src: addPreview, alt: "" }),
+          h("label", { className: "SPR_isoLabel" }, T("叫什么")),
+          h("input", { className: "SPR_isoInput", value: addDraft.name, onChange: (event) => setAddDraft((current) => ({ ...current, name: event.target.value })) }),
+          h("label", { className: "SPR_isoLabel" }, T("这块素材怎么用")),
+          h("select", { className: "SPR_isoInput", value: addDraft.kind, onChange: (event) => setAddDraft((current) => ({ ...current, kind: event.target.value })) },
+            h("option", { value: "ground" }, T("地面（网格图块）")),
+            h("option", { value: "autotile" }, T("自动连接（4×4 = 16 块）")),
+            h("option", { value: "object" }, T("物件（一张完整图，可占多格）"))
+          ),
+          h("div", { className: "SPR_isoRow" },
+            h(NumField, { label: T("源图每格宽"), value: Number(addDraft.sourceW), min: 1, max: 512, onChange: (value) => setAddDraft((current) => ({ ...current, sourceW: value })) }),
+            h(NumField, { label: T("源图每格高"), value: Number(addDraft.sourceH), min: 1, max: 768, onChange: (value) => setAddDraft((current) => ({ ...current, sourceH: value })) })
+          ),
+          addDraft.kind === "ground"
+            ? h("label", { className: "SPR_isoCheck" }, h("input", { type: "checkbox", checked: addDraft.animRows === true, onChange: (event) => setAddDraft((current) => ({ ...current, animRows: event.target.checked })) }), T("会动（每一行是一帧）"))
+            : null,
+          addDraft.kind === "object"
+            ? h(React.Fragment, null,
+                h("div", { className: "SPR_isoRow" },
+                  h(NumField, { label: T("占几格宽"), value: Number(addDraft.footprint.cols), min: 1, max: 512, onChange: (value) => setAddDraft((current) => ({ ...current, footprint: { ...current.footprint, cols: value } })) }),
+                  h(NumField, { label: T("占几格高"), value: Number(addDraft.footprint.rows), min: 1, max: 512, onChange: (value) => setAddDraft((current) => ({ ...current, footprint: { ...current.footprint, rows: value } })) })
+                ),
+                h(NumField, { label: T("帧数"), value: Number(addDraft.frames), min: 1, max: 64, onChange: (value) => setAddDraft((current) => ({ ...current, frames: value })) }),
+                h("label", { className: "SPR_isoLabel" }, T("通行性")),
+                h("select", { className: "SPR_isoInput", value: String(addDraft.passMode), onChange: (event) => setAddDraft((current) => ({ ...current, passMode: Number(event.target.value) })) },
+                  h("option", { value: "1" }, T("可通过 · 角色在上面")),
+                  h("option", { value: "0" }, T("不可通过")),
+                  h("option", { value: "2" }, T("可通过 · 物件盖住角色"))
+                ),
+                h("label", { className: "SPR_isoCheck" }, h("input", { type: "checkbox", checked: addDraft.keyGreen === true, onChange: (event) => setAddDraft((current) => ({ ...current, keyGreen: event.target.checked })) }), T("抠掉绿幕背景"))
+              )
+            : null,
+          h("label", { className: "SPR_isoLabel" }, T("清晰度")),
+          h("select", { className: "SPR_isoInput", value: addDraft.clarity, onChange: (event) => setAddDraft((current) => ({ ...current, clarity: event.target.value })) },
+            h("option", { value: "smooth" }, T("平滑")),
+            h("option", { value: "sharp" }, T("锐利")),
+            h("option", { value: "crisp" }, T("清晰"))
+          ),
+          h("div", { className: "SPR_isoRow" },
+            h(Btn, { onClick: () => setAddDraft(null) }, T("取消")),
+            h(Btn, { primary: true, busy: busyKey === "import", onClick: () => void importAsset() }, T("确定"))
+          )
+        )
       );
 
-      if (project === null) {
-        return h("div", { className: "SPR_module" },
-          gateOpen ? h(TileExperimentalDialog, { onClose: closeGate }) : null,
-          h(ExperimentalBar, null),
-          header,
-          h("div", { className: "SPR_empty" }, T("还没有地图地块项目——取个名字点「新建项目」开始。")),
-          notice === null ? null : h("div", { className: `SPR_notice SPR_notice-${notice.kind}` }, notice.text)
-        );
+      const tsDialog = tsEdit === null ? null : h(
+        "div",
+        { className: "SPR_isoDlgMask", onClick: () => setTsEdit(null) },
+        h("div", { className: "SPR_isoDlg", onClick: (event) => event.stopPropagation() },
+          h("div", { className: "SPR_isoDlgHead" }, h("b", null, T("素材属性")), h("span", { style: { flex: 1 } }), h("button", { type: "button", className: "SPR_isoClose", onClick: () => setTsEdit(null) }, "×")),
+          h("label", { className: "SPR_isoLabel" }, T("名字")),
+          h("input", { className: "SPR_isoInput", value: tsEdit.name, onChange: (event) => setTsEdit((current) => ({ ...current, name: event.target.value })) }),
+          h("label", { className: "SPR_isoLabel" }, T("动画速度")),
+          h("select", { className: "SPR_isoInput", value: tsEdit.fps, onChange: (event) => setTsEdit((current) => ({ ...current, fps: event.target.value })) },
+            h("option", { value: "" }, T("跟设置里的动画速度")),
+            [1, 2, 4, 6, 8, 12].map((value) => h("option", { key: value, value: String(value) }, T("{n0} 帧/秒", { n0: String(value) })))
+          ),
+          h("label", { className: "SPR_isoLabel" }, T("循环方式")),
+          h("select", { className: "SPR_isoInput", value: tsEdit.loop, onChange: (event) => setTsEdit((current) => ({ ...current, loop: event.target.value })) },
+            h("option", { value: "forward" }, T("正放")),
+            h("option", { value: "reverse" }, T("倒放")),
+            h("option", { value: "pingpong" }, T("来回"))
+          ),
+          h("div", { className: "SPR_isoRow" },
+            h(Btn, { onClick: () => setTsEdit(null) }, T("取消")),
+            h(Btn, { primary: true, busy: busyKey === "tileset", onClick: async () => {
+              setBusyKey("tileset");
+              try {
+                await api.saveIsoTileset({ projectId: view.id, tilesetId: tsEdit.tilesetId, name: tsEdit.name, fps: tsEdit.fps === "" ? null : Number(tsEdit.fps), loop: tsEdit.loop });
+                setTsEdit(null);
+                await loadProject(view.id, true);
+              } catch (error) {
+                setNotice({ kind: "error", text: msg(error) });
+              } finally {
+                setBusyKey(null);
+              }
+            } }, T("保存"))
+          )
+        )
+      );
+
+      const nameDialog = nameAsk === null ? null : h(
+        "div",
+        { className: "SPR_isoDlgMask", onClick: () => setNameAsk(null) },
+        h("div", { className: "SPR_isoDlg", onClick: (event) => event.stopPropagation() },
+          h("div", { className: "SPR_isoDlgHead" }, h("b", null, nameAsk.title), h("span", { style: { flex: 1 } }), h("button", { type: "button", className: "SPR_isoClose", onClick: () => setNameAsk(null) }, "×")),
+          h("label", { className: "SPR_isoLabel" }, T("名字")),
+          h("input", { className: "SPR_isoInput", autoFocus: true, value: nameAsk.value, onChange: (event) => setNameAsk((current) => ({ ...current, value: event.target.value })) }),
+          nameAsk.mode === "create"
+            ? h(React.Fragment, null,
+                h("div", { className: "SPR_isoRow" },
+                  h(NumField, { label: T("格子宽"), value: Number(nameAsk.cellW), min: 16, max: 512, step: 4, onChange: (value) => setNameAsk((current) => ({ ...current, cellW: value })) }),
+                  h(NumField, { label: T("格子高"), value: Number(nameAsk.cellH), min: 32, max: 768, onChange: (value) => setNameAsk((current) => ({ ...current, cellH: value })) })
+                ),
+                h("div", { className: "SPR_isoRow" },
+                  h(NumField, { label: T("列"), value: Number(nameAsk.cols), min: 1, max: 512, onChange: (value) => setNameAsk((current) => ({ ...current, cols: value })) }),
+                  h(NumField, { label: T("行"), value: Number(nameAsk.rows), min: 1, max: 512, onChange: (value) => setNameAsk((current) => ({ ...current, rows: value })) })
+                ),
+                h("label", { className: "SPR_isoCheck" }, h("input", { type: "checkbox", checked: nameAsk.wrap === true, onChange: (event) => setNameAsk((current) => ({ ...current, wrap: event.target.checked })) }), T("地图四周环绕"))
+              )
+            : null,
+          h("div", { className: "SPR_isoRow" },
+            h(Btn, { onClick: () => setNameAsk(null) }, T("取消")),
+            h(Btn, { primary: true, busy: busyKey === "create", onClick: () => void submitNameAsk() }, T("确定"))
+          )
+        )
+      );
+
+      const shell = (inner) => h("div", { className: "SPR_moduleBody", "data-module": "iso" }, inner, nameDialog, addDialog, tsDialog);
+
+      if (view === null || layout === null) {
+        return shell(h("div", { className: "SPR_isoRoot" },
+          h("div", { className: "SPR_isoEmpty" },
+            h("p", { className: "SPR_isoEmptyTitle" }, T("还没有 45° 地图项目。")),
+            h("p", { className: "SPR_isoHint" }, T("建一个项目就能直接画；自带一套 45° 素材，不用先准备图。")),
+            h("div", { className: "SPR_isoRow" },
+              h(Btn, { primary: true, onClick: requestNewProject }, T("新建项目")),
+              h(Btn, { onClick: () => void (async () => {
+                try {
+                  const created = await api.createIsoProject({ name: T("我的地图"), cell: { width: 64, height: 96 }, cols: 32, rows: 32, wrap: true });
+                  await api.importIsoSampleTileset({ projectId: created.id }).catch(() => undefined);
+                  await refreshProjects();
+                  await loadProject(created.id);
+                  setOpenCard("assets");
+                } catch (error) {
+                  setNotice({ kind: "error", text: msg(error) });
+                }
+              })() }, T("用自带素材试试"))
+            ),
+            notice === null ? null : h("div", { className: `SPR_notice SPR_notice-${notice.kind}` }, notice.text)
+          )
+        ));
       }
 
-      // ── 步骤条 ────────────────────────────────────────────────────────
-      const steps = h("div", { className: "SPR_steps" },
-        TILE_STAGES.map((entry) => {
-          const state = project.stages?.[entry.key] ?? { status: "idle" };
-          return h("button", {
-            key: entry.key,
-            type: "button",
-            className: `SPR_step${stage === entry.key ? " SPR_step-active" : ""} SPR_step-${state.status}`,
-            title: entry.hint,
-            onClick: () => setStage(entry.key)
-          },
-            entry.title,
-            state.status === "done" ? h("span", { className: "SPR_stepMark" }, "✓") : null,
-            state.status === "error" ? h("span", { className: "SPR_stepMark" }, "!") : null
-          );
+      const menu = h("div", { className: "SPR_isoMenu" },
+        h("button", { type: "button", className: "SPR_isoMenuItem", onClick: () => { setMenuOpen(false); requestNewProject(); } }, T("新建项目")),
+        h("button", { type: "button", className: "SPR_isoMenuItem", onClick: () => { setMenuOpen(false); setNameAsk({ mode: "rename", title: T("重命名项目"), value: view.name }); } }, T("重命名")),
+        h("button", { type: "button", className: "SPR_isoMenuItem", onClick: () => { setMenuOpen(false); void deleteProject(); } }, T("删除项目")),
+        h("div", { className: "SPR_isoMenuLabel" }, T("切换项目")),
+        projects.map((entry) => h("button", { key: entry.id, type: "button", className: "SPR_isoMenuItem", "data-on": entry.id === view.id ? "true" : undefined, onClick: () => { setMenuOpen(false); void loadProject(entry.id); } }, entry.name))
+      );
+
+      const palette = h("div", { className: "SPR_isoPalette" },
+        h("div", { className: "SPR_isoPaletteGrid" },
+          paletteEntries.map((entry) => {
+            const owner = entry.tileset;
+            const url = `${view.assetBase}${owner.file}?v=${owner.rev ?? 0}`;
+            const bw = owner.cell.width;
+            const bh = owner.cell.height;
+            const sizeX = (owner.imageWidth / Math.max(1, entry.rect.width)) * 100;
+            const sizeY = (owner.imageHeight / Math.max(1, entry.rect.height)) * 100;
+            const posX = owner.imageWidth <= entry.rect.width ? 0 : (entry.rect.x / Math.max(1, owner.imageWidth - entry.rect.width)) * 100;
+            const posY = owner.imageHeight <= entry.rect.height ? 0 : (entry.rect.y / Math.max(1, owner.imageHeight - entry.rect.height)) * 100;
+            return h("button", {
+              key: `${entry.tilesetId}:${entry.index}`,
+              type: "button",
+              className: "SPR_isoTile",
+              "data-on": brush !== null && brush.index === entry.index && brush.tilesetId === entry.tilesetId ? "true" : undefined,
+              title: `${entry.name}${owner.frames > 1 ? ` · ${owner.frames} 帧` : ""}`,
+              style: {
+                backgroundImage: `url(${url})`,
+                backgroundSize: `${sizeX}% ${sizeY}%`,
+                backgroundPosition: `${posX}% ${posY}%`,
+                imageRendering: "pixelated"
+              },
+              onClick: (event) => selectBrush(entry, event.shiftKey === true || event.ctrlKey === true)
+            });
+          })
+        ),
+        paletteEntries.length === 0 ? h("p", { className: "SPR_isoHint" }, T("这一层还没有可用的笔刷。点「素材」导入，或换到另一层。")) : null
+      );
+
+      const toolButton = (key, label, icon, onClick, opts: any = {}) =>
+        h("button", {
+          key,
+          type: "button",
+          className: "SPR_isoTool",
+          "data-on": opts.on === true ? "true" : undefined,
+          disabled: opts.disabled === true,
+          title: `${label}${opts.hint === undefined ? "" : ` · ${opts.hint}`}`,
+          onClick
+        }, h(MapToolIcon, { name: icon }));
+
+      const tools = h("div", { className: "SPR_isoTools" },
+        toolButton("undo", T("撤销"), "undo", () => void doUndo(), { hint: "⌘Z", disabled: view.canUndo !== true }),
+        toolButton("redo", T("重做"), "redo", () => void doRedo(), { hint: "⇧⌘Z", disabled: view.canRedo !== true }),
+        toolButton("pen", T("画笔"), "pen", () => setTool("pen"), { on: tool === "pen", hint: "B" }),
+        toolButton("eraser", T("橡皮"), "eraser", () => setTool("eraser"), { on: tool === "eraser", hint: "E" }),
+        toolButton("bucket", T("油漆桶"), "bucket", () => setTool("bucket"), { on: tool === "bucket", hint: "G" }),
+        toolButton("pipette", T("吸管"), "pipette", () => setTool("pipette"), { on: tool === "pipette", hint: "I" }),
+        toolButton("hand", T("抓手"), "hand", () => setTool("hand"), { on: tool === "hand", hint: "H" }),
+        toolButton("marker", T("标记"), "marker", () => setTool("marker"), { on: tool === "marker", hint: "M" }),
+        h("button", { key: "layer", type: "button", className: "SPR_isoTool SPR_isoLayerBtn", title: T("图层"), onClick: () => setOpenCard(openCard === "layers" ? null : "layers") },
+          h("span", null, String(layerIndex + 1)),
+          h("small", null, activeLayer?.kind === "object" ? T("物件") : T("地面"))
+        ),
+        toolButton("grid", T("网格线"), "grid", () => setShowGrid((value) => value !== true), { on: showGrid === true }),
+        toolButton("gen", T("一键生成"), "magic", () => setOpenCard(openCard === "gen" ? null : "gen"), { on: openCard === "gen" }),
+        toolButton("settings", T("设置"), "settings", () => setOpenCard(openCard === "settings" ? null : "settings"), { on: openCard === "settings" })
+      );
+
+      const side = h("div", { className: "SPR_isoSide" },
+        h("div", { className: "SPR_isoSideTitle" }, activeLayer?.kind === "object" ? T("物件调色板") : T("地面调色板")),
+        palette,
+        tools
+      );
+
+      const cardHead = (title) => h("div", { className: "SPR_isoCardHead" }, h("b", null, title), h("span", { style: { flex: 1 } }), h("button", { type: "button", className: "SPR_isoClose", onClick: () => setOpenCard(null) }, "×"));
+
+      const assetsCard = h("div", { className: "SPR_isoCard" },
+        cardHead(T("素材")),
+        h("div", { className: "SPR_isoRow" },
+          h(Btn, { primary: true, onClick: () => { setAddDraft({ base64: "", name: "", kind: "ground", sourceW: view.cell.width, sourceH: view.cell.height, frames: 1, animRows: false, footprint: { cols: 1, rows: 1 }, passMode: 1, keyGreen: false, clarity: "smooth" }); setAddPreview(null); } }, T("新增素材")),
+          h(Btn, { busy: busyKey === "sample", onClick: () => void restoreSamples() }, T("恢复默认素材")),
+          h(Btn, { onClick: () => setGuidePage(0) }, T("素材说明"))
+        ),
+        h("div", { className: "SPR_isoAssetList" },
+          view.tilesets.map((tileset) => h("div", { key: tileset.id, className: "SPR_isoAssetRow" },
+            h("button", { type: "button", className: "SPR_isoAssetName", onClick: () => setTsEdit({ tilesetId: tileset.id, name: tileset.name, fps: tileset.fps === undefined ? "" : String(tileset.fps), loop: tileset.loop ?? "forward" }) }, tileset.name),
+            h("span", { className: "SPR_isoAssetMeta" }, tileset.reason),
+            tileset.builtin === true ? h("span", { className: "SPR_isoBadge" }, T("自带")) : null,
+            h("button", { type: "button", className: "SPR_isoMini", onClick: async () => {
+              if (!window.confirm(T("确定删除素材「{n0}」？它切出来的块和放下的物件会一起删掉。", { n0: tileset.name }))) return;
+              try {
+                const result = await api.removeIsoTileset({ projectId: view.id, tilesetId: tileset.id });
+                if (Array.isArray(result?.warnings) && result.warnings.length > 0) setNotice({ kind: "info", text: result.warnings.join("；") });
+                await loadProject(view.id, true);
+              } catch (error) {
+                setNotice({ kind: "error", text: msg(error) });
+              }
+            } }, "×")
+          ))
+        )
+      );
+
+      const layersCard = h("div", { className: "SPR_isoCard" },
+        cardHead(T("图层")),
+        h("div", { className: "SPR_isoRow" },
+          h(Btn, { onClick: async () => { await api.saveIsoDoc({ projectId: view.id, addLayer: { name: T("地面层 {n0}", { n0: String(view.layers.length + 1) }), kind: "ground" } }); await loadProject(view.id, true); } }, T("加地面层")),
+          h(Btn, { onClick: async () => { await api.saveIsoDoc({ projectId: view.id, addLayer: { name: T("物件层 {n0}", { n0: String(view.layers.length + 1) }), kind: "object" } }); await loadProject(view.id, true); } }, T("加物件层")),
+          h(Btn, { onClick: async () => { if (!window.confirm(T("清掉这一层？"))) return; await api.saveIsoDoc({ projectId: view.id, clearLayerId: activeLayer.id }); await loadProject(view.id, true); } }, T("清空当前层"))
+        ),
+        view.layers.map((layer, index) => h("div", { key: layer.id, className: "SPR_isoLayerRow", "data-on": index === layerIndex ? "true" : undefined },
+          h("span", { className: "SPR_isoLayerIdx" }, String(index + 1)),
+          layerDraft !== null && layerDraft.id === layer.id
+            ? h("input", { className: "SPR_isoInput", autoFocus: true, value: layerDraft.value, onChange: (event) => setLayerDraft({ id: layer.id, value: event.target.value }), onBlur: () => void saveLayerName(layer.id, layerDraft.value), onKeyDown: (event) => { if (event.key === "Enter") void saveLayerName(layer.id, layerDraft.value); } })
+            : h("button", { type: "button", className: "SPR_isoLayerName", onClick: () => { setLayerIndex(index); setLayerDraft({ id: layer.id, value: layer.name }); } }, `${layer.name}${layer.kind === "object" ? " · 物件" : ""}（${layer.filled}）`),
+          h("button", { type: "button", className: "SPR_isoMini", disabled: index <= 0, onClick: async () => { await api.saveIsoDoc({ projectId: view.id, moveLayer: { id: layer.id, toIndex: index - 1 } }); await loadProject(view.id, true); } }, "↑"),
+          h("button", { type: "button", className: "SPR_isoMini", disabled: index >= view.layers.length - 1, onClick: async () => { await api.saveIsoDoc({ projectId: view.id, moveLayer: { id: layer.id, toIndex: index + 1 } }); await loadProject(view.id, true); } }, "↓"),
+          h("button", { type: "button", className: "SPR_isoMini", onClick: async () => { if (!window.confirm(T("删掉这一层和它上面的内容？"))) return; await api.saveIsoDoc({ projectId: view.id, removeLayerId: layer.id }); await loadProject(view.id, true); } }, "×")
+        )),
+        h("label", { className: "SPR_isoCheck" }, h("input", { type: "checkbox", checked: single === true, onChange: (event) => { setSingle(event.target.checked); clearPlan(); setPlanEpoch((value) => value + 1); } }), T("只看这一层")),
+        h("div", { className: "SPR_isoSideTitle" }, T("标记")),
+        view.markers.map((marker) => h("div", { key: marker.id, className: "SPR_isoMarkerRow" },
+          h("span", { className: "SPR_isoMarkerDot" }, String(marker.n)),
+          markerDraft !== null && markerDraft.id === marker.id
+            ? h("input", { className: "SPR_isoInput", autoFocus: true, value: markerDraft.value, onChange: (event) => setMarkerDraft({ id: marker.id, value: event.target.value }), onBlur: () => void saveMarkerName(marker.id, markerDraft.value), onKeyDown: (event) => { if (event.key === "Enter") void saveMarkerName(marker.id, markerDraft.value); } })
+            : h("button", { type: "button", className: "SPR_isoMarkerName", onClick: () => setMarkerDraft({ id: marker.id, value: marker.name }) }, marker.name === "" ? T("标记 {n0}", { n0: String(marker.n) }) : marker.name),
+          h("span", { className: "SPR_isoAssetMeta" }, `(${marker.r},${marker.c})`),
+          h("button", { type: "button", className: "SPR_isoMini", onClick: () => centerOnCell(marker.r, marker.c) }, T("定位")),
+          h("button", { type: "button", className: "SPR_isoMini", onClick: async () => { await applyOps([{ kind: "marker", op: "remove", id: marker.id }], undefined, { reload: true }); } }, "×")
+        ))
+      );
+
+      const exportCard = h("div", { className: "SPR_isoCard" },
+        cardHead(T("导出")),
+        h("label", { className: "SPR_isoCheck" }, h("input", { type: "checkbox", checked: exportFormats.png === true, onChange: (event) => setExportFormats((current) => ({ ...current, png: event.target.checked })) }), T("地图图片 PNG")),
+        h("label", { className: "SPR_isoCheck" }, h("input", { type: "checkbox", checked: exportFormats.json === true, onChange: (event) => setExportFormats((current) => ({ ...current, json: event.target.checked })) }), T("存档数据 JSON")),
+        h("label", { className: "SPR_isoCheck" }, h("input", { type: "checkbox", checked: exportFormats.tilesets === true, onChange: (event) => setExportFormats((current) => ({ ...current, tilesets: event.target.checked })) }), T("素材原图")),
+        exportFormats.png === true ? h("div", { className: "SPR_isoRow" }, h(NumField, { label: T("倍率"), value: exportScale, min: 1, max: 4, onChange: setExportScale })) : null,
+        h("div", { className: "SPR_isoRow" },
+          h(Btn, { primary: true, busy: busyKey === "export" || view.busy === true, onClick: () => void runExport() }, T("导出")),
+          h(Btn, { onClick: () => void runPreview() }, T("生成预览图")),
+          h(Btn, { onClick: () => void api.revealIsoProject({ projectId: view.id, target: "export" }).catch((error) => setNotice({ kind: "error", text: msg(error) })) }, T("打开导出目录"))
+        ),
+        view.exportPath === "" ? null : h("p", { className: "SPR_isoHint" }, view.exportPath),
+        view.exportFiles.map((file) => h("a", { key: file, className: "SPR_isoFile", href: `${view.assetBase}${view.exportBase}${file}`, download: file }, file)),
+        view.preview.map((file) => h("a", { key: file, className: "SPR_isoFile", href: `${view.assetBase}${file}`, target: "_blank", rel: "noreferrer" }, `${T("预览图")}：${file}`))
+      );
+
+      const settingsCard = h("div", { className: "SPR_isoCard" },
+        cardHead(T("设置")),
+        h("label", { className: "SPR_isoCheck" }, h("input", { type: "checkbox", checked: view.wrap === true, onChange: async (event) => { await api.saveIsoProject({ projectId: view.id, wrap: event.target.checked }); await loadProject(view.id, true); } }), T("地图四周环绕")),
+        h("div", { className: "SPR_isoRow" }, h(NumField, { label: T("列"), value: view.cols, min: 1, max: 512, onChange: async (value) => { await api.saveIsoDoc({ projectId: view.id, cols: value, rows: view.rows }); await loadProject(view.id, true); } }),
+          h(NumField, { label: T("行"), value: view.rows, min: 1, max: 512, onChange: async (value) => { await api.saveIsoDoc({ projectId: view.id, cols: view.cols, rows: value }); await loadProject(view.id, true); } })),
+        h("label", { className: "SPR_isoLabel" }, T("动画速度")),
+        h("select", { className: "SPR_isoInput", value: animFps === null ? "" : String(animFps), onChange: (event) => setAnimFps(event.target.value === "" ? null : Number(event.target.value)) },
+          h("option", { value: "" }, T("跟地图计划默认")),
+          h("option", { value: "0.5" }, T("慢")),
+          h("option", { value: "1" }, T("中")),
+          h("option", { value: "2" }, T("快"))
+        ),
+        h("div", { className: "SPR_isoRow" },
+          h(Btn, { on: showGrid === true, onClick: () => setShowGrid((value) => value !== true) }, T("网格线")),
+          h(Btn, { on: showPass === true, onClick: () => { setShowPass((value) => value !== true); clearPlan(); setPlanEpoch((value) => value + 1); } }, T("区域"))
+        ),
+        h("div", { className: "SPR_isoRow" },
+          h(Btn, { onClick: () => setOpenCard("layers") }, T("图层与标记")),
+          h(Btn, { onClick: () => setGuidePage(0) }, T("素材说明")),
+          h(Btn, { onClick: async () => { await api.setIsoApproved({ projectId: view.id, approved: true }); await loadProject(view.id, true); } }, T("整个模块看过了"))
+        ),
+        planWarnings.length === 0 ? null : h("p", { className: "SPR_isoWarn" }, planWarnings.join("；")),
+        truncated === true ? h("p", { className: "SPR_isoWarn" }, T("现在缩得太小，画布只画了一部分（放大一点）。")) : null
+      );
+
+      const genCard = h("div", { className: "SPR_isoCard" },
+        cardHead(T("一键生成")),
+        h("label", { className: "SPR_isoLabel" }, T("怎么铺")),
+        h("select", { className: "SPR_isoInput", value: genKind, onChange: (event) => setGenKind(event.target.value) },
+          h("option", { value: "random" }, T("随机铺满")),
+          h("option", { value: "maze" }, T("迷宫（需要两块素材）")),
+          h("option", { value: "continent" }, T("大陆（需要四块素材）"))
+        ),
+        h("div", { className: "SPR_isoRow" }, h(NumField, { label: T("种子"), value: genSeed, min: 0, max: 999999999, onChange: setGenSeed })),
+        h("p", { className: "SPR_isoHint" }, T("用当前选中的地面笔刷铺；多选（Shift / Ctrl）可按顺序当墙 / 通路 / 地貌。同种子结果完全一样。")),
+        h("div", { className: "SPR_isoRow" },
+          h(Btn, { primary: true, busy: busyKey === "gen", onClick: () => void runGenerate() }, T("生成")),
+          h(Btn, { onClick: () => { setGenSeed(Math.floor(Math.random() * 999999999)); } }, T("换一组"))
+        )
+      );
+
+      const guideCard = h("div", { className: "SPR_isoCard SPR_isoGuide" },
+        cardHead(T("素材说明")),
+        h("div", { className: "SPR_isoRow" },
+          [0, 1, 2].map((index) => h("button", { key: index, type: "button", className: "SPR_isoMini", "data-on": guidePage === index ? "true" : undefined, onClick: () => setGuidePage(index) }, [T("地面"), T("自动连接"), T("物件")][index]))
+        ),
+        guidePage === 0
+          ? h(React.Fragment, null, h("p", null, T("地面：整张图按格子切开。静态时每个格子都是一个笔刷；勾「会动」时每一列是一个笔刷，每一行是一帧。")), h("p", { className: "SPR_isoHint" }, T("菱形在每一格里居中；格子宽 = 菱形宽，格子高 = 菱形高 + 上方留给高处物件的空间。")))
+          : guidePage === 1
+            ? h(React.Fragment, null, h("p", null, T("自动连接：严格 4×4 = 16 块，行优先排列。")), h("p", { className: "SPR_isoHint" }, T("位序：N=1 / E=2 / S=4 / W=8。屏幕上 N 是右上、E 是右下、S 是左下、W 是左上。第 0 块四周都不连，第 15 块四周都连。"))
+            )
+            : h(React.Fragment, null, h("p", null, T("物件：一张完整图，不要切成格子。")), h("p", { className: "SPR_isoHint" }, T("图片底边中点是落地点；可以高出一格（树冠 / 屋顶）。占几格只影响占地与遮挡，不改图片本身。多帧时竖排，同一张图按帧播放。")))
+      );
+
+      const card = openCard === "assets" ? assetsCard
+        : openCard === "layers" ? layersCard
+        : openCard === "export" ? exportCard
+        : openCard === "settings" ? settingsCard
+        : openCard === "gen" ? genCard
+        : openCard === "guide" ? guideCard
+        : null;
+
+      const topBar = h("div", { className: "SPR_isoTop" },
+        h("div", { className: "SPR_isoProjWrap" },
+          h("button", { type: "button", className: "SPR_isoProj", "data-open": menuOpen === true ? "true" : undefined, onClick: () => setMenuOpen((value) => value !== true) }, h("span", { className: "SPR_isoProjName" }, view.name), h("span", null, "▾")),
+          menuOpen === true ? menu : null
+        ),
+        h("span", { style: { flex: 1 } }),
+        h(Btn, { on: openCard === "assets", onClick: () => setOpenCard(openCard === "assets" ? null : "assets") }, T("素材")),
+        h(Btn, { on: openCard === "export", onClick: () => setOpenCard(openCard === "export" ? null : "export") }, T("导出")),
+        h(Btn, { on: openCard === "layers", onClick: () => setOpenCard(openCard === "layers" ? null : "layers") }, T("图层")),
+        h(Btn, { onClick: () => setOpenCard(openCard === "settings" ? null : "settings") }, T("设置"))
+      );
+
+      const stage = h("div", { className: "SPR_isoStage", ref: stageRef },
+        h("canvas", {
+          ref: bindCanvas,
+          className: "SPR_isoCanvas",
+          onPointerDown: (event) => void onPointerDown(event),
+          onPointerMove,
+          onPointerUp,
+          onPointerLeave: () => { setHover(null); },
+          onContextMenu: (event) => event.preventDefault(),
+          onDoubleClick: (event) => {
+            const hit = cellFromEvent(event);
+            if (hit !== null) centerOnCell(hit.r, hit.c);
+          }
         })
       );
 
-      // ── 参考图（原「① 模板」）──────────────────────────────────────────
-      //
-      // ★ 这一步**已经不是独立阶段了** —— 点「生成全部地块」时宿主会按当前
-      // 占格形状自动渲染参考图，形状/格子尺寸没变就直接复用上次那份
-      // （一次渲染 120~390ms、约 14MB，十几个变体每次现渲染就是几十秒白等）。
-      //
-      // 这里只做**只读预览**：让你在花钱之前看一眼「模型会照着什么画」。
-      // 几何错了看这张图最快 —— 这个模块的错好几次都是这么发现的。
-      const templatePanel = h("div", { className: "SPR_templatePanel" },
-        h("div", { className: "SPR_row" },
-          h("span", { className: "SPR_fieldLabel" }, T("参考图（自动生成，免费）")),
-          h("span", { className: "SPR_muted" }, T("按②里每个地块的占格形状渲染；改了形状或格子尺寸，下次生成时自动重做"))
+      const main = h("div", { className: "SPR_isoRoot" },
+        topBar,
+        h("div", { className: "SPR_isoBody" },
+          side,
+          stage
         ),
-        // ⚠️ 这里**不能**用 `onError` 把图 `display:none` 掉。
-        // 一旦被隐藏，之后即使生成好了也不会再显示（浏览器不会重跑 onError）。
-        // 正确做法：按文件**在不在**决定渲不渲染，`onError` 只做「标灰」提示。
-        //
-        // ★ 文件名一律读**宿主列出来的那份**（`project.templates`），界面不写死。
-        // 写死 `cell.png` + `grid2x2.png` 会把 3×1 / L 形的参考图藏起来，
-        // 用户以为「只支持 1×1 和 2×2」。
-        //
-        // ★★ 但**只有磁盘上真有的**才能挂 `<img>`（`templatesPresent`）。
-        // 期望清单里的文件可能还没落盘 —— 给它挂 `<img>` 就是一次 404，
-        // 面板上全是裂图（实测：用户报的「参考图是裂的」就是这个）。
-        // 没落盘的显示成「待生成」占位块。
-        //
-        // 版本参数用宿主的 `templateRev` 而不是 `project.updatedAt`：
-        // 图片 404 之后浏览器会把**那次失败也缓存住**，而「只是图片 404」时
-        // `updatedAt` 不会变 —— 于是生成完了图还是裂的。
-        // `templateRev` 每次作业结束换一个值，强制浏览器重新取一次。
-        (project.templates ?? []).length > 0
-          ? h("div", { className: "SPR_row SPR_templateRow" },
-              ...(project.templates ?? []).map((name) => {
-                const label = templateLabel(name);
-                if (!(project.templatesPresent ?? []).includes(name)) {
-                  return h("div", {
-                    key: name,
-                    className: "SPR_tileAsset SPR_tileAsset-pending",
-                    "data-template": name,
-                    "data-pending": "1",
-                    title: T("还没生成 —— 点「生成全部地块」时会自动渲染")
-                  },
-                    h("div", { className: "SPR_thumb SPR_thumb-pending" }, T("待生成")),
-                    h("span", { className: "SPR_muted" }, label)
-                  );
-                }
-                return h("div", {
-                  key: name,
-                  className: "SPR_tileAsset",
-                  "data-template": name
-                },
-                  h("img", {
-                    className: "SPR_thumb",
-                    src: `${project.assetBase}template/${name}?v=${encodeURIComponent(project.templateRev ?? "")}`,
-                    alt: name,
-                    onError: (event) => { event.target.setAttribute("data-broken", "1"); }
-                  }),
-                  h("span", { className: "SPR_muted" }, label)
-                );
-              }))
-          : h("p", { className: "SPR_muted" }, busy
-              ? T("正在准备参考图…")
-              : T("还没有参考图 —— 点「生成全部地块」时会自动渲染（免费）。"))
+        notice === null ? null : h("div", { className: `SPR_notice SPR_notice-${notice.kind}` }, notice.text, h("button", { type: "button", className: "SPR_isoMini", style: { marginLeft: 8 }, onClick: () => setNotice(null) }, T("关闭"))),
+        card === null ? null : h("div", { className: "SPR_isoCardWrap", onClick: () => setOpenCard(null) }, h("div", { onClick: (event) => event.stopPropagation() }, card)),
+        guidePage === null ? null : h("div", { className: "SPR_isoDlgMask", onClick: () => setGuidePage(null) }, h("div", { className: "SPR_isoDlg", onClick: (event) => event.stopPropagation() }, guideCard))
       );
-
-      // ── 地块清单的增 / 删 / 改 ────────────────────────────────────────
-      //
-      // 全部通过 `saveTileProject({items})` 提交，宿主侧 `mergeTileItems` 负责
-      // 「保留已生成的变体、只作废提示词真的变了的那些」。所以这里只管把
-      // 完整的 items 列表拼出来 —— **必须带上 `variants`**，否则宿主认为
-      // 这是个没有产物的新条目（早期版本就是这么把已生成的图弄丢的）。
-
-      /** 把界面上的 items 整理成宿主能合并的形状（保留产物与不在编辑中的字段）。 */
-      const itemsForSave = (overrides = {}) =>
-        project.items.map((item) => {
-          const source = overrides[item.key] ?? item;
-          return {
-            key: source.key,
-            label: source.label,
-            kind: source.kind,
-            family: source.family,
-            footprint: source.footprint,
-            // ★ 形状必须一起提交：宿主按它算包围菱形与摆放，
-            // 只给 footprint（包围矩形）L 形会退化成方块。
-            shape: source.shape ?? shapeOfKey(source.key),
-            content: source.content,
-            mode: source.mode,
-            variantCount: source.variantCount,
-            variants: item.variants
-          };
-        });
-
-      const startEdit = (item) => {
-        setEditingKey(item.key);
-        setNewItem(null);
-        setItemDraft({
-          key: item.key,
-          label: item.label ?? "",
-          kind: item.kind ?? "terrain",
-          family: item.family ?? item.key,
-          footprint: [...(item.footprint ?? [1, 1])],
-          shape: shapeOfKey(item.key),
-          content: item.content ?? "",
-          mode: item.mode ?? "template",
-          variantCount: Math.max(1, item.variantCount ?? 1)
-        });
-      };
-
-      /**
-       * 保存一个地块的编辑。
-       * ⚠️ 改 `key` 等于**换了个地块**：旧 key 的产物不能直接搬过去（宿主按 key 合并），
-       * 所以这里把 key 做成只读展示，要改 key 就删掉重建。
-       */
-      const saveItem = async () => {
-        if (itemDraft === null) return;
-        const next = itemsForSave({ [itemDraft.key]: itemDraft });
-        const promptChanged = itemDraft.content !== project.items.find((i) => i.key === itemDraft.key)?.content
-          || itemDraft.mode !== project.items.find((i) => i.key === itemDraft.key)?.mode;
-        await api.saveTileProject({ projectId: project.id, items: next });
-        setNotice({
-          kind: "info",
-          text: promptChanged
-            ? T("已保存「{n0}」——提示词变了，这个地块的产物已作废，需要重跑", { n0: itemDraft.label || itemDraft.key })
-            : T("已保存「{n0}」——提示词没变，产物保住了", { n0: itemDraft.label || itemDraft.key })
-        });
-        setEditingKey(null);
-        setItemDraft(null);
-      };
-
-      const deleteItem = async (item) => {
-        const next = project.items
-          .filter((entry) => entry.key !== item.key)
-          .map((entry) => ({
-            key: entry.key, label: entry.label, kind: entry.kind, family: entry.family,
-            footprint: entry.footprint, content: entry.content, mode: entry.mode,
-            variantCount: entry.variantCount, variants: entry.variants
-          }));
-        if (next.length === 0) {
-          setNotice({ kind: "error", text: T("至少要留一个地块") });
-          return;
-        }
-        await api.saveTileProject({ projectId: project.id, items: next });
-        if (editingKey === item.key) { setEditingKey(null); setItemDraft(null); }
-        setNotice({ kind: "info", text: T("已删除「{n0}」", { n0: item.label }) });
-      };
-
-      /** 新增地块：key 必须唯一且是「英文小写 / 数字 / 下划线」，它会被当文件名用。 */
-      const addItem = async () => {
-        if (newItem === null) return;
-        const key = String(newItem.key ?? "").trim();
-        if (!/^[a-z][a-z0-9_]{1,23}$/.test(key)) {
-          setNotice({ kind: "error", text: T("地块标识只能用英文小写字母开头，后接小写字母 / 数字 / 下划线（2~24 位）——它会当文件名用") });
-          return;
-        }
-        if (project.items.some((item) => item.key === key)) {
-          setNotice({ kind: "error", text: T("已经有同名地块了：{n0}", { n0: key }) });
-          return;
-        }
-        const next = [
-          ...project.items.map((entry) => ({
-            key: entry.key, label: entry.label, kind: entry.kind, family: entry.family,
-            footprint: entry.footprint, content: entry.content, mode: entry.mode,
-            variantCount: entry.variantCount, variants: entry.variants
-          })),
-          {
-            key,
-            label: newItem.label?.trim() === "" ? key : newItem.label,
-            kind: newItem.kind,
-            family: newItem.family?.trim() === "" ? key : newItem.family,
-            footprint: newItem.footprint,
-          shape: newItem.shape ?? shapeFromRect(newItem.footprint[0], newItem.footprint[1]),
-            content: newItem.content ?? "",
-            mode: newItem.mode,
-            variantCount: Math.max(1, newItem.variantCount ?? 1),
-            variants: []
-          }
-        ];
-        await api.saveTileProject({ projectId: project.id, items: next });
-        setNewItem(null);
-        setNotice({ kind: "info", text: T("已新增地块「{n0}」", { n0: key }) });
-      };
-
-      const resetItems = async () => {
-        await api.saveTileProject({ projectId: project.id, resetItemsToDefault: true });
-        setEditingKey(null);
-        setItemDraft(null);
-        setNewItem(null);
-        setNotice({ kind: "info", text: T("已恢复默认地块清单（已生成的地块会作废）") });
-      };
-
-      /** 一个地块卡片的可编辑表单。 */
-      const itemEditor = () => {
-        if (itemDraft === null) return null;
-        const set = (patch) => setItemDraft((draft) => ({ ...draft, ...patch }));
-        const original = project.items.find((item) => item.key === itemDraft.key);
-        const promptChanged = original !== undefined &&
-          (original.content !== itemDraft.content || original.mode !== itemDraft.mode);
-        return h("div", { className: "SPR_tileEditor" },
-          h("div", { className: "SPR_tileEditorRow" },
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("标识（key，只读）")),
-              h("input", { className: "SPR_input", value: itemDraft.key, readOnly: true, disabled: true })
-            ),
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("名称")),
-              h("input", {
-                className: "SPR_input",
-                value: itemDraft.label,
-                onChange: (event) => set({ label: event.target.value })
-              })
-            ),
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("用途")),
-              h("select", {
-                className: "SPR_input",
-                value: itemDraft.kind,
-                onChange: (event) => {
-                  const kind = event.target.value;
-                  // 换用途时把生成方式也带到一个合理默认，省得用户自己配错
-                  set({ kind, mode: kind === "decor" ? "plain" : kind === "building" ? "grid2x2" : "template" });
-                }
-              },
-                h("option", { value: "terrain" }, T("地形（占 1 格）")),
-                h("option", { value: "decor" }, T("装饰（占 1 格、按锚点摆放）")),
-                h("option", { value: "building" }, T("建筑（跨格）"))
-              )
-            ),
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("生成方式")),
-              h("select", {
-                className: "SPR_input",
-                value: itemDraft.mode,
-                onChange: (event) => set({ mode: event.target.value })
-              },
-                h("option", { value: "template" }, T("模板填充（地形）")),
-                h("option", { value: "plain" }, T("白底单图（装饰）")),
-                h("option", { value: "grid2x2" }, T("2×2 地基网格（建筑）"))
-              )
-            )
-          ),
-          h("div", { className: "SPR_tileEditorRow" },
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("变体数（每个变体一次计费调用）")),
-              h(NumField, {
-                className: "SPR_input SPR_input-num",
-                value: itemDraft.variantCount, min: 1, max: 6, step: 1,
-                onChange: (next) => set({ variantCount: Math.max(1, Math.min(6, next)) })
-              })
-            ),
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("类别（铺图时按它随机抽变体）")),
-              h("input", {
-                className: "SPR_input",
-                value: itemDraft.family,
-                onChange: (event) => set({ family: event.target.value })
-              })
-            ),
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("占格形状（点格子增删，支持 L 形）")),
-              h(ShapeEditor, {
-                shape: itemDraft.shape ?? shapeFromRect(itemDraft.footprint[0], itemDraft.footprint[1]),
-                onChange: (next) => set({ shape: next, footprint: footprintOfShape(next) })
-              })
-            )
-          ),
-          h("label", { className: "SPR_field" },
-            h("span", { className: "SPR_fieldLabel" }, T("生成提示词（只描述「菱形里面是什么」；形状 / 角度 / 透视由代码保证，不要写）")),
-            h("textarea", {
-              className: "SPR_input SPR_tilePrompt",
-              rows: 4,
-              value: itemDraft.content,
-              onChange: (event) => set({ content: event.target.value })
-            })
-          ),
-          promptChanged
-            ? h("div", { className: "SPR_tileBadge SPR_tileBadge-warn" },
-                T("提示词与生成方式有改动 —— 保存后这个地块的已生成产物会作废（重跑要花钱）"))
-            : h("div", { className: "SPR_muted" }, T("只改名称 / 类别 / 变体数不会作废产物")),
-          // 实时预览最终会发给模型的提示词：用户能看见「统一画风」被追加在末尾
-          h("details", { className: "SPR_tilePromptPreview" },
-            h("summary", null, T("看最终提示词")),
-            h("pre", null, buildTilePromptPreview(itemDraft, styleDraft))
-          ),
-          h("div", { className: "SPR_row" },
-            h("button", {
-              type: "button",
-              className: "SPR_btn SPR_btn-primary",
-              onClick: () => void run(T("保存地块"), saveItem)
-            }, T("保存")),
-            h("button", {
-              type: "button",
-              className: "SPR_btn",
-              onClick: () => { setEditingKey(null); setItemDraft(null); }
-            }, T("取消")),
-            h("button", {
-              type: "button",
-              className: "SPR_btn",
-              onClick: () => void run(T("移除地块"), () => deleteItem(original ?? { key: itemDraft.key, label: itemDraft.label }))
-            }, T("删除这个地块"))
-          )
-        );
-      };
-
-      // ── ② 生成 ────────────────────────────────────────────────────────
-      const geomBadge = (variant) => {
-        const report = variant.report;
-        if (variant.error !== undefined) return h("span", { className: "SPR_tileBadge SPR_tileBadge-bad" }, T("失败"));
-        if (report === undefined) return null;
-        if (report.mode === "template") return h("span", { className: "SPR_tileBadge SPR_tileBadge-warn" }, T("模板几何"));
-        const ratio = report.ratioMeasured;
-        if (typeof ratio !== "number") return h("span", { className: "SPR_tileBadge" }, "—");
-        const off = Math.abs(ratio - 2);
-        const cls = off <= 0.02 ? "SPR_tileBadge-ok" : off <= 0.05 ? "SPR_tileBadge" : "SPR_tileBadge-warn";
-        return h("span", { className: `SPR_tileBadge ${cls}` }, `2:1 · ${ratio.toFixed(3)}`);
-      };
-
-      /**
-       * 实时预览「最终会发给模型的提示词」。
-       *
-       * 刻意在客户端复刻一份 `buildTilePrompt`（`src/tilegen.ts`）的形状：
-       * 浏览器半区是经典脚本，不能 import 宿主代码。两边的一致性由
-       * `verify-tile-client.mjs` 断言（它比对同一份 items + style 下两侧的前缀）。
-       * 前缀文案不要求逐字相同（那会把界面和宿主焊死），但**结构**必须一致：
-       * 地形 = 固定前缀 + 内容 + 画风；装饰 = 白底单图前缀；建筑 = 地基说明。
-       */
-      const buildTilePromptPreview = (draft, style) => {
-        const tail = String(style ?? "").trim() === "" ? "" : ` ${String(style).trim()}`;
-        if (draft.kind === "decor" || draft.mode === "plain") {
-          return `画一个斜45度等轴测（isometric）视角的游戏装饰物贴图，正交投影，观察者从画面下方看。` +
-            `正方形画布，装饰物居中，纯白色背景，画面里只有这一个东西：${draft.content}${tail}`;
-        }
-        if (draft.kind === "building" || draft.mode === "grid2x2") {
-          // ★ 形状描述必须按**这个地块自己的形状**算，不能写死「2x2 共 4 格」。
-          // 曾经写死了：用户新加一个 3×1 的围墙，预览里仍然写着 2x2 ——
-          // 预览与实际提示词对不上，用户以为形状没生效。
-          // 与宿主 `tilegen.describeShape` 同一条逻辑（矩形不写）。
-          const shape = draft.shape ?? shapeFromRect(draft.footprint?.[0] ?? 1, draft.footprint?.[1] ?? 1);
-          const note = describeShapePreview(shape);
-          return `参考图是一张斜45度等轴测（isometric）的建筑施工参考图。\n` +
-            `图中：浅灰色的菱形是建筑的**地基**，洋红色线是地基的边界，\n` +
-            `蓝色的线框是从地基四个角**垂直向上**拉出来的立方体。\n` +
-            `请画一栋**立体的建筑**：${draft.content}` +
-            (note === undefined ? "" : `\n${note}`) +
-            `\n视角是斜45度等轴测俯视（观察者从画面下方看）……\n` +
-            `像素画风，色彩明快饱和，干净色块，无文字、无数字、无边框、无阴影。`;
-        }
-        return `参考图里那个洋红色菱形就是地块的确切形状与位置。请只把菱形内部填成下面的内容。\n` +
-          `硬性要求：菱形的四个顶点、四条边、大小、位置必须与参考图完全一致；……\n\n` +
-          `内容：${draft.content}${tail}`;
-      };
-
-      const generateStage = h("div", { className: "SPR_tileStage" },
-        h("p", { className: "SPR_hint" }, T("生成一个变体 = 一次 Seedream 调用。参考图按每个地块的占格形状自动渲染，不用手动准备。")),
-        templatePanel,
-        h("div", { className: "SPR_row" },
-          h("span", { className: "SPR_fieldLabel" }, T("统一画风")),
-          h("input", {
-            className: "SPR_input SPR_input-wide",
-            value: styleDraft,
-            onChange: (event) => setStyleDraft(event.target.value)
-          }),
-          h(BusyBtn, {
-            busy: busy || tasks.active,
-            className: "SPR_btn",
-            onClick: () => void run(T("保存画风"), async () => {
-              await api.saveTileProject({ projectId: project.id, style: styleDraft });
-            })
-          }, T("保存画风")),
-          h("span", { className: "SPR_muted" }, T("改画风会让已生成的地块全部作废（重跑要花钱）"))
-        ),
-        h("div", { className: "SPR_row" },
-          h(BusyBtn, {
-            busy: busy,
-            className: "SPR_btn SPR_btn-primary",
-            onClick: () => void run(T("生成全部"), () => api.runTileItems({ projectId: project.id }))
-          }, T("生成全部地块")),
-          h(BusyBtn, {
-            busy: busy,
-            className: "SPR_btn",
-            onClick: () => void run(T("补缺"), async () => {
-              const missing = project.items.filter((item) => item.variants.length === 0).map((item) => item.key);
-              if (missing.length === 0) return { started: false, reason: T("所有地块都已经生成过了") };
-              return api.runTileItems({ projectId: project.id, keys: missing });
-            })
-          }, T("只补没生成的")),
-          h("button", {
-            type: "button",
-            className: "SPR_btn",
-            onClick: () => {
-              setNewItem({
-                key: "", label: "", kind: "terrain", family: "",
-                footprint: [1, 1], content: "", mode: "template", variantCount: 1
-              });
-              setEditingKey(null);
-              setItemDraft(null);
-            }
-          }, T("＋ 新增地块")),
-          h(BusyBtn, {
-            busy: busy,
-            className: "SPR_btn",
-            onClick: () => void run(T("恢复默认清单"), resetItems)
-          }, T("恢复默认清单")),
-          busy ? h(BusyBtn, {
-            busy: false,
-            className: "SPR_btn",
-            onClick: () => void run(T("停止"), () => api.cancelTileJob({ projectId: project.id }))
-          }, T("停止")) : null
-        ),
-
-        // 新增地块表单
-        newItem === null ? null : h("div", { className: "SPR_tileEditor" },
-          h("div", { className: "SPR_tileEditorRow" },
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("标识（英文小写，会当文件名）")),
-              h("input", {
-                className: "SPR_input",
-                placeholder: "rock3",
-                value: newItem.key,
-                onChange: (event) => setNewItem({ ...newItem, key: event.target.value })
-              })
-            ),
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("名称")),
-              h("input", {
-                className: "SPR_input",
-                placeholder: T("灰色岩壁"),
-                value: newItem.label,
-                onChange: (event) => setNewItem({ ...newItem, label: event.target.value })
-              })
-            ),
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("用途")),
-              h("select", {
-                className: "SPR_input",
-                value: newItem.kind,
-                onChange: (event) => {
-                  const kind = event.target.value;
-                  setNewItem({ ...newItem, kind, mode: kind === "decor" ? "plain" : kind === "building" ? "grid2x2" : "template" });
-                }
-              },
-                h("option", { value: "terrain" }, T("地形（占 1 格）")),
-                h("option", { value: "decor" }, T("装饰（占 1 格、按锚点摆放）")),
-                h("option", { value: "building" }, T("建筑（跨格）"))
-              )
-            ),
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("变体数（每个变体一次计费调用）")),
-              h(NumField, {
-                className: "SPR_input SPR_input-num",
-                value: newItem.variantCount, min: 1, max: 6, step: 1,
-                onChange: (next) => setNewItem({ ...newItem, variantCount: Math.max(1, Math.min(6, next)) })
-              })
-            ),
-            h("label", { className: "SPR_field" },
-              h("span", { className: "SPR_fieldLabel" }, T("类别（铺图时按它随机抽变体）")),
-              h("input", {
-                className: "SPR_input",
-                placeholder: newItem.key === "" ? T("留空即用标识") : newItem.key,
-                value: newItem.family,
-                onChange: (event) => setNewItem({ ...newItem, family: event.target.value })
-              })
-            )
-          ),
-          h("label", { className: "SPR_field" },
-            h("span", { className: "SPR_fieldLabel" }, T("生成提示词（只描述「菱形里面是什么」）")),
-            h("textarea", {
-              className: "SPR_input SPR_tilePrompt",
-              rows: 3,
-              value: newItem.content,
-              onChange: (event) => setNewItem({ ...newItem, content: event.target.value })
-            })
-          ),
-          h("div", { className: "SPR_row" },
-            h("button", {
-              type: "button",
-              className: "SPR_btn SPR_btn-primary",
-              onClick: () => void run(T("新增地块"), addItem)
-            }, T("新增")),
-            h("button", { type: "button", className: "SPR_btn", onClick: () => setNewItem(null) }, T("取消"))
-          )
-        ),
-        // 进度条由模块顶部统一渲染（`TileProgressBar`，行内、不遮挡），
-        // 这里不再重复一份 —— 重复会出现两条进度、还会让「正在生成」字样对不上。
-        h("div", { className: "SPR_tileGrid" },
-          project.items.map((item) => h("div", {
-            key: item.key,
-            className: `SPR_tileCard${editingKey === item.key ? " SPR_tileCard-editing" : ""}`
-          },
-            h("div", { className: "SPR_tileCardHead" },
-              h("span", { className: "SPR_tileCardTitle" }, item.label),
-              h("span", { className: "SPR_muted" }, `${item.kind} · ${item.variantCount} 张 · ${item.family}`)
-            ),
-            // 编辑态：整张卡片换成表单（缩略图仍在上面的验收阶段可看）
-            editingKey === item.key
-              ? itemEditor()
-              : h("div", { className: "SPR_row" },
-                  h("button", {
-                    type: "button",
-                    className: "SPR_btn SPR_btn-mini",
-                    onClick: () => startEdit(item)
-                  }, T("编辑")),
-                  h("button", {
-                    type: "button",
-                    className: "SPR_btn SPR_btn-mini",
-                    onClick: () => void run(T("删除"), () => deleteItem(item))
-                  }, T("删除"))
-                ),
-            h("div", { className: "SPR_tileThumbs" },
-              Array.from({ length: Math.max(1, item.variantCount) }).map((_, index) => {
-                const variant = item.variants[index];
-                const ready = variant !== undefined && variant.cell !== undefined;
-                return h("div", { key: index, className: "SPR_tileThumb" },
-                  ready
-                    ? h("img", {
-                        className: "SPR_thumb",
-                        src: `${project.assetBase}${variant.cell}?v=${encodeURIComponent(project.updatedAt ?? "")}`,
-                        alt: `${item.key}-${index}`
-                      })
-                    : h("div", { className: "SPR_thumb SPR_thumb-empty" },
-                        isVariantTargeted(item.key, index) ? T("排队中") : T("待生成")),
-                  ready ? geomBadge(variant) : null,
-                  ready ? h(BusyBtn, {
-                    busy: isVariantRunning(item.key, index),
-                    busyText: T("重跑中…"),
-                    className: "SPR_btn SPR_btn-mini",
-                    onClick: () => void run(T("重跑"), () => api.runTileItem({ projectId: project.id, key: item.key, variant: index }))
-                  }, T("重跑")) : null
-                );
-              })
-            )
-          ))
-        )
-      );
-
-      // ── ③ 验收 ────────────────────────────────────────────────────────
-      const reviewStage = h("div", { className: "SPR_tileStage" },
-        h("p", { className: "SPR_hint" }, T("逐项看成品与几何报告。几何正常的地块拼起来不会有缝；标「模板几何」说明这张没量准，建议重跑。")),
-        h("div", { className: "SPR_tileGrid" },
-          project.items.map((item) => h("div", { key: item.key, className: "SPR_tileCard" },
-            h("div", { className: "SPR_tileCardHead" },
-              h("span", { className: "SPR_tileCardTitle" }, item.label),
-              item.variants.length === 0 ? h("span", { className: "SPR_tileBadge SPR_tileBadge-warn" }, T("未生成")) : null
-            ),
-            h("div", { className: "SPR_tileThumbs" },
-              item.variants.map((variant) => h("div", { key: variant.index, className: "SPR_tileThumb" },
-                variant.cell === undefined
-                  ? h("div", { className: "SPR_thumb SPR_thumb-empty" }, variant.error ?? T("失败"))
-                  : h(ZoomableImage, {
-                      className: "SPR_thumb",
-                      src: `${project.assetBase}${variant.cell}?v=${encodeURIComponent(project.updatedAt ?? "")}`,
-                      alt: `${item.key}-${variant.index}`,
-                      caption: `#${variant.index + 1}`
-                    }),
-                geomBadge(variant),
-                variant.cell === undefined ? null : h("div", { className: "SPR_row" },
-                  h("button", {
-                    type: "button",
-                    className: `SPR_btn SPR_btn-mini${variant.approved === true ? " SPR_btn-on" : ""}`,
-                    onClick: () => void run(T("验收"), async () => {
-                      await api.setTileApproved({
-                        projectId: project.id, key: item.key, variant: variant.index,
-                        approved: variant.approved !== true
-                      });
-                    })
-                  }, variant.approved === true ? T("已通过") : T("通过")),
-                  h(BusyBtn, {
-                    busy: isVariantRunning(item.key, variant.index),
-                    busyText: T("重跑中…"),
-                    className: "SPR_btn SPR_btn-mini",
-                    onClick: () => void run(T("重跑"), () => api.runTileItem({ projectId: project.id, key: item.key, variant: variant.index }))
-                  }, T("重跑"))
-                )
-              ))
-            )
-          ))
-        )
-      );
-
-      // ── ④ 拼图 ────────────────────────────────────────────────────────
-      const numberField = (label, value, setValue, min, max, step) =>
-        h("label", { className: "SPR_field SPR_field-inline" },
-          h("span", { className: "SPR_fieldLabel" }, label),
-          h(NumField, { className: "SPR_input SPR_input-num", value, min, max, step, onChange: (next) => setValue(next) })
-        );
-
-      /**
-       * 地图布局草稿 —— **三层分开存**：
-       *   · `ground[r][c]`：地面地块键（空格 = 空地）
-       *   · `decor["r,c"]`：装饰键（与地面**独立**，所以树下面照样有草地）
-       *   · `buildings`：跨格建筑（锚点 + 占格 + 垫底地面）
-       *
-       * 为什么要有草稿：宿主每次 `saveTileMapCells` 都会作废下游（拼出来的图）。
-       * 用户连续涂十几格如果每次都提交，就变成十几次往返 + 十几次作废。
-       * 所以涂改只改草稿，点「保存布局」才提交一次。
-       *
-       * ⚠️ 以前是**单层**的：一格只存一个键。于是「刷一棵树」等于把草地换成树
-       * （树下面没有草地），而 2×2 的建筑也只能占一格。
-       */
-      const ensureMapDraft = () => {
-        if (mapDraft !== null) return mapDraft;
-        const rows = Math.max(1, mapRows);
-        const cols = Math.max(1, mapCols);
-        /**
-         * 没指定地面时这一格该铺什么。
-         *
-         * ⚠️ **不能留空**。老项目（以及用户曾经用手涂过树 / 建筑的那些格）里
-         * `cells` 存的可能是**装饰或建筑的键** —— 拼图那边这些格子照样铺着地面，
-         * 但界面草稿若直接丢成空串，预览里就出现一个个**白色菱形洞**，
-         * 而「开始编辑布局」打开的正是这份草稿。实测踩过：13 个 tree 格变成白洞。
-         */
-        const groundFill = firstTerrainKey() ?? "";
-        const ground = [];
-        const decorFromCells = {};
-        for (let r = 0; r < rows; r++) {
-          const row = [];
-          for (let c = 0; c < cols; c++) {
-            const key = project.map?.cells?.[r]?.[c] ?? "";
-            if (key === "") { row.push(""); continue; }
-            if (kindOf(key) === "terrain") { row.push(key); continue; }
-            // 装饰键（老项目手涂的）：**升格成装饰** + 底下补默认地面。
-            // 只补地面会把用户涂的那棵树弄丢；只留装饰则预览里是个白洞。
-            if (kindOf(key) === "decor") decorFromCells[`${r},${c}`] = key;
-            row.push(groundFill);
-          }
-          ground.push(row);
-        }
-        const decor = {};
-        for (const [pos, entry] of Object.entries(project.preview?.decor ?? {})) {
-          const at = pos.split(",");
-          const r = Number.parseInt(at[0], 10);
-          const c = Number.parseInt(at[1], 10);
-          if (!Number.isFinite(r) || !Number.isFinite(c)) continue;
-          if (r >= rows || c >= cols) continue;
-          // ⚠️ 草稿里存的是**地块键**（`tree`），不是贴图路径。
-          // 存路径的话后面按键查变体会查不到，装饰**一个都画不出来**，
-          // 而且不报错（实测：预览里树全丢了）。
-          const key = keyOfVariant(String(entry[1]));
-          if (key !== "") decor[pos] = key;
-        }
-        // 从 `cells` 里升格出来的装饰（老项目手涂的树）优先于记录里的
-        for (const [pos, key] of Object.entries(decorFromCells)) decor[pos] = key;
-        const buildings = (project.preview?.buildings ?? []).map((b) => {
-          const meta = buildingMetaOf(b);
-          // 形状优先取宿主给的那份；老数据没有就按 fw/fh 兜成矩形。
-          const shape = Array.isArray(b.shape) && b.shape.length > 0
-            ? b.shape.map(([r, c]) => [Number(r), Number(c)])
-            : shapeFromRect(b.fw, b.fh);
-          return {
-            r: b.r, c: b.c, fw: b.fw, fh: b.fh, key: keyOfVariant(b.cell), under: defaultUnder(),
-            shape, ratio: meta.ratio, baseFraction: meta.baseFraction
-          };
-        });
-        // ★ 老数据的建筑占格是**空串**（旧版 `place()` 会把它清空）。
-        // 这里补上默认地面 —— 不补的话界面会一直给它们叠那块纯色垫底
-        // （真机上就是「建筑拖着塑料板」），而且用户得先手动保存一次才会好。
-        for (const b of buildings) {
-          for (const [dr, dc] of b.shape) {
-            const row = ground[b.r + dr];
-            if (row === undefined) continue;
-            if (row[b.c + dc] === "") row[b.c + dc] = b.under !== "" ? b.under : groundFill;
-          }
-        }
-        const draft = { ground, decor, buildings };
-        // 第一份草稿也进历史（index 0）—— 撤销到根就该看到「刚打开编辑」的样子
-        commitDraft(draft);
-        return draft;
-      };
-
-      /** 贴图相对路径 → 地块键（反查 `preview.cells`）。 */
-      const keyOfVariant = (rel) => {
-        for (const [key, list] of previewEntries()) {
-          if (list.includes(rel)) return key;
-        }
-        return "";
-      };
-      /** 把 `preview.cells` 规整成 `[键, 贴图数组][]`（宿主给的是 `unknown`）。 */
-      const previewEntries = () => {
-        const raw = project.preview?.cells ?? {};
-        const out = [];
-        for (const key of Object.keys(raw)) {
-          const list = raw[key];
-          if (Array.isArray(list)) out.push([key, list.filter((x) => typeof x === "string")]);
-        }
-        return out;
-      };
-      const kindOf = (key) => project.preview?.kinds?.[key] ?? "";
-      /**
-       * 某地块的**形状**（相对锚点的格子集合）。
-       *
-       * ⚠️ 优先读 `preview.shapes`（宿主按 `shapeOf` 统一给的）；没有才按老的
-       * `footprints` 矩形兜底。**别直接按 `footprints` 铺格子** —— 那只是包围矩形，
-       * L 形会多占格、点到的格子和涂到的错位。
-       */
-      const shapeOfKey = (key) => {
-        const raw = project.preview?.shapes?.[key];
-        if (Array.isArray(raw) && raw.length > 0) {
-          return raw.filter((p) => Array.isArray(p) && p.length >= 2)
-            .map((p) => [Number(p[0]), Number(p[1])]);
-        }
-        const [fw, fh] = project.preview?.footprints?.[key] ?? [1, 1];
-        const out = [];
-        for (let r = 0; r < Math.max(1, fh); r++) {
-          for (let c = 0; c < Math.max(1, fw); c++) out.push([r, c]);
-        }
-        return out;
-      };
-      /** 形状的包围矩形 `[列, 行]`（只用于文案 / 兼容展示）。 */
-      const footprintOf = (key) => project.preview?.footprints?.[key] ?? [1, 1];
-      /** 布局里第一个有贴图的地面地块键（用来补「这格没写地面」的洞）。 */
-      const firstTerrainKey = () => {
-        for (const [key, list] of previewEntries()) {
-          if ((project.preview?.kinds?.[key] ?? "") === "terrain" && list.length > 0) return key;
-        }
-        return null;
-      };
-      /** 建筑底面垫底用哪种地面**地块键**（不是贴图路径）。 */
-      const defaultUnder = () => firstTerrainKey() ?? "";
-
-      /**
-       * 建筑贴图的「自然高 / 宽」与底面比例。
-       *
-       * ⚠️ **优先读草稿里那份，其次才是 `preview.buildings`**。
-       * `preview` 反映的是**已保存**的布局；用户刚用笔刷放下一栋楼时，
-       * 它还不在这份列表里 —— 于是包围盒只能拿默认值（ratio=1、bf=0.5）估，
-       * 估出来的高度和真贴图差一截，`trimTop` 就跟着变，
-       * 表现就是**整张预览在保存前后位移**（真机反馈的「房子上移一格」）。
-       * 所以放下楼时要把这两个值记进草稿，量包围盒时先用它。
-       */
-      const buildingMetaOf = (bd) => {
-        if (typeof bd?.ratio === "number" && typeof bd?.baseFraction === "number") {
-          return { ratio: bd.ratio, baseFraction: bd.baseFraction };
-        }
-        const found = (project.preview?.buildings ?? []).find((e) => e.r === bd?.r && e.c === bd?.c);
-        return {
-          ratio: typeof found?.ratio === "number" ? found.ratio : 1,
-          baseFraction: typeof found?.baseFraction === "number" ? found.baseFraction : 0.5
-        };
-      };
-      /** 拆楼时把占格补回它原来的垫底地面；没有就退回默认地面。 */
-      const underKeyOf = (building) => building.under ?? defaultUnder();
-
-      /** 取某栋建筑贴图的实测尺寸（没量过就返回 undefined）。 */
-      const calibFor = (bd) => {
-        const store = spriteCalibRef.current;
-        if (store.project !== project.id) {
-          store.project = project.id;
-          store.map = {};
-        }
-        return store.map[`${bd.r},${bd.c}`];
-      };
-
-      /**
-       * 形状的底面中心相对**锚点格中心**的偏移（叠层坐标，已乘 `scale`）。
-       *
-       * ⚠️ 与宿主 `tilemap.shapeBaseOffset` **逐字同构**：
-       * 取 `(c−r)` 与 `(c+r)` 的极差、各自除以 2，再乘步长。
-       * 别改成「各格中心平均」或「(fw−1) 那版」—— 非矩形会偏、非正方形差半格。
-       */
-      const shapeOffsetOf = (shape, stepX, stepY) => {
-        if (!Array.isArray(shape) || shape.length === 0) return { dx: 0, dy: 0 };
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        for (const [r, c] of shape) {
-          const x = c - r;
-          const y = c + r;
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-        return {
-          dx: ((minX + maxX) / 2) * stepX,
-          dy: ((minY + maxY) / 2) * stepY
-        };
-      };
-      /** 形状的包围菱形宽度（1× 像素）= x 极差 · cellW/2 + cellW。 */
-      const shapeDiamondWidthOf = (shape, cellW) => {
-        if (!Array.isArray(shape) || shape.length === 0) return cellW;
-        let minX = Infinity, maxX = -Infinity;
-        for (const [r, c] of shape) {
-          const x = c - r;
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-        }
-        return (maxX - minX) * (cellW / 2) + cellW;
-      };
-
-      /** 换一份草稿并记一笔历史。**所有改动草稿的地方都该走它**，否则撤销会跳步。 */
-      function commitDraft(draft) {
-        const h = historyRef.current;
-        // 截断 redo 分支：撤销之后又画了新东西，原来那条「未来」就作废了
-        h.stack = h.stack.slice(0, h.index + 1);
-        h.stack.push(draft);
-        // 只留最近 60 步：每步都是整份快照（14×14 也就 196 个短字符串）
-        if (h.stack.length > 60) h.stack = h.stack.slice(h.stack.length - 60);
-        h.index = h.stack.length - 1;
-        setMapDraft(draft);
-      }
-
-      const undoSave = () => {
-        const h = historyRef.current;
-        if (h.index <= 0) return false;
-        h.index -= 1;
-        setMapDraft(h.stack[h.index]);
-        setNotice({ kind: "info", text: T("已撤销。") });
-        return true;
-      };
-
-      const redoSave = () => {
-        const h = historyRef.current;
-        if (h.index >= h.stack.length - 1) return false;
-        h.index += 1;
-        setMapDraft(h.stack[h.index]);
-        setNotice({ kind: "info", text: T("已重做。") });
-        return true;
-      };
-
-      const canUndo = historyRef.current.index > 0;
-      const canRedo = historyRef.current.index < historyRef.current.stack.length - 1;
-
-      const draftRows = mapDraft?.ground?.length ?? 0;
-      const draftCols = mapDraft?.ground?.[0]?.length ?? 0;
-
-      /** 笔刷的用途（`terrain` / `decor` / `building`），空笔刷返回 `""`。 */
-      const brushKind = () =>
-        brushKey === null || brushKey === "__erase__" ? "" : kindOf(brushKey);
-      /** 建筑笔刷的**形状**。非建筑笔刷恒为单格。 */
-      const brushShape = () => {
-        if (brushKind() !== "building" || brushKey === null) return [[0, 0]];
-        return shapeOfKey(brushKey);
-      };
-      /** 形状的包围矩形（只用于文案）。 */
-      const shapeBounds = (shape) => {
-        let fw = 1;
-        let fh = 1;
-        for (const [r, c] of shape) {
-          if (c + 1 > fw) fw = c + 1;
-          if (r + 1 > fh) fh = r + 1;
-        }
-        return [fw, fh];
-      };
-      /** 建筑笔刷的占格（包围矩形）。非建筑笔刷恒为 `[1, 1]`。 */
-      const brushFootprint = () => {
-        if (brushKind() !== "building" || brushKey === null) return [1, 1];
-        return footprintOf(brushKey);
-      };
-
-      /**
-       * 落点校验 —— 红警盖房子那套：**先看能不能放，再决定画成绿的还是红的**。
-       *
-       * 不校验直接放的话，拼图会在放置阶段把它跳过 ——
-       * 界面上看着楼在那儿，出图却没有（预览与成品对不上，用户会以为丢东西）。
-       *
-       * ⚠️ 越界要按**形状的每个格子**判，不能只看包围矩形：
-       * L 形的包围矩形可能超出地图、但它真正的格子都还在里面。
-       */
-      const placementOk = (r, c) => {
-        const draft = ensureMapDraft();
-        const shape = brushShape();
-        const [fw, fh] = shapeBounds(shape);
-        const rows = draft.ground.length;
-        const cols = draft.ground[0]?.length ?? 0;
-        if (!Number.isFinite(r) || !Number.isFinite(c)) return { ok: false, reason: T("超出地图范围") };
-        const outside = shape.some(([dr, dc]) => r + dr < 0 || c + dc < 0 || r + dr >= rows || c + dc >= cols);
-        if (outside) {
-          return { ok: false, reason: T("放不下：占 {n0}×{n1} 格，这里会超出边界", { n0: fw, n1: fh }) };
-        }
-        if (brushKind() === "building") {
-          // 压到别的建筑：按**格子集合**判，包围矩形相交不算数
-          const mine = new Set(shape.map(([dr, dc]) => `${r + dr},${c + dc}`));
-          const clash = draft.buildings.find((b) => {
-            const bShape = shapeFromDraftBuilding(b);
-            return bShape.some(([dr, dc]) => mine.has(`${b.r + dr},${b.c + dc}`));
-          });
-          if (clash !== undefined) {
-            return { ok: false, reason: T("放不下：会压到 ({n0},{n1}) 那栋建筑", { n0: clash.r, n1: clash.c }) };
-          }
-        }
-        return { ok: true, reason: "" };
-      };
-
-      /** 草稿里某栋建筑的形状（新版直接带 `shape`，老数据按 fw/fh 兜底）。 */
-      const shapeFromDraftBuilding = (b) => {
-        if (Array.isArray(b?.shape) && b.shape.length > 0) return b.shape;
-        const out = [];
-        for (let r = 0; r < Math.max(1, b?.fh ?? 1); r++) {
-          for (let c = 0; c < Math.max(1, b?.fw ?? 1); c++) out.push([r, c]);
-        }
-        return out;
-      };
-
-      /** 占格里的所有格子（放预览高亮用）。按**形状**取，不是包围矩形。 */
-      const footprintCells = (r, c) => brushShape().map(([dr, dc]) => `${r + dr},${c + dc}`);
-
-      /**
-       * 拆掉压在 (r,c) 上的建筑。返回**是否拆掉了**。
-       *
-       * ⚠️ 这是「大格子铺了之后清不掉」的正解：用户拿地面/装饰笔刷去点一栋楼时，
-       * 期望的是**把那块地方收回来**，而不是在地基下面偷偷改草地（楼还杵在那儿，
-       * 看着就像「清不掉」）。所以任何笔刷点到建筑占格，都先把那栋楼拆掉。
-       */
-      const liftBuildingAt = (r, c, ground, decor) => {
-        const draft = ensureMapDraft();
-        // 按**形状的格子集合**判命中，不能按包围矩形 —— L 形的凹口不属于它，
-        // 在凹口上涂地面不该把那栋楼拆掉。
-        const hit = draft.buildings.filter(
-          (b) => shapeFromDraftBuilding(b).some(([dr, dc]) => b.r + dr === r && b.c + dc === c)
-        );
-        for (const b of hit) {
-          // 占格补回默认草地，否则拆完留下一个洞
-          for (const [dr, dc] of shapeFromDraftBuilding(b)) {
-            if (ground[b.r + dr]?.[b.c + dc] !== undefined) ground[b.r + dr][b.c + dc] = underKeyOf(b);
-            delete decor[`${b.r + dr},${b.c + dc}`];
-          }
-        }
-        return { hit, rest: draft.buildings.filter((b) => !hit.includes(b)) };
-      };
-
-      /**
-       * 涂一格。按笔刷的**用途**决定写哪一层 —— 这是「树下面有草地」和
-       * 「2×2 建筑占 2×2 格」的关键。
-       */
-      const paint = (r, c, key) => {
-        const draft = ensureMapDraft();
-        const ground = draft.ground.map((row) => [...row]);
-        const decor = { ...draft.decor };
-        if (ground[r] === undefined || ground[r][c] === undefined) return;
-
-        // 橡皮擦：把这一格**彻底清干净**。压在这儿的建筑整块拆掉（红警里拆楼）。
-        if (key === "") {
-          const { rest } = liftBuildingAt(r, c, ground, decor);
-          ground[r][c] = "";
-          delete decor[`${r},${c}`];
-          commitDraft({ ground, decor, buildings: rest });
-          setCellKey(`${r},${c}`);
-          return;
-        }
-
-        const kind = kindOf(key);
-        if (kind === "decor") {
-          // 装饰只动装饰层：草地原样留着。
-          // ⚠️ 存的是**地块键**（`tree`），不是贴图路径 —— 宿主按 key#index 查变体，
-          // 存路径的话两份数据对不上，重载后装饰会静默消失。
-          const { rest } = liftBuildingAt(r, c, ground, decor);
-          decor[`${r},${c}`] = key;
-          commitDraft({ ground, decor, buildings: rest });
-        } else if (kind === "building") {
-          const verdict = placementOk(r, c);
-          if (!verdict.ok) {
-            setNotice({ kind: "error", text: verdict.reason });
-            return;
-          }
-          const shape = brushShape();
-          const [fw, fh] = shapeBounds(shape);
-          const mine = new Set(shape.map(([dr, dc]) => `${r + dr},${c + dc}`));
-          // 先拆掉压在占格上的旧楼（同一块地重放 = 换一栋）。
-          // ⚠️ 按**格子集合**判重叠：包围矩形相交不算数（L 形能塞进凹口）。
-          let buildings = draft.buildings.filter(
-            (b) => !shapeFromDraftBuilding(b).some(([dr, dc]) => mine.has(`${b.r + dr},${b.c + dc}`))
-          );
-          const under = defaultUnder();
-          // ★ 把**贴图的自然高宽比与底面比例**一起记进草稿。
-          //
-          // 量包围盒要用它们。只在 `preview.buildings` 里查是不够的 ——
-          // 那份反映的是**已保存**的布局，刚放下的这栋还没进去，
-          // 于是包围盒拿默认值估，`trimTop` 与保存后不一致，整张预览就位移。
-          const meta = buildingMetaOf({ r, c });
-          buildings = [...buildings, {
-            r, c, fw, fh, key, under, shape,
-            ratio: meta.ratio, baseFraction: meta.baseFraction
-          }];
-          // 占格铺**真实地面**（不是清空）。
-          //
-          // 清空的话这一格什么都不铺，建筑底面菱形的四个角是透明的，露出来的
-          // 就是那块纯色垫底 —— 和周围有纹理的草地格格不入（看着像拖了块塑料板）。
-          // 铺上地面之后建筑贴图盖上去，边角自然和草地接上。宿主 `place()` 同口径。
-          for (const [dr, dc] of shape) {
-            if (ground[r + dr]?.[c + dc] !== undefined) ground[r + dr][c + dc] = under;
-            delete decor[`${r + dr},${c + dc}`];
-          }
-          commitDraft({ ground, decor, buildings });
-        } else {
-          // 地面（含未知键）：只动地面层；压在建筑上的话先把楼收回来
-          const { rest } = liftBuildingAt(r, c, ground, decor);
-          ground[r][c] = key;
-          delete decor[`${r},${c}`];
-          commitDraft({ ground, decor, buildings: rest });
-        }
-        setCellKey(`${r},${c}`);
-      };
-
-      /** 按草稿尺寸重建布局（改行 / 列时用）。**保留已有内容**，只裁 / 扩。 */
-      const resizeDraft = (rows, cols) => {
-        const current = mapDraft ?? ensureMapDraft();
-        const ground = [];
-        for (let r = 0; r < rows; r++) {
-          const row = [];
-          for (let c = 0; c < cols; c++) row.push(current.ground?.[r]?.[c] ?? "");
-          ground.push(row);
-        }
-        const decor = {};
-        for (const [pos, rel] of Object.entries(current.decor ?? {})) {
-          const at = pos.split(",");
-          const r = Number.parseInt(at[0], 10);
-          const c = Number.parseInt(at[1], 10);
-          if (r < rows && c < cols) decor[pos] = rel;
-        }
-        // 超出新边界的建筑丢掉（留着会让拼图跳过它，预览与出图就不一致了）
-        const buildings = (current.buildings ?? []).filter((b) => b.r + b.fh <= rows && b.c + b.fw <= cols);
-        commitDraft({ ground, decor, buildings });
-      };
-
-      const saveMapDraft = async () => {
-        const draft = mapDraft;
-        if (draft === null) return;
-        await api.saveTileMapCells({
-          projectId: project.id,
-          cells: draft.ground,
-          seed: mapSeed,
-          decor: draft.decor,
-          layouts: draft.buildings.map((b) => ({
-            r: b.r, c: b.c, width: b.fw, height: b.fh, key: b.key, under: b.under,
-            // ★ 形状要一起回传：宿主按它铺占格 / 拼图，只给宽高会退化成矩形
-            // （L 形会被当成 2×2 的方块铺满）。
-            shape: shapeFromDraftBuilding(b)
-          }))
-        });
-        setNotice({ kind: "info", text: T("布局已保存。点「铺成地图」重新出图。") });
-      };
-
-      /**
-       * 把**地面层**整片刷成指定类别（「全刷成当前笔刷」/「全部清空」）。
-       *
-       * 只动地面：刷满草地不该顺手把装饰和建筑抹掉（那是用户另外摆的东西）。
-       * 只有「全部清空」才三层一起清。
-       */
-      const fillDraft = (key) => {
-        const rows = Math.max(1, mapRows);
-        const cols = Math.max(1, mapCols);
-        const current = mapDraft ?? ensureMapDraft();
-        const ground = [];
-        for (let r = 0; r < rows; r++) {
-          const row = [];
-          for (let c = 0; c < cols; c++) row.push(key);
-          ground.push(row);
-        }
-        commitDraft({
-          ground,
-          decor: key === "" ? {} : { ...current.decor },
-          buildings: key === "" ? [] : current.buildings
-        });
-      };
-
-      /** 预览里叠一层可点的格子。用 CSS 等距定位，跟拼图用的是同一套步长。 */
-      const mapCellGrid = () => {
-        if (mapDraft === null) return null;
-        const cw = project.settings?.cellWidth ?? 64;
-        const ch = project.settings?.cellHeight ?? 96;
-        const rows = mapDraft.ground.length;
-        const cols = mapDraft.ground[0]?.length ?? 0;
-        // 拼图放大 2 倍交付（见宿主 runMapStage 的 upscale），预览图也是放大后的，
-        // 所以叠层也要 ×2。这里的公式与宿主 `tileLayout` / `tileOriginAt`
-        // （src/tilemap.ts）**逐字对应** —— 浏览器半区不能 import 宿主代码，
-        // 一致性由 verify-tile-client.mjs 断言（它拿宿主的 tileOriginAt 比对同一组坐标）。
-        const scale = 2;
-        const stepX = (cw / 2) * scale;
-        const stepY = (cw / 4) * scale;   // 菱形高 / 2 = cellWidth / 4，不是 cellHeight / 4
-        const originX = (rows - 1) * stepX;
-        const originY = ch * scale;        // 最上面那格的上方留一个单元格高
-        // ── 裁剪矩形：与宿主 `measureAssemblyBounds` **逐字同构** ──────────
-        //
-        // ⚠️ 别再依赖 `project.map.pixel` 来对齐。它是宿主机算出来的**缓存**，
-        // 只在拼图那一刻正确；用户一涂改（尤其放/挪一栋高过一格建筑）布局就变了，
-        // 而缓存还是旧的 —— 于是叠层与预览图错位，表现就是
-        // 「保存后房子上移一格」「点到的格子和涂到的不是同一格」。
-        //
-        // 现在两边用同一个**几何公式**各算一遍：宿主拿它裁剪并上报，
-        // 界面拿它对齐。公式只跟网格与「哪些格有地面/装饰/建筑」有关，
-        // 是当前草稿的纯函数，所以永远同步。
-        const groundInset = Math.round(ch / 3);          // 地面菱形在单元格里的上边距（1×）
-        const diamondH = Math.round(cw / 2);             // 菱形高（1×）
-        let bLeft = Infinity, bTop = Infinity, bRight = -Infinity, bBottom = -Infinity;
-        const putBox = (x, y, w, h) => {
-          if (!Number.isFinite(x) || !Number.isFinite(y) || w <= 0 || h <= 0) return;
-          if (x < bLeft) bLeft = x;
-          if (y < bTop) bTop = y;
-          if (x + w > bRight) bRight = x + w;
-          if (y + h > bBottom) bBottom = y + h;
-        };
-        const occByBuilding = new Map();
-        for (const bd of mapDraft.buildings) {
-          for (const [dr, dc] of shapeFromDraftBuilding(bd)) {
-            occByBuilding.set(`${bd.r + dr},${bd.c + dc}`, bd);
-          }
-        }
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            const ox = originX + (c - r) * stepX;       // 交付尺寸（2×）
-            const oy = originY + (c + r) * stepY;
-            const key = mapDraft.ground[r]?.[c] ?? "";
-            if (key !== "") {
-              const insetX = ((cw - diamondH * 2) / 2) * scale;
-              putBox(ox - insetX, oy + groundInset * scale, cw * scale, diamondH * scale);
-            }
-            const dec = mapDraft.decor[`${r},${c}`];
-            if (typeof dec === "string" && dec !== "" && !occByBuilding.has(`${r},${c}`)) {
-              putBox(ox, oy, cw * scale, ch * scale);
-            }
-          }
-        }
-        for (const bd of mapDraft.buildings) {
-          const bShape = shapeFromDraftBuilding(bd);
-          const ox = originX + (bd.c - bd.r) * stepX;
-          const oy = originY + (bd.c + bd.r) * stepY;
-          // ★ 底心与包围菱形都按**形状**算，与宿主 `shapeBaseOffset` /
-          // `shapeDiamondHalf` 同一条公式（浏览器半区不能 import 宿主代码）。
-          // ⚠️ 别用 `((fw−1)·stepX)/2` 那版：非正方形会差半格，L 形差更多。
-          const bOff = shapeOffsetOf(bShape, stepX, stepY);
-          const baseX = ox + (cw * scale) / 2 + bOff.dx;
-          const baseY = oy + (ch * scale) / 2 + bOff.dy;
-          const info = buildingMetaOf(bd);
-          const w = shapeDiamondWidthOf(bShape, cw) * scale;
-          // ★ 优先用**实测**尺寸（贴图加载过就有了），没有才用比例估。
-          // 这是「保存前后不跳」的关键：宿主量的是真贴图，界面必须也对齐真贴图。
-          const calib = calibFor(bd);
-          const naturalW = calib?.naturalW ?? 0;
-          const naturalH = calib?.naturalH ?? 0;
-          const hgt = Math.max(1, Math.round(naturalH > 0 ? (w * naturalH) / naturalW : w * info.ratio));
-          const bf = info.baseFraction;
-          putBox(Math.round(baseX - w / 2), Math.round(baseY - bf * hgt), w, hgt);
-          // 垫底：**逐格**（与宿主 `assembleMap` 同口径）。
-          // 画一个大菱形会把 L 形的凹口也涂上。
-          // ⚠️ 单格菱形**半宽 = cellW/2**（整格宽），写成 cellW/4 就只算了一半，
-          // 包围盒会偏小、裁剪时切掉边缘。
-          const cellHalfW = (cw / 2) * scale;
-          const cellHalfH = cellHalfW / 2;
-          for (const [dr, dc] of bShape) {
-            const cx2 = ox + (cw * scale) / 2 + (dc - dr) * stepX;
-            const cy2 = oy + (ch * scale) / 2 + (dc + dr) * stepY;
-            putBox(
-              Math.ceil(cx2 - cellHalfW), Math.floor(cy2 - cellHalfH),
-              Math.floor(cx2 + cellHalfW) - Math.ceil(cx2 - cellHalfW) + 1,
-              Math.ceil(cy2 + cellHalfH) - Math.floor(cy2 - cellHalfH) + 1
-            );
-          }
-        }
-        const hasBounds = Number.isFinite(bLeft) && bRight > bLeft && bBottom > bTop;
-        const trimLeft = hasBounds ? Math.floor(bLeft) : 0;
-        const trimTop = hasBounds ? Math.floor(bTop) : 0;
-        const canvasW = hasBounds ? Math.ceil(bRight) - trimLeft : Math.ceil((cols + rows) * stepX + cw * scale);
-        const canvasH = hasBounds ? Math.ceil(bBottom) - trimTop : Math.ceil((rows + cols) * stepY + ch * 2 * scale);
-        // 缩放到容器宽度：叠层是「交付尺寸」（2 倍），14×14 有 1792px 宽，
-        // 不缩放就只能看见左上角。上限 1（不放大），下限 0.1（极端大地图也别缩成点）。
-        const fit = Math.max(0.1, Math.min(1, 900 / canvasW));
-        const fitW = Math.round(canvasW * fit);
-        const fitH = Math.round(canvasH * fit);
-        /**
-         * 即时预览：把「地面 → 装饰 → 建筑」三层按等距位置摆上去，
-         * 顺序与宿主 `assembleMap` 一致（远的先画、近的盖住远的）。
-         *
-         * 三层都读**草稿**（不是成品），所以涂一格立刻变；
-         * 而草稿本身是从成品加载来的，所以刚点开看到的就是刚才那张图。
-         * 变体下标用与宿主**同一个** `pickVariantIndex`（位置 + 种子），
-         * 所以预览挑到的变体和出图完全一样。
-         */
-        const pv = project.preview ?? {};
-        const pvCells = pv.cells ?? {};
-        const seed = typeof mapSeed === "number" ? mapSeed : (project.map?.seed ?? 0);
-        const artUrl = (rel) => `${project.assetBase}${rel}?v=${encodeURIComponent(project.updatedAt ?? "")}`;
-        /** 与宿主 `tilemap.pickVariantIndex` 逐字同构（浏览器半区不能 import 宿主代码）。 */
-        const pickVariantIndex = (s, r, c, count) => {
-          if (count <= 1) return 0;
-          let h = (s ^ 0x9e3779b9) >>> 0;
-          h = Math.imul(h ^ (r + 0x85ebca6b), 0xc2b2ae35) >>> 0;
-          h = Math.imul(h ^ (c + 0x27d4eb2f), 0x165667b1) >>> 0;
-          h = (h ^ (h >>> 15)) >>> 0;
-          return h % count;
-        };
-        /**
-         * 装饰的地面线（1× 像素）—— 与宿主 `tilegeom.decorAnchorY` **同一公式**：
-         * `round(cellHeight/2 + diamondHeight/2 − diamondHeight/4 − 2)`，
-         * 其中 `diamondHeight = cellWidth/2`。64×96 → 54。
-         */
-        const decorAnchor = Math.round(ch / 2 + cw / 4 - cw / 8 - 2);
-        const variantArt = (key, r, c) => {
-          const list = pvCells[key];
-          if (list === undefined || list.length === 0) return null;
-          return list[pickVariantIndex(seed, r, c, list.length)];
-        };
-        const under = [];
-        const layers = [];
-        const decor = [];
-        const builds = [];
-        const cells = [];
-        // 建筑底面的垫底。
-        //
-        // ⚠️ 只在占格地面**没铺满**时才需要它：占格现在铺着真地面，
-        // 底面菱形的四角由邻格的草地盖住，再叠一块裁成菱形的贴图反而会在
-        // 草地上压出一个边界硬朗的菱形（原来那块「塑料板」就是这么来的）。
-        // 所以逐格检查：谁缺地面，就给它垫一块。
-        const groundCovered = new Set();
-        for (const b of mapDraft.buildings) {
-          for (let dr = 0; dr < b.fh; dr++) {
-            for (let dc = 0; dc < b.fw; dc++) {
-              const key = mapDraft.ground[b.r + dr]?.[b.c + dc];
-              if (typeof key === "string" && key !== "") groundCovered.add(`${b.r + dr},${b.c + dc}`);
-            }
-          }
-        }
-        for (const b of mapDraft.buildings) {
-          const missing = [];
-          for (const [dr, dc] of shapeFromDraftBuilding(b)) {
-            if (!groundCovered.has(`${b.r + dr},${b.c + dc}`)) missing.push(`${b.r + dr},${b.c + dc}`);
-          }
-          if (missing.length === 0 || b.under === "") continue;
-          const x = Math.round(originX + (b.c - b.r) * stepX) - trimLeft;
-          const y = Math.round(originY + (b.c + b.r) * stepY) - trimTop;
-          const bShape = shapeFromDraftBuilding(b);
-          const w = shapeDiamondWidthOf(bShape, cw) * scale;
-          const hh = w / 2;
-          // 占格菱形的中心 —— 建筑贴图的底面落在这里，垫底也要跟着落在这里。
-          // 用锚点格中心的话垫底会往左上偏半格，建筑看着像浮在半空。
-          const bOff = shapeOffsetOf(bShape, stepX, stepY);
-          const baseX = x + (cw * scale) / 2 + bOff.dx;
-          const baseY = y + (ch * scale) / 2 + bOff.dy;
-          // 垫底的草贴图：先按地块键查第一张（草通常只有一个变体）
-          const underArt = (project.preview?.cells?.[b.under] ?? [])[0] ?? b.under;
-          under.push(h("img", {
-            key: `u${b.r},${b.c}`,
-            className: "SPR_mapArt SPR_mapUnder",
-            src: artUrl(underArt),
-            alt: `under ${b.r},${b.c}`,
-            style: {
-              left: `${baseX - w / 2}px`,
-              top: `${baseY - hh / 2}px`,
-              width: `${w}px`, height: `${hh}px`,
-              clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)"
-            }
-          }));
-        }
-        // 被建筑占掉的格子不画地面（与宿主口径一致：建筑单独 blit）
-        const occupiedByBuilding = new Set();
-        for (const b of mapDraft.buildings) {
-          for (let dr = 0; dr < b.fh; dr++) {
-            for (let dc = 0; dc < b.fw; dc++) occupiedByBuilding.add(`${b.r + dr},${b.c + dc}`);
-          }
-        }
-
-        // ── 幽灵预览的几何：光标格 + 笔刷占格 + 落点校验 ──────────────
-        const ghostCells = new Set<string>();  // 元素是 "r,c"
-        let ghostOk = true;
-        let ghostReason = "";
-        if (hoverCell !== null) {
-          const at = hoverCell.split(",");
-          const hr = Number(at[0]);
-          const hc = Number(at[1]);
-          const verdict = placementOk(hr, hc);
-          ghostOk = verdict.ok;
-          ghostReason = verdict.reason;
-          for (const cell of footprintCells(hr, hc)) ghostCells.add(cell);
-        }
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            const key = mapDraft.ground[r][c];
-            const x = Math.round(originX + (c - r) * stepX) - trimLeft;
-            const y = Math.round(originY + (c + r) * stepY) - trimTop;
-            const occupied = occupiedByBuilding.has(`${r},${c}`);
-            // ⚠️ 建筑占格**照画地面**（不再因为 occupied 就跳过）。
-            // 宿主 `place()` 现在也把占格铺回默认地面，两边必须一致：
-            // 占格空着的话建筑底面菱形的四个角会露出纯色垫底，
-            // 和周围有纹理的草地格格不入。
-            const art = key === "" ? null : variantArt(key, r, c);
-            if (art !== null) {
-              layers.push(h("img", {
-                key: `a${r},${c}`,
-                className: "SPR_mapArt",
-                src: artUrl(art),
-                alt: `${r},${c} ${key}`,
-                style: { left: `${x}px`, top: `${y}px`, width: `${cw * scale}px`, height: `${ch * scale}px` }
-              }));
-            }
-            // 装饰：与地面**独立**的一层，所以树下面照样有草地。
-            //
-            // ⚠️ 装饰贴图是**整格画布**（`cellWidth × cellHeight`），不是「一张树的图」。
-            // 宿主 `regularizeDecorSprite` 已经把它**居中 + 落地**地合成进那一格了：
-            //   `left = round(cellW/2 − 贴图宽/2)`、`top = decorAnchorY − 贴图高`
-            // 所以宿主 `assembleMap` 只需 `blit(sprite, cellX, cellY)` —— 直接贴整格。
-            //
-            // 界面必须**同样直接贴整格、绝不再居中一次**：
-            // 再加 `translateX(-50%)` 就是把已经居中的内容又左移半格，整排装饰偏出去。
-            //
-            // 这里错过两次，方向相反，判据只有一条 ——
-            // **贴图铺满整格，左上角对齐格子左上角**：
-            //   · 锚点写成「格子底边」→ 整排往上升；
-            //   · 以为要自己居中 → 加了 `translateX(-50%)` → 整排左移半格。
-            const decKey = mapDraft.decor[`${r},${c}`];
-            if (typeof decKey === "string" && decKey !== "" && !occupied) {
-              const decArt = variantArt(decKey, r, c);
-              if (decArt !== null) {
-                decor.push(h("img", {
-                  key: `d${r},${c}`,
-                  className: "SPR_mapDecor",
-                  src: artUrl(decArt),
-                  alt: `decor ${r},${c}`,
-                  style: {
-                    left: `${x}px`, top: `${y}px`,
-                    width: `${cw * scale}px`, height: `${ch * scale}px`
-                  }
-                }));
-              }
-            }
-            cells.push(h("button", {
-              key: `${r},${c}`,
-              type: "button",
-              className: `SPR_mapCell${key === "" ? " SPR_mapCell-empty" : ""}${cellKey === `${r},${c}` ? " SPR_mapCell-active" : ""}${ghostCells.has(`${r},${c}`) ? (ghostOk ? " SPR_mapCell-ghostOk" : " SPR_mapCell-ghostBad") : ""}`,
-              style: {
-                left: `${x}px`, top: `${y}px`,
-                width: `${cw * scale}px`, height: `${ch * scale}px`,
-                // 只让菱形那部分可点：菱形在单元格里位于 y ∈ [1/3, 2/3]
-                clipPath: "polygon(50% 33.3%, 100% 50%, 50% 66.7%, 0% 50%)"
-              },
-              title: ghostCells.has(`${r},${c}`) && !ghostOk
-                ? `${r},${c} · ${ghostReason}`
-                : `${r},${c} · ${key === "" ? T("空格") : key}`,
-              onMouseEnter: () => setHoverCell(`${r},${c}`),
-              onFocus: () => setHoverCell(`${r},${c}`),
-              onClick: () => paint(r, c, brushKey === "__erase__" ? "" : (brushKey ?? ""))
-            }, h("span", { className: "SPR_mapCellLabel" }, key === "" ? "" : key.slice(0, 4))));
-          }
-        }
-
-        // ★ 红警盖房子那种「幽灵预览」：光标停在哪，就把**整块占格**画出来。
-        //
-        // 只高亮一格时，选了 2×2 建筑的用户根本不知道这一下会盖多大一片。
-        // 能放画绿、不能放画红（越界 / 压到别的建筑），并在格子的 title 里写明原因。
-        //
-        // ⚠️ 只画占格那几块（`ghostCells`），**不要另画一圈外框** ——
-        // 两者会叠在同一个容器里越堆越多（实测同一批格子被画了 5 遍，
-        // 并且因为共用 `builds` 还被当成建筑重复了一遍）。
-        const ghost = [];
-        if (ghostCells.size > 0) {
-          ghost.push(h("div", {
-            key: "ghost",
-            className: `SPR_mapGhost${ghostOk ? " SPR_mapGhost-ok" : " SPR_mapGhost-bad"}`,
-            style: { left: "0px", top: "0px", width: `${canvasW}px`, height: `${canvasH}px` }
-          }, ...Array.from(ghostCells, (cell) => {
-            const at = cell.split(",");
-            const gr = Number(at[0]);
-            const gc = Number(at[1]);
-            return h("div", {
-              key: `g${cell}`,
-              className: "SPR_mapGhostCell",
-              style: {
-                left: `${Math.round(originX + (gc - gr) * stepX) - trimLeft}px`,
-                top: `${Math.round(originY + (gc + gr) * stepY) - trimTop}px`,
-                width: `${cw * scale}px`, height: `${ch * scale}px`
-              }
-            });
-          })));
-        }
-
-        // ★ 跨格建筑：按**占格**摆，不是按一格。
-        // 以前预览把建筑当 1×1 地块画，所以「本应该 2×2 的房屋只占一格」。
-        //
-        // 尺寸要靠图片的**自然宽高**才知道（宿主没传，传了也要靠 JS 算），
-        // 这里交给浏览器：图片按目标底面宽 / 自然宽 做 `scale`，
-        // 再按 `baseFraction` 把底面中心对到锚点格中心 —— 这正是宿主
-        // `regularizeBuilding` + `assembleMap` 那两步的 CSS 等价写法。
-        const buildWidth = (shape) => shapeDiamondWidthOf(shape, cw) * scale;
-        for (const b of mapDraft.buildings) {
-          const x = Math.round(originX + (b.c - b.r) * stepX) - trimLeft;
-          const y = Math.round(originY + (b.c + b.r) * stepY) - trimTop;
-          const bShape = shapeFromDraftBuilding(b);
-          // 底面中心 = **形状的包围菱形**中心（不是锚点格中心，2×2 时差半格）
-          const bOff = shapeOffsetOf(bShape, stepX, stepY);
-          const anchorX = x + (cw * scale) / 2 + bOff.dx;
-          const anchorY2 = y + (ch * scale) / 2 + bOff.dy;
-          const art = variantArt(b.key, b.r, b.c);
-          if (art === null) continue;
-          const bf = buildingMetaOf(b).baseFraction;
-          builds.push(h("div", {
-            key: `b${b.r},${b.c}`,
-            className: "SPR_mapBuild",
-            style: { left: "0px", top: "0px", width: `${canvasW}px`, height: `${canvasH}px` }
-          }, h("img", {
-            className: "SPR_mapBuildImg",
-            src: artUrl(art),
-            alt: `building ${b.r},${b.c}`,
-            // 让标定用的 effect 能按位置找回这张图（量它的真实尺寸）
-            "data-sprite": `${b.r},${b.c}`,
-            "data-w": String(buildWidth(bShape)),
-            "data-bx": String(anchorX),
-            "data-by": String(anchorY2),
-            "data-bf": String(typeof bf === "number" ? bf : 0.5),
-            "data-cw": String(cw * scale),
-            ref: (el) => {
-              if (el === null) return;
-              const fit = () => {
-                const nw = el.naturalWidth || 1;
-                const nh = el.naturalHeight || 1;
-                const bf = Number(el.dataset.bf) || 0.5;
-                const k = (Number(el.dataset.w) || nw) / nw;
-                // transform-origin 设在「底面中心」：缩放时底面中心不动，
-                // 于是只要把左上角摆到「底面中心 − 底面中心在贴图里的偏移」即可。
-                el.style.transformOrigin = `${nw / 2}px ${bf * nh}px`;
-                el.style.transform = `scale(${k})`;
-                el.style.left = `${(Number(el.dataset.bx) || 0) - nw / 2}px`;
-                el.style.top = `${(Number(el.dataset.by) || 0) - bf * nh}px`;
-              };
-              if (el.complete) fit();
-              else el.addEventListener("load", fit, { once: true });
-            }
-          })));
-        }
-        return h("div", { className: "SPR_mapEditorWrap" },
-          h("p", { className: "SPR_muted" }, T("下面的预览就是当前草稿：涂一格立刻变，不用先保存。")),
-          // 等比缩放到容器宽度，让整张图一眼看得见。
-          // 不缩放的话 14×14 的叠层宽 1792px，只能看见左上角一小块 ——
-          // 「拼的时候就能预览」也就无从谈起。
-          h("div", {
-            className: "SPR_mapEditorFit",
-            style: { width: `${fitW}px`, height: `${fitH}px` }
-          },
-            h("div", {
-              className: "SPR_mapEditorScaler",
-              style: { width: `${canvasW}px`, height: `${canvasH}px`, transform: `scale(${fit})` }
-            },
-              h("div", {
-                className: "SPR_mapEditorCanvas",
-                style: { width: `${canvasW}px`, height: `${canvasH}px` },
-                // 光标移出画布就收起幽灵预览（否则它一直挂在最后停的那一格）
-                onMouseLeave: () => setHoverCell(null),
-                /**
-                 * 滚轮切笔刷 —— 地图编辑器的老习惯：手不用离开地图就能换笔。
-                 * `deltaY < 0`（向上滚）往前进一格，向下滚往后退。
-                 * **只有按住 Ctrl 才接管**：普通滚动要留给页面本身，否则用户
-                 * 想上下翻面板却被吞掉，体验更差。
-                 */
-                onWheel: (event) => {
-                  if (!event.ctrlKey) return;
-                  const list = ["__erase__", ...project.items.map((it) => it.key)];
-                  if (list.length === 0) return;
-                  const at = list.indexOf(brushKey);
-                  const step = event.deltaY > 0 ? -1 : 1;
-                  const next = list[(at + step + list.length) % list.length];
-                  event.preventDefault();
-                  setBrushKey(next);
-                }
-              },
-                under,
-                layers,
-                decor,
-                builds,
-                ghost,
-                cells
-              )
-            )
-          )
-        );
-      };
-
-      const mapStage = h("div", { className: "SPR_tileStage" },
-        h("p", { className: "SPR_hint" }, T("铺图全在本地：按等距网格铺、按类别随机抽变体、按 (r+c) 顺序遮挡。同种子 + 同布局 = 逐像素一致。也可以手动改：挑一个地块当笔刷，点格子涂上去。")),
-        h("div", { className: "SPR_row" },
-          numberField(T("行"), mapRows, (next) => { setMapRows(next); resizeDraft(next, mapCols); }, 1, 64, 1),
-          numberField(T("列"), mapCols, (next) => { setMapCols(next); resizeDraft(mapRows, next); }, 1, 64, 1),
-          numberField(T("种子"), mapSeed, setMapSeed, 0, 999999999, 1),
-          numberField(T("装饰密度"), decorDensity, setDecorDensity, 0, 1, 0.01)
-        ),
-        h("div", { className: "SPR_row" },
-          h(BusyBtn, {
-            busy: busy,
-            className: "SPR_btn SPR_btn-primary",
-            onClick: () => void run(T("拼图"), () => api.runTileMap({
-              projectId: project.id, rows: mapRows, cols: mapCols, seed: mapSeed,
-              fill: project.items[0]?.key ?? "grass", decorDensity
-            }))
-          }, T("铺成地图（免费）")),
-          h(BusyBtn, {
-            busy: busy,
-            className: "SPR_btn",
-            onClick: () => void run(T("换种子"), () => api.runTileMap({
-              projectId: project.id, rows: mapRows, cols: mapCols,
-              seed: Math.floor(Math.random() * 1000000),
-              fill: project.items[0]?.key ?? "grass", decorDensity
-            }))
-          }, T("换个种子重铺"))
-        ),
-
-        // ── 手动编辑布局 ────────────────────────────────────────────────
-        h("div", { className: "SPR_tileEditor" },
-          h("div", { className: "SPR_tileEditorRow" },
-            h("span", { className: "SPR_fieldLabel" }, T("笔刷（点格子刷上去）")),
-            h("div", { className: "SPR_mapBrush" },
-              // 按用途分组：点「地面」只换草皮、点「装饰」是**加**一棵树（草地还在）、
-              // 点「建筑」按它的占格整块放下。混在一起会让用户以为刷树会把草顶掉。
-              ...["terrain", "decor", "building"].map((kind) =>
-                h("span", { key: kind, className: "SPR_mapBrushGroup" },
-                  h("span", { className: "SPR_mapBrushLabel" },
-                    kind === "terrain" ? T("地面") : kind === "decor" ? T("装饰") : T("建筑")),
-                  ...project.items.filter((item) => item.kind === kind).map((item) => h("button", {
-                    key: item.key,
-                    type: "button",
-                    className: `SPR_btn SPR_btn-mini${brushKey === item.key ? " SPR_btn-on" : ""}`,
-                    onClick: () => setBrushKey(item.key),
-                    title: kind === "building"
-                      ? T("{n0} · 占 {n1}×{n2} 格", { n0: item.key, n1: item.footprint[0], n2: item.footprint[1] })
-                      : `${item.key} · ${item.family}`
-                  }, item.label))
-                )
-              ),
-              h("button", {
-                type: "button",
-                className: `SPR_btn SPR_btn-mini${brushKey === "__erase__" ? " SPR_btn-on" : ""}`,
-                onClick: () => setBrushKey("__erase__")
-              }, T("橡皮擦"))
-            )
-          ),
-          mapDraft === null
-            ? h("div", { className: "SPR_row" },
-                h("button", { type: "button", className: "SPR_btn", onClick: () => { ensureMapDraft(); setNotice({ kind: "info", text: T("已取出当前布局，开始涂改（改完点「保存布局」）") }); } },
-                  T("开始编辑布局"))
-              )
-            : h("div", { className: "SPR_tileEditorRow" },
-                h("button", { type: "button", className: "SPR_btn", disabled: !canUndo, onClick: () => undoSave() },
-                  T("撤销")),
-                h("button", { type: "button", className: "SPR_btn", disabled: !canRedo, onClick: () => redoSave() },
-                  T("重做")),
-                h("button", { type: "button", className: "SPR_btn", onClick: () => fillDraft(brushKey === "__erase__" ? "" : (brushKey ?? "")) },
-                  T("全刷成当前笔刷")),
-                h("button", { type: "button", className: "SPR_btn", onClick: () => fillDraft("") }, T("全部清空")),
-                h("button", { type: "button", className: "SPR_btn SPR_btn-primary", onClick: () => void run(T("保存布局"), saveMapDraft) },
-                  T("保存布局")),
-                h("button", { type: "button", className: "SPR_btn", onClick: () => { setMapDraft(null); setCellKey(null); setHoverCell(null); } }, T("放弃修改")),
-                h("span", { className: "SPR_muted" },
-                  cellKey === null
-                    ? T("共 {n0} 行 × {n1} 列", { n0: draftRows, n1: draftCols })
-                    : T("正在编辑 {n0} · 当前是「{n1}」", {
-                        n0: cellKey,
-                        n1: (() => {
-                          const at = cellKey.split(",");
-                          const key = mapDraft.ground?.[Number(at[0])]?.[Number(at[1])] ?? "";
-                          return key === "" ? T("空格") : key;
-                        })()
-                      }))
-              ),
-          mapDraft === null ? null : mapCellGrid(),
-          h("p", { className: "SPR_muted" },
-            T("涂改只改草稿，点「保存布局」才写回项目；之后再点「铺成地图」出图。手动改布局不会作废已生成的地块。")),
-          mapDraft === null ? null : h("p", { className: "SPR_muted" },
-            T("快捷键：Ctrl+Z 撤销 / Ctrl+Shift+Z 重做；Esc 放下笔刷；在地图上按住 Ctrl 滚轮切笔刷。"))
-        ),
-        // ⚠️ 判据是 `map.png`（宿主真实给的字段），**不是** `map.ready`。
-        // 宿主从来没算过 `ready`，所以写成 `map.ready === true` 时**拼好的地图
-        // 永远不显示**，界面一直停在「还没有拼图」——而且不报任何错。
-        // 实测踩过。verify-tile-client.mjs 现在会断言「已有 png 时必须显示预览」。
-        typeof project.map?.png === "string"
-          ? h("div", { className: "SPR_row" },
-              h(ZoomableImage, {
-                className: "SPR_tileMap",
-                src: `${project.assetBase}${project.map.png}?v=${encodeURIComponent(project.updatedAt ?? "")}`,
-                alt: T("地图"),
-                caption: `${project.map.cols}×${project.map.rows} · seed ${project.map.seed}`
-              })
-            )
-          : h("div", { className: "SPR_empty" }, T("还没有拼图——点「铺成地图」立刻看到结果（不花钱）。"))
-      );
-
-      // ── ⑤ 导出 ────────────────────────────────────────────────────────
-      const exportStage = h("div", { className: "SPR_tileStage" },
-        h("p", { className: "SPR_hint" }, T("导出地块包（每张 PNG）+ 地图 PNG + 布局 JSON。全部本地计算。")),
-        h("div", { className: "SPR_row" },
-          h(BusyBtn, {
-            busy: busy,
-            className: "SPR_btn SPR_btn-primary",
-            onClick: () => void run(T("导出"), () => api.runTileExport({ projectId: project.id }))
-          }, T("导出到 export/")),
-          h("button", {
-            type: "button",
-            className: "SPR_btn",
-            onClick: () => void api.revealTileProject({ projectId: project.id }).catch((error) => setNotice({ kind: "error", text: msg(error) }))
-          }, T("打开产物目录"))
-        )
-      );
-
-      const stageBody = stage === "generate" ? generateStage
-        : stage === "review" ? reviewStage
-        : stage === "map" ? mapStage
-        : exportStage;
-
-      return h("div", { className: "SPR_module" },
-        gateOpen ? h(TileExperimentalDialog, { onClose: closeGate }) : null,
-        h(ExperimentalBar, null),
-        header,
-        steps,
-        notice === null ? null : h("div", { className: `SPR_notice SPR_notice-${notice.kind}` }, notice.text),
-        // ⚠️ 进度提示必须是**行内、不遮挡**的，不能盖住整个面板。
-        //
-        // 这里原来用 `LoadingOverlay`（`position:absolute; inset:0`）盖在整块面板上，
-        // 生成一个地块要几十秒，期间用户既进不了别的阶段、也没法去别的模块干活 ——
-        // 而「取消」按钮本身也被盖住了，等于点了停不下来。
-        //
-        // 现在换成一条细进度条 + 一行文字，跟着文档流走：
-        // 它不拦点击，用户可以去别的页签、别的阶段，回来进度还在。
-        // 需要「看到就放心」的地方（缩略图、遮罩）仍用 LoadingOverlay。
-        busy ? h(TileProgressBar, {
-          job: project.job,
-          text: T("正在生成地块…")
-        }) : null,
-        stageBody
-      );
+      return shell(main);
     }
+
 
     function ImageModule(props) {      useLocaleTick();
       const api = props.api;
@@ -19339,18 +18559,7 @@
       });
     }
 
-    /** 进入模块⑤时的实验性说明弹窗（45° 地图地块）。 */
-    function TileExperimentalDialog({ onClose }) {
-      return h(ExperimentalDialog, {
-        moduleKey: "tile",
-        title: T("45°地图地块生成仍在开发中"),
-        ariaLabel: T("45°地图地块生成（实验性）"),
-        points: TILE_EXPERIMENTAL_POINTS,
-        onClose
-      });
-    }
-
-    // 模块⑥「地图编辑器」已经没有实验性弹窗了（它不是实验性功能）。
+    // 模块⑥「俯视地图编辑器」已经没有实验性弹窗了（它不是实验性功能）。
 
     /**
      * 模块④的主体界面。
@@ -20205,7 +19414,7 @@
           "div",
           { className: "SPR_settingsGroup" },
           h("h3", null, T("生图后端")),
-          h("p", null, T("八方向图、图片生成、骨骼动画、45°地图地块的生图都走这里选的后端；图生视频（MiniMax）不受影响。")),
+          h("p", null, T("八方向图、图片生成、骨骼动画的生图都走这里选的后端；图生视频（MiniMax）不受影响。")),
           h(
             "div",
             { className: "SPR_fields" },
@@ -21455,23 +20664,29 @@
         runRigBones: (payload) => call("runRigBones", payload),
         runRigAtlas: (payload) => call("runRigAtlas", payload),
 
-        // 地图地块生成
-        listTileProjects: () => call("listTileProjects"),
-        createTileProject: (payload) => call("createTileProject", { lang: activeLang(), ...payload }),
-        // 清单 / 画风描述的默认值存在宿主侧，所以「读」和「重置为默认」都要把语言带过去
-        getTileProject: (projectId) => call("getTileProject", { projectId, lang: activeLang() }),
-        deleteTileProject: (payload) => call("deleteTileProject", payload),
-        saveTileProject: (payload) => call("saveTileProject", { lang: activeLang(), ...payload }),
-        runTileItems: (payload) => call("runTileItems", payload),
-        runTileItem: (payload) => call("runTileItem", payload),
-        setTileApproved: (payload) => call("setTileApproved", payload),
-        runTileMap: (payload) => call("runTileMap", payload),
-        saveTileMapCells: (payload) => call("saveTileMapCells", payload),
-        runTileExport: (payload) => call("runTileExport", payload),
-        cancelTileJob: (payload) => call("cancelTileJob", payload),
-        revealTileProject: (payload) => call("revealTileProject", payload),
+        // 45° 地图编辑器（模块五 · iso）：全本地，没有一步收费
+        listIsoProjects: () => call("listIsoProjects"),
+        createIsoProject: (payload) => call("createIsoProject", payload),
+        getIsoProject: (payload) => call("getIsoProject", payload),
+        saveIsoProject: (payload) => call("saveIsoProject", payload),
+        deleteIsoProject: (payload) => call("deleteIsoProject", payload),
+        importIsoTileset: (payload) => call("importIsoTileset", payload),
+        importIsoSampleTileset: (payload) => call("importIsoSampleTileset", payload),
+        saveIsoTileset: (payload) => call("saveIsoTileset", payload),
+        removeIsoTileset: (payload) => call("removeIsoTileset", payload),
+        saveIsoDoc: (payload) => call("saveIsoDoc", payload),
+        applyIsoOps: (payload) => call("applyIsoOps", payload),
+        isoUndo: (payload) => call("isoUndo", payload),
+        isoRedo: (payload) => call("isoRedo", payload),
+        isoPlan: (payload) => call("isoPlan", payload),
+        runIsoGenerate: (payload) => call("runIsoGenerate", payload),
+        runIsoPreview: (payload) => call("runIsoPreview", payload),
+        runIsoExport: (payload) => call("runIsoExport", payload),
+        cancelIsoJob: (payload) => call("cancelIsoJob", payload),
+        setIsoApproved: (payload) => call("setIsoApproved", payload),
+        revealIsoProject: (payload) => call("revealIsoProject", payload),
 
-        // 地图编辑器（模块六）：全本地，没有一步收费
+        // 俯视地图编辑器（模块六）：全本地，没有一步收费
         listMapProjects: () => call("listMapProjects"),
         createMapProject: (payload) => call("createMapProject", { lang: activeLang(), ...payload }),
         getMapProject: (payload) => call("getMapProject", { lang: activeLang(), ...payload }),
@@ -21613,7 +20828,7 @@
      * `mapgeom` / `mapdoc` 的真实现做黄金对照逐点比对 —— 界面复刻的那部分几何
      * 必须有守门的，否则「预览与导出错位」会以静默的方式回来。
      */
-    bundleModule.exports.__test = { StudioPanel, TileModule, ImageModule, SequenceModule, mergeDrafts, RigSemanticsPanel, MapModule, MusicModule, SfxModule, MAP_pointToCell, MAP_cellAnchor, MAP_cellTopLeft, MAP_lineCells, usePendingTasks, LoadingOverlay, MediaBox, BusyBtn, BusyBadge, NumField, ZoomableImage, CSS, subscribeIntent, parseIntents, openStudioIntent, OPEN_QUERY_KEY, StudioGlyph, StudioGlyphIcon, publishHiddenModules, useHiddenModules, visibleModulesOf, normalizeHiddenKeys, ConfigSection, attachSessionBridge, openAssetChat, openMusicChat, buildAssetRequestPrompt, buildMusicRequestPrompt, buildComposeRequestPrompt, deriveAssetName, deriveMusicName, ASSET_FRAMES_MIN, ASSET_FRAMES_MAX };
+    bundleModule.exports.__test = { StudioPanel, IsoModule, ImageModule, SequenceModule, mergeDrafts, RigSemanticsPanel, MapModule, MusicModule, SfxModule, ISO_pointToCell, ISO_cellCenter, ISO_cellTopLeft, ISO_lineCells, MAP_pointToCell, MAP_cellAnchor, MAP_cellTopLeft, MAP_lineCells, usePendingTasks, LoadingOverlay, MediaBox, BusyBtn, BusyBadge, NumField, ZoomableImage, CSS, subscribeIntent, parseIntents, openStudioIntent, OPEN_QUERY_KEY, StudioGlyph, StudioGlyphIcon, publishHiddenModules, useHiddenModules, visibleModulesOf, normalizeHiddenKeys, ConfigSection, attachSessionBridge, openAssetChat, openMusicChat, buildAssetRequestPrompt, buildMusicRequestPrompt, buildComposeRequestPrompt, deriveAssetName, deriveMusicName, ASSET_FRAMES_MIN, ASSET_FRAMES_MAX };
     return bundleModule.exports;
   }
 });

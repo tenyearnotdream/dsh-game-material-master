@@ -289,7 +289,7 @@ try {
   check("STUDIO_MODULES 含 map", [...links.STUDIO_MODULES].includes("map"), links.STUDIO_MODULES.join(","));
   check("MAP_STAGES 四个 key 保持不变", links.MAP_STAGES.join(",") === "assets,rules,paint,export", links.MAP_STAGES.join(","));
   check("每个地图方法都归属 map 模块", CONTRACT_METHODS.every((method) => toolsurface.METHOD_MODULE[method] === "map"), CONTRACT_METHODS.filter((method) => toolsurface.METHOD_MODULE[method] !== "map").join(","));
-  check("m 前缀认成 map，t 前缀仍是 tile，未知前缀返回 undefined", toolsurface.moduleForId("m1a2b3c") === "map" && toolsurface.moduleForId("t1a2b3c") === "tile" && toolsurface.moduleForId("zz12") === undefined);
+  check("m 前缀认成 map，g 前缀认成 iso，未知前缀返回 undefined", toolsurface.moduleForId("m1a2b3c") === "map" && toolsurface.moduleForId("g1a2b3c") === "iso" && toolsurface.moduleForId("zz12") === undefined);
   check("模块中文名不再带旧术语", !String(toolsurface.MODULE_LABELS.map).includes("等距") && !String(toolsurface.MODULE_LABELS.map).includes("地块"), toolsurface.MODULE_LABELS.map);
   check(
     "资源白名单只剩 tilesets / preview / export / ai（maps 已删）",

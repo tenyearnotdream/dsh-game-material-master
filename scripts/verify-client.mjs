@@ -555,21 +555,16 @@ function checkRigContracts(text, label) {
     `${label}：模块④常驻提示条与共建仓库入口`,
     text.includes("ExperimentalBar") && text.includes("https://github.com/universe-st/dsh-game-material-master")
   );
-  // ★ 模块⑤「45°地图地块生成」也标了实验性：角标 + 弹窗 + 常驻提示条一个不能少。
-  // 只加角标不加提示条的话，用户在模块里干着活就看不到「这是实验性功能」了。
+  // 模块⑤已经换成「45°地图编辑器」：正式功能，不应再有实验性角标 / 弹窗 / 常驻提示条。
   check(
-    `${label}：模块⑤「45°地图地块生成」带实验性标记`,
-    text.includes('title: T("45°地图地块生成")') && /title: T\("45°地图地块生成"\)[^}]*experimental: true/.test(text),
-    "模块⑤ 的 MODULES 条目里没有 experimental: true"
+    `${label}：模块⑤「45°地图编辑器」是正式功能（没有 experimental: true）`,
+    text.includes('title: T("45°地图编辑器")') && !/title: T\("45°地图编辑器"\)[^}]*experimental: true/.test(text),
+    "模块⑤ 仍然带实验性标记"
   );
   check(
-    `${label}：进入模块⑤也弹实验性提示`,
-    text.includes("TileExperimentalDialog") && text.includes("45°地图地块生成仍在开发中")
-  );
-  check(
-    `${label}：模块⑤也有常驻提示条（进了模块不能看不到标记）`,
-    /TileExperimentalDialog[\s\S]{0,400}?ExperimentalBar/.test(text),
-    "TileModule 里没有挂 ExperimentalBar"
+    `${label}：模块⑤没有实验性弹窗 / 常驻提示条`,
+    !text.includes("TileExperimentalDialog") && !text.includes("TILE_EXPERIMENTAL_POINTS"),
+    "还有 tile 实验性残留"
   );
   {
     // 每个实验性模块各有一格标志（写死那几个 key 的话，加一个模块这里必然漏）

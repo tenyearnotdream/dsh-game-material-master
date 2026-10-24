@@ -2084,7 +2084,7 @@ try {
     check("MODULES 里模块⑥的条目存在且没有 experimental: true", mapEntry !== "" && !mapEntry.includes("experimental"), mapEntry);
     check("源码里不再有 MapExperimentalDialog / MAP_EXPERIMENTAL_POINTS", !source.includes("MapExperimentalDialog") && !source.includes("MAP_EXPERIMENTAL_POINTS"));
     check("实验性「不再提示」标志里没有 map 这一格（模块④⑤之外不该有）", !/experimentalGateMuted = \{[^}]*\bmap\b/.test(source));
-    check("模块⑤仍然是实验性（别把转正顺手扩大化）", /title: T\("45°地图地块生成"\)[^}]*experimental: true/.test(source));
+    check("模块⑤是新 45° 地图编辑器且为正式功能", /title: T\("45°地图编辑器"\)/.test(source) && !/title: T\("45°地图编辑器"\)[^}]*experimental: true/.test(source));
     const treeNow = await withFreshHooks(() => renderTree(() => MapModule({ api })));
     check("面板里没有实验性角标与常驻提示条", byClass(treeNow, "SPR_expTag").length === 0 && byClass(treeNow, "SPR_expBar").length === 0);
   }

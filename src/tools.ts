@@ -30,12 +30,12 @@ import { listProjects, readProject } from "./store.js";
 import { listImageJobs, readImageJob, sniffImage } from "./imagegen.js";
 import { listSequenceJobs, readSequenceJob, listSequenceTasks } from "./seqgen.js";
 import { listRigJobs, readRigJob, rigSnapshot } from "./riggen.js";
-import { listTileProjects, readTileProject, tileSnapshot } from "./tilegen.js";
+import { isoSnapshot, listIsoProjects, readIsoProject } from "./isogen.js";
 import { listMapProjects, mapSnapshot, readMapProject } from "./mapgen.js";
 import { listMusicJobs, musicSnapshot, readMusicJob } from "./musicgen.js";
 import { listSfxJobs, readSfxJob, sfxNextActions, sfxSnapshot } from "./sfxgen.js";
 import { TOOL_METHODS } from "./wire.js";
-import { MUSIC_STAGES, MAP_STAGES, SFX_STAGES, SPRITE_STAGES, TILE_STAGES, PANEL_KEY, STUDIO_MODULES, assetBasePath, buildOpenLink, originForLinks, type OpenIntent } from "./links.js";
+import { MUSIC_STAGES, MAP_STAGES, SFX_STAGES, SPRITE_STAGES, ISO_STAGES, PANEL_KEY, STUDIO_MODULES, assetBasePath, buildOpenLink, originForLinks, type OpenIntent } from "./links.js";
 import { loadConfig } from "./config.js";
 import { buildGuide, GUIDE_TOPICS, guideTopicList, isGuideTopic, type GuideTopic } from "./toolguides.js";
 
@@ -54,8 +54,8 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   image: "图片生成",
   sequence: "序列帧生成",
   rig: "骨骼动画生成",
-  tile: "45°地图地块生成",
-  map: "地图编辑器（导入 tileset）",
+  iso: "45°地图编辑器",
+  map: "俯视地图编辑器（导入素材图）",
   music: "音乐生成编辑",
   sfx: "音效生成"
 };
@@ -167,21 +167,28 @@ export const METHOD_MODULE: Record<string, ModuleKey> = {
   runRigLayout: "rig",
   runRigBones: "rig",
   runRigAtlas: "rig",
-  // 模块五 45°地图地块
-  listTileProjects: "tile",
-  createTileProject: "tile",
-  getTileProject: "tile",
-  deleteTileProject: "tile",
-  saveTileProject: "tile",
-  runTileItems: "tile",
-  runTileItem: "tile",
-  setTileApproved: "tile",
-  runTileMap: "tile",
-  saveTileMapCells: "tile",
-  runTileExport: "tile",
-  cancelTileJob: "tile",
-  revealTileProject: "tile",
-  // 模块六 地图编辑器（单项目 = 单张地图，全本地零计费）
+  // 模块五 45°地图编辑器
+  listIsoProjects: "iso",
+  createIsoProject: "iso",
+  getIsoProject: "iso",
+  saveIsoProject: "iso",
+  deleteIsoProject: "iso",
+  importIsoTileset: "iso",
+  importIsoSampleTileset: "iso",
+  saveIsoTileset: "iso",
+  removeIsoTileset: "iso",
+  saveIsoDoc: "iso",
+  applyIsoOps: "iso",
+  isoUndo: "iso",
+  isoRedo: "iso",
+  isoPlan: "iso",
+  runIsoGenerate: "iso",
+  runIsoPreview: "iso",
+  runIsoExport: "iso",
+  cancelIsoJob: "iso",
+  setIsoApproved: "iso",
+  revealIsoProject: "iso",
+  // 模块六 俯视地图编辑器（单项目 = 单张地图，全本地零计费）
   listMapProjects: "map",
   createMapProject: "map",
   getMapProject: "map",
@@ -276,7 +283,7 @@ async function hiddenModulesNow(): Promise<Set<string>> {
 /**
  * 【功能管理】被隐藏的模块对模型一律不可用。
  *
- * 只在界面上藏起来是不够的：模型看不见页签，照样能调 `runTileItems` 真实计费。
+ * 只在界面上藏起来是不够的：模型看不见页签，照样能调 `runIsoGenerate` 等本地方法。
  * 所以工具面必须自己再拦一次，并且报错里告诉用户去哪里打开。
  */
 async function assertModuleVisible(module: ModuleKey | undefined): Promise<void> {
@@ -345,7 +352,7 @@ type ToolAction = (typeof TOOL_ACTIONS)[number];
 const TOOL_STAGES: string[] = Array.from(
   new Set<string>([
     ...SPRITE_STAGES,
-    ...TILE_STAGES,
+    ...ISO_STAGES,
     ...MAP_STAGES,
     ...MUSIC_STAGES,
     ...SFX_STAGES,
@@ -462,7 +469,7 @@ export function moduleForId(id: string): ModuleKey | undefined {
   if (/^i[a-z0-9]+$/.test(id)) return "image";
   if (/^s[a-z0-9]+$/.test(id)) return "sequence";
   if (/^r[a-z0-9]+$/.test(id)) return "rig";
-  if (/^t[a-z0-9]+$/.test(id)) return "tile";
+  if (/^g[a-z0-9]+$/.test(id)) return "iso";
   if (/^m[a-z0-9]+$/.test(id)) return "map";
   if (/^a[a-z0-9]+$/.test(id)) return "music";
   if (/^f[a-z0-9]+$/.test(id)) return "sfx";
@@ -737,10 +744,10 @@ async function snapshotOf(module: ModuleKey, id: string): Promise<any> {
     if (job === undefined) throw new Error(`找不到序列帧任务：${id}`);
     return sequenceSnapshot(job);
   }
-  if (module === "tile") {
-    const project = await readTileProject(id);
-    if (project === undefined) throw new Error(`找不到地图地块项目：${id}`);
-    return tileSnapshot(project, originForLinks());
+  if (module === "iso") {
+    const project = await readIsoProject(id);
+    if (project === undefined) throw new Error(`找不到 45° 地图项目：${id}`);
+    return isoSnapshot(project, originForLinks());
   }
   if (module === "map") {
     const project = await readMapProject(id);
@@ -828,7 +835,7 @@ function intentFromCall(method: string, payload: Record<string, any>, value?: an
    * `composeMapAsset` 是「AI 生成素材」那条链路的终点：它整理出来的图**还不是素材**
    * —— 素材属性在「新增素材」那一刻定死，所以要用户自己点一次「确定」。
    * 链接因此带上 `dialog=add&asset=<相对路径>&frames=<帧数>&shape=<形态>`：
-   * 点开落在地图编辑器、素材窗口展开、「新增素材」已经打开并**按形态**预填好
+   * 点开落在俯视地图编辑器、素材窗口展开、「新增素材」已经打开并**按形态**预填好
    * （少了 `shape` 的话拼块 / 整格会被预选成「普通」，导入出来的块全是碎的，而且不报错）。
    */
   if (method === "composeMapAsset") {
@@ -907,7 +914,7 @@ function intentFromCall(method: string, payload: Record<string, any>, value?: an
     return module === undefined ? undefined : { module, jobId };
   }
   if (method.startsWith("listRigJob") || method.startsWith("createRigJob")) return { module: "rig" };
-  if (method.startsWith("listTileProject") || method.startsWith("createTileProject")) return { module: "tile" };
+  if (method.startsWith("listIsoProject") || method.startsWith("createIsoProject")) return { module: "iso" };
   if (method.startsWith("listMapProject") || method.startsWith("createMapProject")) return { module: "map" };
   if (method.startsWith("listMusicJob") || method.startsWith("createMusicJob")) return { module: "music" };
   if (method.startsWith("listSfxJob") || method.startsWith("createSfxJob")) return { module: "sfx" };
@@ -1001,7 +1008,7 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
         const result: Record<string, any> = { method, ok: true, value: value ?? null };
         const intent = intentFromCall(method, payload ?? {}, value);
         if (intent !== undefined) {
-          const hint = method === "composeMapAsset" ? "点开回到地图编辑器：「新增素材」已经打开并预填好这张图，确认一下就能用" : "点开可以看到这一步的实际产物并打「通过」";
+          const hint = method === "composeMapAsset" ? "点开回到俯视地图编辑器：「新增素材」已经打开并预填好这张图，确认一下就能用" : "点开可以看到这一步的实际产物并打「通过」";
           Object.assign(result, openInfo(intent, hint));
         }
         return result;
@@ -1030,12 +1037,12 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
         if (id === "") {
           // 只列可见模块的清单：隐藏的模块连「有哪些项目」都不给模型看一眼。
           await assertModuleVisible(moduleOf(args?.module));
-          const [projects, images, sequences, rigs, tiles, maps, music, sfx] = await Promise.all([
+          const [projects, images, sequences, rigs, isos, maps, music, sfx] = await Promise.all([
             hidden.has("sprite") ? [] : listProjects(),
             hidden.has("image") ? [] : listImageJobs(),
             hidden.has("sequence") ? [] : listSequenceJobs(),
             hidden.has("rig") ? [] : listRigJobs(),
-            hidden.has("tile") ? [] : listTileProjects(),
+            hidden.has("iso") ? [] : listIsoProjects(),
             hidden.has("map") ? [] : listMapProjects(),
             hidden.has("music") ? [] : listMusicJobs(),
             hidden.has("sfx") ? [] : listSfxJobs()
@@ -1049,15 +1056,15 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
             imageJobs: images,
             sequenceJobs: sequences,
             rigJobs: rigs,
-            tileProjects: tiles,
+            isoProjects: isos,
             mapProjects: maps,
             musicJobs: music,
             sfxJobs: sfx,
             links,
-            hint: "用 game_material({action:'status', module, id}) 看某个目标的细节；八方向图的四步是 images → videos → frames → sheet，45°地图地块是 generate → review → map → export，地图编辑器是 assets（素材）→ rules（自动连接）→ paint（地图）→ export（导出），全本地不花钱；音乐是 generate（生成）→ edit（编辑）→ export（导出），生成按谱乐 AI 积分计费；音效是 generate（生成，火山引擎 Seed-Audio）→ export（导出），每次生成真实计费。"
+            hint: "用 game_material({action:'status', module, id}) 看某个目标的细节；八方向图的四步是 images → videos → frames → sheet，45°地图编辑器是 assets（素材）→ paint（地图）→ export（导出），俯视地图编辑器是 assets（素材）→ rules（自动连接）→ paint（地图）→ export（导出），全本地不花钱；音乐是 generate（生成）→ edit（编辑）→ export（导出），生成按谱乐 AI 积分计费；音效是 generate（生成，火山引擎 Seed-Audio）→ export（导出），每次生成真实计费。"
           };
         }
-        // ⚠️ 这里**不能**再按 module 短路：`status({module:'tile', id})` 也走到这里，
+        // ⚠️ 这里**不能**再按 module 短路：`status({module:'iso', id})` 也走到这里，
         // 短路会把「带 id 的查询」变成「列清单」，assetBase / 几何报告全丢。
         // 只给了 module、没给 id 的情况，上面的 `id === ""` 分支已经覆盖了。
         const module = resolveTarget(args?.module, id);
@@ -1117,7 +1124,7 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
         "参数 `path` 是文件的绝对路径或相对当前工作目录的路径，宿主自己读盘，**不要把 base64 贴进来**。",
         "kind 取值：sprite=source（源设定图）| video（**本地自选视频**，要用 `key` 指定槽位：turn=转圈视频，或 front/back/downLeft/downRight/upLeft/upRight/left/right 之一）；",
         "image=ref（参考图，最多 10 张）| item（直接加一张图，只做抠像用）；",
-        "sequence=firstFrame | lastFrame | referenceImage | referenceVideo；rig=source（角色整图）| part（单个部件 PNG，文件名即部件名）；map=tileset（图集原图）；sfx=referenceImage（参考图）| referenceAudio（参考音频）。",
+        "sequence=firstFrame | lastFrame | referenceImage | referenceVideo；rig=source（角色整图）| part（单个部件 PNG，文件名即部件名）；iso=tileset（素材原图，默认按地面切）；map=tileset（图集原图）；sfx=referenceImage（参考图）| referenceAudio（参考音频）。",
         "限制：图片 ≤30MB，视频 ≤40MB（平台请求体上限 64MB；界面上那条本地上传路更宽），类型按文件头嗅探。"
       ].join("\n"),
       parameters: {
@@ -1238,7 +1245,7 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
           stage: {
             type: "string",
             enum: ["images", "videos", "frames", "sheet", "generate", "review", "map", "export", "parts", "layout", "rig", "atlas", ...MAP_STAGES, ...MUSIC_STAGES, ...SFX_STAGES],
-            description: "八方向图 / 地图地块 / 地图编辑器 / 骨骼动画专用：只看某一个阶段。"
+            description: "八方向图 / 地图地块 / 俯视地图编辑器 / 骨骼动画专用：只看某一个阶段。"
           },
           direction: { type: "string", description: "八方向图专用：只看某一个方位（front/back/…）。" },
           index: { type: "integer", description: "图片任务专用：只看第几张（从 0 开始）。" },
@@ -1315,40 +1322,27 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
           packet.exportPath = snapshot.exportPath;
           packet.warnings = [...(snapshot.warnings ?? []), ...(snapshot.exportWarnings ?? [])];
           packet.nextActions = (snapshot.nextActions ?? []).map((action: any) => `${action.step}：${action.why}`);
-        } else if (module === "tile") {
-          // ⚠️ 地图地块的 `stages` 是**对象**（{generate, review, map, export}），
-          // 不是数组。之前它掉进了 `else`（骨骼动画）分支，那边无条件当成数组用
-          // `.filter()` —— 于是 game_material({action:'review'}) 对 tile 直接抛
-          // `snapshot.stages.filter is not a function`。真机验证才发现。
-          const tileStages = snapshot.stages as Record<string, any>;
-          const stageKeys = Object.keys(tileStages ?? {});
-          if (stage !== undefined && !stageKeys.includes(stage)) {
-            throw new Error(`未知阶段：${stage}（可选：${stageKeys.join(" / ")}）`);
+        } else if (module === "iso") {
+          // iso 快照的 stages 是**数组**（与其它模块一致），直接过滤即可。
+          const isoStages = snapshot.stages as any[];
+          if (stage !== undefined && !isoStages.some((entry) => entry.stage === stage)) {
+            throw new Error(`未知阶段：${stage}（可选：${isoStages.map((entry) => entry.stage).join(" / ")}）`);
           }
-          packet.stages = stageKeys
-            .filter((key) => stage === undefined || key === stage)
-            .map((key) => ({ stage: key, ...tileStages[key] }));
-          // 只要某个地块 / 变体：过滤 items，方便「就重跑这一张」的判断
-          packet.items = (snapshot.items as any[]).filter((item) => key === undefined || item.key === key);
-          if (packet.items.length === 0) throw new Error(`找不到地块：${key}`);
-          packet.progress = snapshot.progress;
-          packet.map = snapshot.map;
-          packet.style = snapshot.style;
-          packet.settings = snapshot.settings;
-          // 给出「下一步该做什么」：几何回退过的、失败的、没生成的，都要点名
-          const fallback = packet.items.flatMap((item: any) =>
-            item.variants.filter((v: any) => v.geomMode === "template").map((v: any) => `${item.key} v${v.index + 1}`));
-          const failed = packet.items.flatMap((item: any) =>
-            item.variants.filter((v: any) => v.error !== undefined).map((v: any) => `${item.key} v${v.index + 1}：${v.error}`));
-          const missing = packet.items.filter((item: any) => item.variants.length === 0).map((item: any) => item.key);
-          packet.nextActions = {
-            missing,
-            fallback,
-            failed,
-            hint: fallback.length > 0
-              ? "这些地块没量出 2:1 菱形，已按模板几何回退。多半是模型不对——请确认生图模型是 Seedream 5.0 系列（4.0 会把等距菱形画成近正方形），然后只重跑这几张：runTileItem({projectId, key, variant})。"
-              : "几何都正常。可以继续验收、拼图（runTileMap）或导出（runTileExport）。"
-          };
+          packet.stages = isoStages.filter((entry) => stage === undefined || entry.stage === stage);
+          packet.cell = snapshot.cell;
+          packet.cols = snapshot.cols;
+          packet.rows = snapshot.rows;
+          packet.tilesets = snapshot.tilesets;
+          packet.layers = snapshot.layers;
+          packet.filled = snapshot.filled;
+          packet.objects = snapshot.objects;
+          packet.preview = snapshot.previewUrls;
+          packet.previewUrls = snapshot.previewUrls;
+          packet.exportBaseUrl = snapshot.exportBaseUrl;
+          packet.exportFiles = snapshot.exportFiles;
+          packet.exportPath = snapshot.exportPath;
+          packet.warnings = [...(snapshot.warnings ?? []), ...(snapshot.exportWarnings ?? [])];
+          packet.nextActions = (snapshot.nextActions ?? []).map((action: any) => `${action.step}：${action.why}`);
         } else if (module === "music") {
           const musicStages = snapshot.stages as Record<string, any>;
           const stageKeys = Object.keys(musicStages ?? {});
@@ -1408,7 +1402,7 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
         "图片任务：module=image，id=任务 id，index 可只对某一张生效（省略即全任务）。",
         "序列帧：module=sequence，id=任务 id，step=video|frames|sheet（省略即全部三步）。",
         "骨骼动画：module=rig，id=任务 id，stage=parts|layout|rig|atlas（省略即四个阶段全打）；stage=parts 时可再带 part 只对某个部件生效。",
-        "地图编辑器：module=map，id=项目 id，stage=assets|rules|paint|export（省略即四个阶段全打）。这条链路全本地，打勾只是记录「这步看过了」。",
+        "俯视地图编辑器：module=map，id=项目 id，stage=assets|rules|paint|export（省略即四个阶段全打）。这条链路全本地，打勾只是记录「这步看过了」。",
         "音乐：module=music，id=任务 id，stage=compose|generate|edit|export；也可以带 songId / versionId / scoreId 只对某一首/某一版/某一版谱曲打勾。",
         "音效：module=sfx，id=任务 id，stage=generate|export（省略即两个阶段全打）。"
       ].join("\n"),
@@ -1418,7 +1412,7 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
         properties: {
           module: { type: "string", enum: [...MODULES], description: "目标所属模块；可省略，按 id 前缀判断。" },
           id: { type: "string", description: "项目 / 任务 id。" },
-          stage: { type: "string", enum: ["images", "videos", "frames", "sheet", ...MAP_STAGES, ...MUSIC_STAGES, ...SFX_STAGES], description: "八方向图 / 地图编辑器 / 音乐 / 音效：阶段。" },
+          stage: { type: "string", enum: ["images", "videos", "frames", "sheet", ...MAP_STAGES, ...MUSIC_STAGES, ...SFX_STAGES], description: "八方向图 / 俯视地图编辑器 / 音乐 / 音效：阶段。" },
           songId: { type: "string", description: "音乐：只对某一首歌生效。" },
           versionId: { type: "string", description: "音乐：只对某个版本生效。" },
           scoreId: { type: "string", description: "音乐：只对某一版谱曲（MIDI）生效。" },
@@ -1467,14 +1461,13 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
           return { module, id, stage: stage ?? null, approved, ...openInfo({ module: "map", jobId: id, stage }, "点开看验收结果") };
         }
 
-        if (module === "tile") {
-          const key = asString(args?.key) || undefined;
-          const variant = args?.variant === undefined ? undefined : clampInt(args.variant, 0, 0, 99);
-          await (gateway as any).setTileApproved({ projectId: id, key, variant, approved });
-          return {
-            module, id, key: key ?? null, variant: variant ?? null, approved,
-            ...openInfo({ module: "tile", jobId: id }, "点开看验收结果")
-          };
+        if (module === "iso") {
+          const stage = asString(args?.stage) || undefined;
+          if (stage !== undefined && !(ISO_STAGES as readonly string[]).includes(stage)) {
+            throw new Error(`未知阶段：${stage}（可选：${ISO_STAGES.join(" / ")}）`);
+          }
+          await (gateway as any).setIsoApproved({ projectId: id, stage, approved });
+          return { module, id, stage: stage ?? null, approved, ...openInfo({ module: "iso", jobId: id, stage }, "点开看验收结果") };
         }
 
         if (module === "sequence") {
@@ -1715,26 +1708,20 @@ function intakeFor(module: ModuleKey, id: string, told: Set<string>, config: any
     ask("mapSize", "地图多大？（默认 32×32；改尺寸用 saveMapDoc 的 cols / rows）要分几层？（默认两层：图层 1 / 图层 2）", "尺寸与图层决定画布和最终 PNG 的像素大小；地图四周默认**环绕**。", "用 saveMapDoc({projectId, cols, rows, addLayer:{name}, wrap})。");
     ask("generate", "先一键铺一层再手改，还是直接手画？（一键生成：随机铺满 / 迷宫 / 大陆；也可以让 agent 直接拿坐标系画）", "一键生成是本地计算、不花钱，同一个种子结果完全一样，随时能撤销。", "用 runMapGenerate({projectId, kind:'random'|'maze'|'continent', tiles?, seed?, layerId?})，或 applyMapOps({projectId, ops}) 直接画。");
   }
-  if (module === "tile") {
-    if (config?.imageProviderBlocker !== null && config?.imageProviderBlocker !== undefined) {
-      blockers.push(`${config.imageProviderBlocker}，配好点「测试连接」。`);
-    }
-    known.实验性 = "45°地图地块生成是实验性功能：几何（参考图/拼图/裁剪）由本地代码算、有像素级自检，可靠；不稳定的是「AI 能否照着占格形状画出对的造型」，非矩形占地经常要重跑。";
-    known.生图后端 = config?.imageProviderSummary;
-    known.四个阶段 = "① 生成地块（★计费；参考图会按占格形状自动渲染，不用手动准备）→ ② 验收 → ③ 拼成地图（本地免费，可反复）→ ④ 导出";
-    known.几何由代码保证 = "等距参考图由本地代码按「占格形状」渲染（严格 2:1 等距），AI 只负责填内容。实测这样菱形比例达标率 100%";
-    known.默认地块清单 = "9 类地形（草/土/石/灌木，各 1~2 变体）+ 4 个独立装饰（树/松树/巨石）+ 1 栋跨 2×2 格建筑";
-    known.默认单元格 = `${config?.cellWidth ?? 64} 宽，高为 96（菱形占中部，上方留白给高出地面的装饰）`;
-    // ⚠️ 属性名只能用标识符允许的字符：带圈数字 ② 之类不是合法标识符字符，
-    // 写成 `known.只有第②步花钱` 会直接编译不过（Invalid character）。
-    known.只有第1步花钱 = "生成一个变体 = 一次 Seedream 调用；参考图、规整、拼图、导出全在本地，免费且可反复";
-    known.装饰与地面分开生成 = "树/巨石走「白底单图 + 锚点摆放」，不与地面画在同一张图上（同图会被画两遍）";
+  if (module === "iso") {
+    // 全本地、零计费：**故意不加 API Key 阻塞**。
+    known.全本地不花钱 = "导入素材 → 自动连接 → 45° 等距画布上画 → 导出 PNG：一次模型调用都没有，不需要任何 API Key";
+    known.三个用法 = "地面（网格图块）/ 自动连接（4×4 = 16 块，N/E/S/W 位序）/ 物件（一张完整图，可占 2×2、可高出格子）";
+    known.内置素材 = "importIsoSampleTileset 可以装一套内置素材（草地 / 泥土 / 石地 / 水面 / 水岸自动连接 + 树 / 石头 / 灌木 / 木桶 / 石屋），本机现算、零成本";
+    known.三个阶段 = "assets（素材）→ paint（地图）→ export（导出）";
+    known.一键生成 = "runIsoGenerate 支持 random / maze / continent，同种子逐字节可复现，整层一次提交、一次撤销";
+    known.预览等于导出 = "画布与导出 PNG 执行同一份宿主计划，并按同一个 z 排序，所以不存在「预览好看、导出位移」";
+    if (target?.cell) known.当前格子 = target.cell;
     if (target?.reviewMode) known.审核模式 = target.reviewMode;
-    ask("style", "整套地块的画风描述是什么？（例如「像素画风，色彩明快饱和，干净色块，无噪点」；可留空走默认）", "它会追加到每个地块的提示词末尾，改一次整套画风都变。", "用 game_material({action:'call'}) 的 saveTileProject({projectId, style}) 保存。");
-    ask("items", "要做哪几类地块？（默认给 9 类地形 + 4 个装饰 + 1 栋建筑，可以直接用，也可以增删改）", "地块清单决定画面里有什么，也决定要花多少次调用。", "用 saveTileProject({projectId, items:[…]}) 整份写回；每项含 key/label/kind/family/content/mode/variantCount。");
-    ask("mapLayout", "地图要多大？（默认 14×14）要不要指定某几格用别的类别、或者撒装饰？", "布局是本地计算，改多少次都不花钱。", "用 runTileMap({projectId, rows, cols, seed, fill, decorDensity})；手动指定格子用 saveTileMapCells。");
+    ask("tileset", "素材从哪来？把素材图 PNG 的**本机绝对路径**给我（可以多张），或者自己在界面「素材」里上传；也可以先用内置素材试手。", "这个模块是「导入派」：不生成素材，只把已有 45° 素材图切成地面 / 自动连接 / 物件。", "用 game_material({action:'upload', module:'iso', id, kind:'tileset', path})，或 importIsoTileset({projectId, name, data, kind:'ground'|'autotile'|'object', ...}) 传 base64，或 importIsoSampleTileset({projectId}) 装内置素材。");
+    ask("mapLayout", "地图要多大？（默认 32×32）格子多大？（默认 64×96，建项目时定死）要不要四周环绕？", "格子决定最终像素密度；改尺寸用 saveIsoDoc 的 cols / rows，环绕用 saveIsoProject 的 wrap。", "用 createIsoProject({name, cell:{width,height}, cols, rows, wrap})；之后 saveIsoDoc({projectId, cols, rows}) / saveIsoProject({projectId, wrap})。");
+    ask("generate", "先一键铺一层再手改，还是直接手画？（一键生成：随机铺满 / 迷宫 / 大陆）", "一键生成是本地计算、不花钱，同一个种子结果完全一样，随时能撤销。", "用 runIsoGenerate({projectId, kind:'random'|'maze'|'continent', tiles?, seed?, layerId?})，或 applyIsoOps({projectId, ops}) 直接画。");
   }
-
   if (module === "music") {
     // ⚠️ 不再因为缺谱乐 Key 直接阻塞：谱曲模式全程本地免费，不需要 Key。
     // 只把它写成 known，等用户选择「直接生成 / 交 Suno」时再要求配 Key。
@@ -1805,8 +1792,8 @@ function intakeFor(module: ModuleKey, id: string, told: Set<string>, config: any
             ? "新建一个图片任务，还是在已有任务上继续？"
             : module === "sequence"
               ? "新建一个序列帧任务，还是在已有任务上继续？"
-              : module === "tile"
-                ? "新建一个地图地块项目，还是在已有项目上继续？"
+              : module === "iso"
+                ? "新建一个 45° 地图项目，还是在已有项目上继续？"
                 : module === "map"
                   ? "新建一个地图项目，还是在已有项目上继续？"
                   : module === "music"
@@ -1815,7 +1802,7 @@ function intakeFor(module: ModuleKey, id: string, told: Set<string>, config: any
                       ? "新建一个音效任务，还是在已有任务上继续？"
                       : "新建一个骨骼动画任务，还是在已有任务上继续？",
       why: "后面的参数都挂在项目 / 任务上。",
-      how: "新建：game_material({action:'call', method:'createProject'|'createImageJob'|'createSequenceJob'|'createRigJob'|'createTileProject'|'createMapProject'|'createMusicJob'|'createSfxJob', payload:{name}})，返回的 id 就是后续 payload 里的 projectId / jobId。"
+      how: "新建：game_material({action:'call', method:'createProject'|'createImageJob'|'createSequenceJob'|'createRigJob'|'createIsoProject'|'createMapProject'|'createMusicJob'|'createSfxJob', payload:{name}})，返回的 id 就是后续 payload 里的 projectId / jobId。"
     });
   }
 
@@ -1917,11 +1904,9 @@ const UPLOAD_KINDS: Record<ModuleKey, string[]> = {
   image: ["ref", "item"],
   sequence: ["firstFrame", "lastFrame", "referenceImage", "referenceVideo"],
   rig: ["source", "part"],
-  // 地图地块**不需要上传素材**：地块由代码渲染的菱形模板 + 提示词生成。
-  // 留空数组而不是漏掉这一项 —— 漏掉会让类型检查失败，而空数组能让
-  // 「上传」这条路给出明确的报错信息（见 uploadFromPath）。
-  tile: [],
-  // 地图编辑器就是**导入素材**起家的：这里上传的就是 tileset 图集原图。
+  // 45° 地图编辑器也是导入派：上传的是素材原图（默认按地面切）。
+  iso: ["tileset"],
+  // 俯视地图编辑器就是**导入素材**起家的：这里上传的就是 tileset 图集原图。
   map: ["tileset"],
   // 音乐模块 v1 不导入本地音频：只编辑本任务生成/下载的歌曲。留空数组让
   // 上传这条路给出明确报错，而不是掉进 sequence 分支做别的事。
@@ -2007,10 +1992,10 @@ async function uploadFromPath(
   } else if (module === "rig") {
     if (kind === "part") await call.uploadRigPart({ jobId: id, name: fileName, data: base64 });
     else await call.uploadRigSource({ jobId: id, name: fileName, data: base64 });
-  } else if (module === "tile") {
-    // 地图地块目前不需要上传素材：地块由模板 + 提示词生成。
-    // 明确报错，而不是掉进 sequence 分支里做一件风马牛不相及的事。
-    throw new Error("地图地块模块不需要上传素材：地块由「代码渲染的菱形模板 + 提示词」生成。要改画风请用 saveTileProject({style})");
+  } else if (module === "iso") {
+    // 上传只做「地面」这条最常用的路；自动连接 / 物件要带 4×4 / 占格参数，
+    // 让 agent 走 importIsoTileset，避免把物件误切成格。
+    await call.importIsoTileset({ projectId: id, name: fileName, data: base64, kind: "ground" });
   } else if (module === "music") {
     throw new Error("音乐模块 v1 不导入本地音频：只用 runMusicGeneration 生成的歌曲；要编辑本地文件请等后续版本。");
   } else if (module === "sfx") {
@@ -2145,7 +2130,7 @@ function renderRigStageDetail(stage: any): string[] {
 const MAP_STAGE_LABELS: Record<string, string> = { assets: "素材", rules: "自动连接", paint: "地图", export: "导出" };
 
 /**
- * 地图编辑器的验收摘要：素材 / 阶段 / 地图 / 预览图 / 导出产物。
+ * 俯视地图编辑器的验收摘要：素材 / 阶段 / 地图 / 预览图 / 导出产物。
  *
  * 这里的每一条都是**能点开的绝对 URL** —— 模型把它贴进回复，用户点一下就能看图。
  * 判定依据用 `Array.isArray(value.tilesets)`（只有模块六的快照有这个字段）。
@@ -2161,6 +2146,26 @@ function renderMapSummary(value: any): string[] {
   }
   if (typeof value.cols === "number" && typeof value.rows === "number") lines.push(`  地图：${value.cols}×${value.rows}，已画 ${value.filled ?? 0} 格`);
   for (const layer of value.layers ?? []) lines.push(`    · ${layer.name}：${layer.filled} 格`);
+  for (const tileset of value.tilesets ?? []) {
+    lines.push(`  素材「${tileset.name}」${tileset.imageWidth}×${tileset.imageHeight} · ${tileset.reason ?? ""} · ${tileset.tileCount} 块 · 笔刷 ${tileset.palette?.length ?? 0} 个`);
+    if (typeof tileset.url === "string") lines.push(`      ${tileset.url}`);
+  }
+  for (const url of value.previewUrls ?? value.preview ?? []) lines.push(`  验收预览图：${url}`);
+  if (typeof value.exportBaseUrl === "string" && value.exportBaseUrl !== "") lines.push(`  导出目录：${value.exportBaseUrl}`);
+  if (typeof value.exportPath === "string" && value.exportPath !== "") lines.push(`  导出目录（本机路径）：${value.exportPath}`);
+  for (const file of value.exportFiles ?? []) lines.push(`      ${file}`);
+  for (const warning of value.warnings ?? []) lines.push(`  ⚠ ${warning}`);
+  return lines;
+}
+
+/** 45° 地图编辑器的验收摘要。 */
+function renderIsoSummary(value: any): string[] {
+  const lines: string[] = [];
+  if (typeof value.cell?.width === "number" && typeof value.cell?.height === "number") {
+    lines.push(`  格子：${value.cell.width}×${value.cell.height}${value.wrap === true ? " · 环绕" : ""}`);
+  }
+  if (typeof value.cols === "number" && typeof value.rows === "number") lines.push(`  地图：${value.cols}×${value.rows}，已画 ${value.filled ?? 0} 格 / ${value.objects ?? 0} 个物件`);
+  for (const layer of value.layers ?? []) lines.push(`    · ${layer.name}（${layer.kind === "object" ? "物件" : "地面"}）：${layer.filled} 格`);
   for (const tileset of value.tilesets ?? []) {
     lines.push(`  素材「${tileset.name}」${tileset.imageWidth}×${tileset.imageHeight} · ${tileset.reason ?? ""} · ${tileset.tileCount} 块 · 笔刷 ${tileset.palette?.length ?? 0} 个`);
     if (typeof tileset.url === "string") lines.push(`      ${tileset.url}`);
@@ -2335,9 +2340,11 @@ function renderStatus(value: any): string {
       for (const detail of renderRigStageDetail(stage)) lines.push(detail);
     }
   }
-  // 地图编辑器（模块六）：它的阶段是**对象**（不是数组），素材 / 预览图 / 导出清单
+  // 俯视地图编辑器（模块六）：它的阶段是**对象**（不是数组），素材 / 预览图 / 导出清单
   // 也不在通用字段里，单独一段。
-  if (Array.isArray(value.tilesets)) for (const line of renderMapSummary(value)) lines.push(line);
+  if (Array.isArray(value.tilesets)) {
+    for (const line of value.projection === "isometric-2:1" ? renderIsoSummary(value) : renderMapSummary(value)) lines.push(line);
+  }
   // 八方向图：阶段①的两种生成方式差异很大，状态里必须写明走的是哪条、
   // 转圈视频与八个截帧位置各是什么——否则 agent 只能对着一张张方向图猜。
   if (value.imageMode !== undefined && value.turn !== undefined) {
@@ -2393,7 +2400,7 @@ function renderWait(value: any): string {
 function renderReview(value: any): string {
   const lines = [`${value.name}（${value.id}）验收包${value.busy ? " — ⏳ 仍有任务在跑" : ""}`];
   if (value.qa !== null && value.qa !== undefined) lines.push(renderRigQa(value.qa));
-  // 地图编辑器（模块六）：产物形状和别的模块完全不同（素材 + 一张地图 + 导出清单），
+  // 俯视地图编辑器（模块六）：产物形状和别的模块完全不同（素材 + 一张地图 + 导出清单），
   // 单独走一段，免得掉进下面按 cells / items 迭代的通用分支。
   if (value.module === "map") lines.push(...renderMapSummary(value));
   if (value.module === "music") lines.push(...renderMusicSummary(value));

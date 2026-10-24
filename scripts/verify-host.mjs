@@ -123,7 +123,7 @@ async function main() {
   // 「AI 生成素材」新增 composeMapAsset（整理一批帧 → 一张待确认的素材图），134 → 135。
   // 「原地重烘」新增 recomposeMapTileset（按现在的规则重烘一张素材，保留图块序号），135 → 136。
   // 音效生成（模块八）新增 13 个方法（testSfx + 12 个 sfx 方法），163 → 176。
-  check("manifest 方法数为 176（新增远程方法时同步改这个数）", invocations.length === 176, `实际 ${invocations.length}`);
+  check("manifest 方法数为 183（新增远程方法时同步改这个数）", invocations.length === 183, `实际 ${invocations.length}`);
   const ids = new Set(invocations.map((i) => i.id));
   check("方法 id 唯一", ids.size === invocations.length);
   check("所有方法都声明在 gameStudio 服务下", invocations.every((i) => i.service === "gameStudio" && i.namespace === "gameStudio"));
@@ -247,16 +247,16 @@ async function main() {
   // 功能管理：默认全部模块可见；写进去的非法 key 要被丢掉、顺序要固定
   // （顺序固定是为了让「同一组勾选」永远序列化成同一份 JSON）。
   check("默认没有任何被隐藏的功能", JSON.stringify(initial.hiddenModules) === JSON.stringify([]), JSON.stringify(initial.hiddenModules));
-  const hiddenSaved = await studio.saveConfig({ hiddenModules: ["tile", "nope", "sprite", "tile"] });
+  const hiddenSaved = await studio.saveConfig({ hiddenModules: ["iso", "nope", "sprite", "iso"] });
   check(
     "hiddenModules 落盘时收敛成合法子集并按固定顺序",
-    JSON.stringify(hiddenSaved.hiddenModules) === JSON.stringify(["sprite", "tile"]),
+    JSON.stringify(hiddenSaved.hiddenModules) === JSON.stringify(["sprite", "iso"]),
     JSON.stringify(hiddenSaved.hiddenModules)
   );
-  check("重新读配置仍是同一份", JSON.stringify((await studio.getConfig()).hiddenModules) === JSON.stringify(["sprite", "tile"]));
+  check("重新读配置仍是同一份", JSON.stringify((await studio.getConfig()).hiddenModules) === JSON.stringify(["sprite", "iso"]));
   const hiddenDraft = (await studio.getConfig()).hiddenModules;
   hiddenDraft.push("rig");
-  check("回传的数组是副本（界面改草稿不会写花宿主缓存）", JSON.stringify((await studio.getConfig()).hiddenModules) === JSON.stringify(["sprite", "tile"]));
+  check("回传的数组是副本（界面改草稿不会写花宿主缓存）", JSON.stringify((await studio.getConfig()).hiddenModules) === JSON.stringify(["sprite", "iso"]));
   await studio.saveConfig({ hiddenModules: [] });
   check("可以全部恢复成可见", JSON.stringify((await studio.getConfig()).hiddenModules) === JSON.stringify([]));
 
@@ -2028,54 +2028,50 @@ async function main() {
     await studio.deleteProject({ projectId: freshId });
   }
 
-  // ── 14. 地图地块的资源路由 ─────────────────────────────────────────────
+  // ── 14. 45° 地图编辑器的资源路由 ───────────────────────────────────────
   //
   // ⚠️ 这一节钉的是一个**静默坏掉**的点：路由里的 scope 白名单有**两处**——
   // `AssetScope` 类型和 `handleAsset` 里的运行时判断。只改类型不改判断，
   // TypeScript 不会报错（scope 是断言出来的），请求直接掉进 404，
-  // 界面表现只是「图裂了」。实测 `tile-assets` 就这么漏过一轮。
-  console.log("14) 地图地块的资源路由");
+  // 界面表现只是「图裂了」。
+  console.log("14) 45° 地图编辑器的资源路由");
   {
-    const tilegen = await import("../lib/tilegen.js");
-    // 自己起一台 server：`handler` 与前面几节用的是同一个，但端口各节独立。
+    const isogen = await import("../lib/isogen.js");
     const server4 = createServer((req, res) => void handler(req, res));
     await new Promise((resolve) => server4.listen(0, "127.0.0.1", resolve));
     const port4 = server4.address().port;
-    const tile = await studio.createTileProject({ name: "路由验证" });
-    const tileId = tile.id;
+    const project4 = await studio.createIsoProject({ name: "路由验证" });
+    const isoId = project4.id;
     try {
-      check("项目 id 形如 t…", tilegen.isValidTileProjectId(tileId), tileId);
-      check("view 带 assetBase 且指向 tile-assets",
-        String(tile.assetBase).endsWith(`/tile-assets/${tileId}/`), String(tile.assetBase));
+      check("项目 id 形如 g…", isogen.isValidIsoProjectId(isoId), isoId);
+      check("view 带 assetBase 且指向 iso-assets",
+        String(project4.assetBase).endsWith(`/iso-assets/${isoId}/`), String(project4.assetBase));
 
-      // 真写一个模板文件，再从 HTTP 路由取回来
       const { mkdir: mkdirp, writeFile: writeF } = await import("node:fs/promises");
-      await mkdirp(join(tilegen.tileProjectDir(tileId), "template"), { recursive: true });
-      await writeF(join(tilegen.tileProjectDir(tileId), "template", "cell.png"), encodePng(Buffer.from([255, 0, 0, 255]), 1, 1));
+      await mkdirp(join(isogen.isoProjectDir(isoId), "tilesets"), { recursive: true });
+      await writeF(join(isogen.isoProjectDir(isoId), "tilesets", "cell.png"), encodePng(Buffer.from([255, 0, 0, 255]), 1, 1));
 
-      const base = `http://127.0.0.1:${port4}/dsh-game-material-master/tile-assets/${tileId}`;
-      const cell = await fetch(`${base}/template/cell.png`).catch(() => null);
-      check("模板图可经资源路由取得（tile-assets 在白名单里）",
+      const base = `http://127.0.0.1:${port4}/dsh-game-material-master/iso-assets/${isoId}`;
+      const cell = await fetch(`${base}/tilesets/cell.png`).catch(() => null);
+      check("素材图可经资源路由取得（iso-assets 在白名单里）",
         cell !== null && cell.status === 200, cell === null ? "请求失败" : String(cell.status));
-      check("模板图的 Content-Type 是 image/png",
+      check("素材图的 Content-Type 是 image/png",
         cell !== null && String(cell.headers.get("content-type")).startsWith("image/png"),
         cell === null ? "无响应" : String(cell.headers.get("content-type")));
 
-      // 不在白名单里的子目录必须 403（project.json 在项目根，第一段就是文件名）
       const outside = await fetch(`${base}/project.json`).catch(() => null);
       check("项目根文件不走资源路由（403）",
         outside !== null && outside.status === 403, outside === null ? "请求失败" : String(outside.status));
 
-      // 目录穿越必须被挡
-      const traverse = await fetch(`${base}/template/../../project.json`).catch(() => null);
+      const traverse = await fetch(`${base}/tilesets/../../project.json`).catch(() => null);
       check("目录穿越被挡（非 200）",
         traverse === null || traverse.status !== 200, traverse === null ? "请求失败" : String(traverse.status));
     } finally {
       server4.close();
-      await studio.deleteTileProject({ projectId: tileId });
+      await studio.deleteIsoProject({ projectId: isoId });
     }
-    const tileList = await studio.listTileProjects();
-    check("地图地块项目已删除", !tileList.projects.some((item) => item.id === tileId));
+    const isoList = await studio.listIsoProjects();
+    check("45° 地图项目已删除", !isoList.projects.some((item) => item.id === isoId));
   }
 
   // ── 15. 删除 ───────────────────────────────────────────────────────────

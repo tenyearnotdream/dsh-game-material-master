@@ -89,7 +89,7 @@ const setReviewModeSchema = z.object({
    * ⚠️ 这个枚举漏一个模块，那条模块的「固定流程必须问清审核模式」就落不了地
    * （骨骼动画与地图地块都踩过：走到宿主才抛「未知模块」）。模块六（map）同理。
    */
-  module: z.enum(["sprite", "image", "sequence", "rig", "tile", "map", "music", "sfx"]),
+  module: z.enum(["sprite", "image", "sequence", "rig", "iso", "map", "music", "sfx"]),
   reviewMode: z.enum(["auto", "manual"])
 });
 const runImageSchema = z.object({ projectId: z.string(), key: z.string(), prompt: z.string().optional() });
@@ -524,77 +524,96 @@ interface MethodSpec {
   clientOnly?: boolean;
 }
 
-// ── 地图地块生成（模块五）────────────────────────────────────────────────
+// ── 45° 地图编辑器（模块五 · iso）────────────────────────────────────────
 //
 // ⚠️ 每个字段都必须写进 schema：typert 按声明校验 payload，
-// **schema 里没有的键会被静默丢掉**。`getTileProject` 的 `lang` 漏了的话，
-// 表现就是「切了英文提示词还是中文」，而且不报任何错（AGENTS.md 的硬约束）。
-const tileIdSchema = z.object({ projectId: z.string() });
-const tileGetSchema = z.object({ projectId: z.string(), lang: z.string().optional() });
-const createTileProjectSchema = z.object({
+// **schema 里没有的键会被静默丢掉**。尤其是 `isoPlan.view`、`applyIsoOps.ops`、
+// `isoPlan.pending` 与 `importIsoTileset` 的每个字段 —— 漏一个就是「界面点了没反应」。
+const isoProjectIdSchema = z.object({ projectId: z.string() });
+const isoGetSchema = z.object({ projectId: z.string() });
+const createIsoProjectSchema = z.object({
   name: z.string().optional(),
-  style: z.string().optional(),
-  lang: z.string().optional(),
-  settings: z.record(z.string(), z.unknown()).optional()
+  cell: z.record(z.string(), z.unknown()).optional(),
+  cols: z.number().optional(),
+  rows: z.number().optional(),
+  wrap: z.boolean().optional()
 });
-const saveTileProjectSchema = z.object({
+const saveIsoProjectSchema = z.object({
   projectId: z.string(),
-  /** 界面语言：`resetItemsToDefault` 要重置成哪一国话的默认清单。 */
-  lang: z.string().optional(),
   name: z.string().optional(),
-  style: z.string().optional(),
-  items: z.array(z.record(z.string(), z.unknown())).optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
-  resetItemsToDefault: z.boolean().optional()
+  wrap: z.boolean().optional()
 });
-const runTileItemsSchema = z.object({
+const importIsoTilesetSchema = z.object({
   projectId: z.string(),
-  /** 限定要生成的地块 key；不给就是全部。 */
-  keys: z.array(z.string()).optional()
+  name: z.string().optional(),
+  data: z.string(),
+  kind: z.enum(["ground", "autotile", "object"]).optional(),
+  sourceCell: z.record(z.string(), z.unknown()).optional(),
+  animRows: z.boolean().optional(),
+  frames: z.number().optional(),
+  fps: z.number().optional(),
+  loop: z.enum(["forward", "reverse", "pingpong"]).optional(),
+  clarity: z.enum(["smooth", "sharp", "crisp"]).optional(),
+  footprint: z.record(z.string(), z.unknown()).optional(),
+  anchor: z.record(z.string(), z.unknown()).optional(),
+  pass: z.array(z.number()).optional(),
+  keyGreen: z.boolean().optional()
 });
-const runTileItemSchema = z.object({
+const saveIsoTilesetSchema = z.object({
   projectId: z.string(),
-  key: z.string(),
-  /** 只重跑某一个变体（0 起）。 */
-  variant: z.number().optional()
+  tilesetId: z.string(),
+  name: z.string().optional(),
+  fps: z.number().nullable().optional(),
+  loop: z.enum(["forward", "reverse", "pingpong"]).optional()
 });
-const tileApprovedSchema = z.object({
+const removeIsoTilesetSchema = z.object({ projectId: z.string(), tilesetId: z.string() });
+const saveIsoDocSchema = z.object({
   projectId: z.string(),
-  key: z.string().optional(),
-  variant: z.number().optional(),
+  name: z.string().optional(),
+  cols: z.number().optional(),
+  rows: z.number().optional(),
+  layers: z.array(z.record(z.string(), z.unknown())).optional(),
+  addLayer: z.record(z.string(), z.unknown()).optional(),
+  removeLayerId: z.string().optional(),
+  moveLayer: z.record(z.string(), z.unknown()).optional(),
+  clearLayerId: z.string().optional()
+});
+const applyIsoOpsSchema = z.object({
+  projectId: z.string(),
+  ops: z.array(z.record(z.string(), z.unknown())),
+  stroke: z.string().optional(),
+  have: z.array(z.string()).optional()
+});
+const isoHaveSchema = z.object({ projectId: z.string(), have: z.array(z.string()).optional() });
+const isoPlanSchema = z.object({
+  projectId: z.string(),
+  view: z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() }),
+  have: z.array(z.string()).optional(),
+  layerIds: z.array(z.number()).optional(),
+  pending: z.array(z.record(z.string(), z.unknown())).optional(),
+  pass: z.boolean().optional()
+});
+const runIsoGenerateSchema = z.object({
+  projectId: z.string(),
+  kind: z.enum(["random", "maze", "continent"]),
+  tiles: z.array(z.number()).optional(),
+  seed: z.number().optional(),
+  layerId: z.string().optional()
+});
+const runIsoPreviewSchema = z.object({ projectId: z.string() });
+const runIsoExportSchema = z.object({
+  projectId: z.string(),
+  scale: z.number().optional(),
+  formats: z.object({ png: z.boolean().optional(), json: z.boolean().optional(), tilesets: z.boolean().optional(), zip: z.boolean().optional() }).optional()
+});
+const setIsoApprovedSchema = z.object({
+  projectId: z.string(),
+  stage: z.enum(["assets", "paint", "export"]).optional(),
   approved: z.boolean()
 });
-const runTileMapSchema = z.object({
+const revealIsoProjectSchema = z.object({
   projectId: z.string(),
-  rows: z.number().optional(),
-  cols: z.number().optional(),
-  seed: z.number().optional(),
-  fill: z.string().optional(),
-  decorDensity: z.number().optional(),
-  /**
-   * 重撒装饰与建筑布局（「换个种子重铺」）。
-   *
-   * ⚠️ 必须声明：typert 会**静默丢掉** schema 之外的键。
-   * 漏了它的表现是「点了换个种子，图却一模一样」—— 不报任何错。
-   */
-  reroll: z.boolean().optional()
-});
-const saveTileMapCellsSchema = z.object({
-  projectId: z.string(),
-  rows: z.number().optional(),
-  cols: z.number().optional(),
-  seed: z.number().optional(),
-  cells: z.array(z.array(z.string())).optional(),
-  decor: z.record(z.string(), z.string()).optional(),
-  buildings: z.array(z.array(z.unknown())).optional(),
-  /**
-   * 跨格建筑（界面「手动编辑布局」回传）。
-   *
-   * ⚠️ 必须在 schema 里声明：typert 按声明校验 payload，**没声明的键会被静默丢掉**。
-   * 少了它界面就传不进建筑，拼图只能在「cells 里还有建筑键」时反推 ——
-   * 而占格一旦被清空（拼图自己就会清）就再也推不出来，建筑会凭空消失。
-   */
-  layouts: z.array(z.record(z.string(), z.unknown())).optional()
+  target: z.enum(["project", "export"]).optional()
 });
 
 // ── 地图编辑器（模块六）──────────────────────────────────────────────────
@@ -1188,20 +1207,27 @@ export const METHODS: MethodSpec[] = [  { method: "getConfig", result: configVie
   { method: "runRigBones", payload: rigJobIdSchema, result: startedSchema },
   { method: "runRigAtlas", payload: rigJobIdSchema, result: startedSchema },
 
-  // 地图地块生成
-  { method: "listTileProjects", result: z.object({ projects: z.array(jsonObject) }) },
-  { method: "createTileProject", payload: createTileProjectSchema, result: jsonObject },
-  { method: "getTileProject", payload: tileGetSchema, result: projectViewSchema },
-  { method: "deleteTileProject", payload: tileIdSchema, result: okSchema },
-  { method: "saveTileProject", payload: saveTileProjectSchema, result: jsonObject },
-  { method: "runTileItems", payload: runTileItemsSchema, result: startedSchema },
-  { method: "runTileItem", payload: runTileItemSchema, result: startedSchema },
-  { method: "setTileApproved", payload: tileApprovedSchema, result: okSchema },
-  { method: "runTileMap", payload: runTileMapSchema, result: startedSchema },
-  { method: "saveTileMapCells", payload: saveTileMapCellsSchema, result: okSchema },
-  { method: "runTileExport", payload: tileIdSchema, result: startedSchema },
-  { method: "cancelTileJob", payload: tileIdSchema, result: okSchema },
-  { method: "revealTileProject", payload: tileIdSchema, result: okSchema },
+  // 45° 地图编辑器（模块五 · iso）
+  { method: "listIsoProjects", result: z.object({ projects: z.array(jsonObject) }) },
+  { method: "createIsoProject", payload: createIsoProjectSchema, result: jsonObject },
+  { method: "getIsoProject", payload: isoGetSchema, result: projectViewSchema },
+  { method: "saveIsoProject", payload: saveIsoProjectSchema, result: jsonObject },
+  { method: "deleteIsoProject", payload: isoProjectIdSchema, result: okSchema },
+  { method: "importIsoTileset", payload: importIsoTilesetSchema, result: jsonObject },
+  { method: "importIsoSampleTileset", payload: isoProjectIdSchema, result: jsonObject },
+  { method: "saveIsoTileset", payload: saveIsoTilesetSchema, result: jsonObject },
+  { method: "removeIsoTileset", payload: removeIsoTilesetSchema, result: jsonObject },
+  { method: "saveIsoDoc", payload: saveIsoDocSchema, result: jsonObject },
+  { method: "applyIsoOps", payload: applyIsoOpsSchema, result: jsonObject },
+  { method: "isoUndo", payload: isoHaveSchema, result: jsonObject },
+  { method: "isoRedo", payload: isoHaveSchema, result: jsonObject },
+  { method: "isoPlan", payload: isoPlanSchema, result: jsonObject },
+  { method: "runIsoGenerate", payload: runIsoGenerateSchema, result: jsonObject },
+  { method: "runIsoPreview", payload: runIsoPreviewSchema, result: startedSchema },
+  { method: "runIsoExport", payload: runIsoExportSchema, result: startedSchema },
+  { method: "cancelIsoJob", payload: isoProjectIdSchema, result: okSchema },
+  { method: "setIsoApproved", payload: setIsoApprovedSchema, result: okSchema },
+  { method: "revealIsoProject", payload: revealIsoProjectSchema, result: okSchema },
 
   // 地图编辑器（模块六，单项目 = 单张地图）
   { method: "listMapProjects", result: z.object({ projects: z.array(jsonObject) }) },
