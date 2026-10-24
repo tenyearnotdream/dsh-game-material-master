@@ -10,16 +10,13 @@
 [![npm](https://img.shields.io/npm/v/dsh-game-material-master?color=blue)](https://www.npmjs.com/package/dsh-game-material-master)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **🆕 0.9.2 修复**：火山引擎调用遇到「TLS 握手尚未建立就断开」时会**自动重试最多 3 次**
-> （只重试握手前错误，已发出的请求不重试，避免重复计费）；失败日志会写明尝试次数。
->
-> **0.9.1 修复**：音效生成任务在轮询完成后会同步刷新左侧列表（不再停在「0 条 · ⏳」）；
-> 火山引擎网络错误会带出底层原因，不再是只有一句 `fetch failed`。
->
-> **0.9.0 更新**：新增第八个模块 [**音效生成**](#-音效生成火山引擎-seed-audio)（火山引擎 Seed-Audio：
-> 一句话描述 → 音效 / 环境音 / 角色配音，可带参考图或参考音频，每次生成真实计费，单次最长 120 秒）。
-> 上一版 0.8.0 的 **音乐生成编辑 / 谱曲模式**、地图编辑器 **AI 生成素材 / 整图**、**本地 ComfyUI**
-> 与 **DSH 0.2.1** 适配继续保留。
+> **🆕 0.10.0 更新**：对话工具面收成一个 **`game_material`**（`action` 选 `guide / intake / call / status /
+> wait / review / approve / reviewMode / upload`），常驻上下文从 **49 KB 降到约 4 KB**，流程与方法表改成按需读手册；
+> 模块⑤换成**全本地的 45° 地图编辑器**（2:1 等距、4×4 自动连接、多格 / 高处物件、动画地块、标记层、环绕、
+> 一键生成；还能「**AI 生成素材**」：自动开对话生成，整理好回链到「新增素材」确认导入）；
+> 新增**可选 ToAPIs 异步图片 / 视频后端**（感谢 [PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7)，
+> 来自 [@ToAPIs-2025](https://github.com/ToAPIs-2025)）。
+> 0.9.x 的 **音效生成**（Seed-Audio）与网络重试修复继续保留。
 > 完整变更见 [AGENTS.md 发布记录](https://github.com/universe-st/dsh-game-material-master/blob/main/AGENTS.md#已发布版本)。
 
 ![游戏素材大师 · 工作台](https://raw.githubusercontent.com/universe-st/dsh-game-material-master/main/docs/images/gmm-00-workbench.png)
@@ -316,7 +313,7 @@ dsh plugin --profile web add /path/to/dsh-game-material-master
 ```
 
 包已发布到 npm：[dsh-game-material-master](https://www.npmjs.com/package/dsh-game-material-master)
-（当前 `0.9.2`，`latest`）。本包没有运行时依赖，`dsh plugin add` 拉下来即可用。
+（当前 `0.10.0`，`latest`）。本包没有运行时依赖，`dsh plugin add` 拉下来即可用。
 
 **DSH 版本**：`>=0.2.0-rc.2 <0.3.0`（`package.json` 的 `engines.dsh`；DSH 0.2.1 起插件管理器优先按它判断兼容性）。
 Web 部署用 `--public-url https://host/prefix/` 时，深链接与产物地址会跟着补路径前缀。
@@ -540,6 +537,9 @@ T("第 {n0} 帧", { n0: index + 1 })                        // 带插值，英�
   并由本机 Python 执行用户/agent 写的 `compose.py`。产品思路另参考
   [XIAODUOLU/Midra](https://github.com/XIAODUOLU/Midra) 的「prompt-to-code MIDI、可编辑、再决定是否生成音频」。
   原仓库版权归其作者所有，特此致谢。
+- **可选 ToAPIs 异步图片 / 视频后端由 [@ToAPIs-2025](https://github.com/ToAPIs-2025) 通过
+  [PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7) 贡献**（`feat(toapis)`）：
+  设置页独立配置、异步任务回执防重复提交、凭证只在宿主保存，默认后端仍是火山方舟 / MiniMax。感谢这份实现。
 - ⚠️ **AsLib 仓库里的 `Picture/MapChip/*_pipo.png` 素材属于第三方，没有打包进本插件**
   （它的 README 写明 "Third party content is copyrighted by its respective owners"）。
   内置素材由 `scripts/make-map-sample-tileset.mjs` 按同样的 A2 规格在本机程序化生成。

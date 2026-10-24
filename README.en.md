@@ -12,18 +12,17 @@ third-party service.
 [![npm](https://img.shields.io/npm/v/dsh-game-material-master?color=blue)](https://www.npmjs.com/package/dsh-game-material-master)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **🆕 0.9.2 fix**: when Volcengine aborts before the TLS handshake completes, the plugin now retries up to
-> 3 times (handshake-only errors; requests that were already sent are not retried, so billing is not duplicated),
-> and the failure log states how many attempts were made.
->
-> **0.9.1 fixes**: the sound-effect job list now refreshes after polling completes (no more "0 takes · ⏳"
-> stuck forever), and Volcengine network errors include the underlying cause instead of a bare `fetch failed`.
->
-> **0.9.0 update**: an eighth module, [**Sound effects**](#-sound-effects-volcengine-seed-audio)
-> (Volcengine Seed-Audio: one prompt → sound effects / ambience / character voices, with an optional reference
-> image or audio; every run is billed; up to 120 seconds). The 0.8.0 **music generation / compose mode**,
-> map editor **Generate with AI / stamps**, **local ComfyUI** backend and **DSH 0.2.1** support remain.
-> See the [release notes in AGENTS.md](https://github.com/universe-st/dsh-game-material-master/blob/main/AGENTS.md#已发布版本).
+> **🆕 0.10.0 update**: the conversational surface is now a single **`game_material`** tool
+> (`action` picks `guide / intake / call / status / wait / review / approve / reviewMode / upload`).
+> The always-resident context drops from **49 KB to about 4 KB**; flows and method tables are loaded on demand
+> through `action:"guide"`. Module ⑤ is replaced by a fully local **45° isometric map editor** (2:1 diamonds,
+> 4×4 auto-tiling, multi-cell / elevated objects, animated tiles, markers, wraparound, one-click generation,
+> plus **Generate with AI** which opens a chat and links the result back into "Add tileset" for confirmation).
+> A new **optional ToAPIs asynchronous image / video backend** lands via
+> [PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7) — thanks
+> [@ToAPIs-2025](https://github.com/ToAPIs-2025). The 0.9.x **sound-effect generator** (Seed-Audio) and its
+> network-retry fixes remain. See the
+> [release notes in AGENTS.md](https://github.com/universe-st/dsh-game-material-master/blob/main/AGENTS.md#已发布版本).
 
 ![Game Material Master · workbench](https://raw.githubusercontent.com/universe-st/dsh-game-material-master/main/docs/images/gmm-00-workbench.png)
 
@@ -380,7 +379,7 @@ dsh plugin --profile web add /path/to/dsh-game-material-master
 ```
 
 The package is published to npm: [dsh-game-material-master](https://www.npmjs.com/package/dsh-game-material-master)
-(currently `0.9.2`, `latest`). It has no runtime dependencies, so `dsh plugin add` is all you need.
+(currently `0.10.0`, `latest`). It has no runtime dependencies, so `dsh plugin add` is all you need.
 
 **DSH version**: `>=0.2.0-rc.2 <0.3.0` (the `engines.dsh` field; since DSH 0.2.1 the plugin manager checks it first).
 When a Web deployment uses `--public-url https://host/prefix/`, deep links and asset URLs include that path prefix.
@@ -638,6 +637,11 @@ The screenshots in this document were taken by Playwright against the real UI; t
   notation and pitfalls, and the user's/agent's `compose.py` is executed by the local Python. The product
   idea also references [XIAODUOLU/Midra](https://github.com/XIAODUOLU/Midra) ("prompt-to-code MIDI,
   editable, then decide whether to generate audio"). All rights remain with the original authors. With thanks.
+- **The optional ToAPIs asynchronous image / video backend was contributed by
+  [@ToAPIs-2025](https://github.com/ToAPIs-2025) in
+  [PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7)** (`feat(toapis)`): independent
+  settings, receipts that block duplicate paid submissions, credentials kept on the host, and Ark / MiniMax
+  still the defaults. Thanks for the implementation.
 - ⚠️ **The `Picture/MapChip/*_pipo.png` tiles shipped in the AsLib repository belong to a third party and are
   not bundled here** (its README states "Third party content is copyrighted by its respective owners").
   The built-in tileset is generated procedurally on this machine by `scripts/make-map-sample-tileset.mjs`,

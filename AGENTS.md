@@ -199,44 +199,14 @@ Conventional Commits，中文描述：`feat(rig): …` / `docs: …` / `fix(spri
 | `0.9.0` | 2026-10-18 10:11 | **新增第八个模块「音效生成」**（`feat(sfx)`，火山引擎豆包语音 **Seed-Audio**：一句话描述 → 音效 / 环境音 / UI 声 / 生物吼叫 / 角色配音；可带 1 张参考图或最多 3 条参考音频（互斥）；每次生成一条 take、永不覆盖；单次 ≤120 秒；每次生成真实计费；界面直接生成、工具面可调）。新增 `src/sfxapi.ts` / `src/sfxgen.ts`、配置项 `sfx*`、wire 13 个方法（163 → **176**）、`sfx-assets` 路由与独立导出；新增自检 `verify-sfx` 54 / `verify-sfx-gateway` 39 / `verify-sfx-client` 28。⚠️ 宿主半区改动，需重启 DSH。 |
 | `0.9.1` | 2026-10-18 12:50 | **音效生成修复**（`fix(sfx)`）：轮询 `getSfxJob` 时同步刷新左侧任务列表（生成完成后不再停在「0 条 · ⏳」）；火山引擎 `fetch failed` 带上底层 `cause`（例如 TLS `ECONNRESET`），便于区分网络与鉴权问题。`verify-sfx-client` 28 → **29**。 |
 | `0.9.2` | 2026-10-18 13:11 | **音效生成网络重试**（`fix(sfx)`）：只对「TLS 握手尚未建立就断开」这类**请求还没发出**的错误自动重试最多 3 次（Clash / TUN 节点抖动常见）；已发出的请求不重试，避免重复计费。成功后日志写明重试次数；`verify-sfx` 54 → **55**。 |
-| `0.11.0` | 2026-10-24 12:10 | **模块五推倒重做**（`feat(iso)!`）：删除「45°地图地块生成」（`tile`：AI 生成 / 模板 / 规整 / 拼图全删），换成**全本地 45° 地图编辑器**（`iso`：2:1 等距菱形地块、4×4 自动连接、多格/高处物件、动画地块、标记层、环绕、一键生成；导入自己的素材 + 程序化内置素材；导出 PNG / JSON / zip）。现有模块六「地图编辑器」一行未动。wire 删 13 个 tile 方法、加 20 个 iso 方法（176 → **183**）；`iso-assets` 路由；新增 `src/isogeom.ts` / `isotiles.ts` / `isodoc.ts` / `isorender.ts` / `isoexport.ts` / `isogen.ts` / `isosamplegen.ts`；自检新增 `verify-iso` 39 / `-pipeline` 39 / `-gateway` 53 / `-client` 62。⚠️ 宿主半区改动，需重启 DSH。 |
-| `0.12.0` | 2026-10-24 13:30 | **45° 地图编辑器 AI 生成素材**（`feat(iso)`）：素材卡新增「AI 生成素材」，支持地面 / 物件；自动开新对话生成 → 宿主 `composeIsoAsset` 抠绿 / 裁边 / 2:1 菱形或占格整理 → 回链打开「新增素材」预填，用户确认才导入。首版不做 4×4 自动连接（仍手工导入）。新增 wire 方法 184；`ai/` 资源目录；`verify-iso` 39 / `-pipeline` 50 / `-gateway` 57 / `-client` 69；`verify-tools` 196。⚠️ 宿主半区改动，需重启 DSH。 |
+| `0.10.0` | 2026-10-24 06:49 | **对话工具面收成单入口**（`feat(tools)!`）：8 个 `game_material_*` 合并成 1 个 `game_material`，常驻 49,393 B → 约 3.9 KB，流程 / 方法表改由 `guide` 按需加载。**模块五推倒重做**（`feat(iso)!`）：删掉「45° 地图地块生成」，换成全本地 **45° 地图编辑器**（2:1 等距 / 4×4 自动连接 / 多格高处物件 / 动画地块 / 标记层 / 环绕 / 一键生成 / 内置素材 / 导出 PNG·JSON·zip），并支持**AI 生成素材**（开新对话 → `composeIsoAsset` → 回链确认）。**新增可选 ToAPIs 异步图片 / 视频后端**（`feat(toapis)`，[PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7) by [@ToAPIs-2025](https://github.com/ToAPIs-2025)）。wire 方法 176 → **184**；新增 `verify-iso*` 四件与 `verify-toapis`。⚠️ 宿主半区改动，需重启 DSH。 |
 
-### 0.12.0 发布说明（2026-10-24）
+### 0.10.0 发布说明（2026-10-24）
 
-`package.json` 是 `0.12.0`。相对 0.11.0：
+`package.json` 是 `0.10.0`。相对已发布的 0.9.2，这是把三段开发合并成的一次发布（内部曾按
+0.10.0 / 0.11.0 / 0.12.0 推进，0.11.0 与 0.12.0 **从未发布到 npm**，git 历史里仍能看到这两个版本号）。
 
-- **45° 地图编辑器新增 AI 生成素材**：素材卡「AI 生成素材」→ 新对话 → `composeIsoAsset` → 回链确认。首版支持地面（2:1 菱形）与物件（整图 + footprint）；自动连接 4×4 仍走手工导入。
-- 新增 `src/isocompose.ts`（纯像素整理）与 `isogen.composeIsoAsset`；`ai/` 加入 iso 资源目录。
-- 回链复用 `dialog=add&asset=…&shape=ground|object&frames=…&scale=…&cols=…&rows=…&keyed=1`，iso 界面自动打开「新增素材」并预填；只整理、不自动导入。
-- wire 新增 `composeIsoAsset`，方法数 184；新增 `iso-ai-asset` 工具手册；`verify-host` / `verify-tools` / `verify-iso-*` 同步。
-- ⚠️ 宿主半区改动，**要重启 DSH**；浏览器半区刷新即可。
-
-### 0.11.0 发布说明（2026-10-24）
-
-`package.json` 是 `0.11.0`。相对 0.10.0：
-
-- **删除模块五「45°地图地块生成」（`tile`）**：`src/tilegen.ts` / `tilemap.ts` / `tilegeom.ts`、
-  13 个 tile 远程方法、`tile-assets` 路由、tile 界面与实验性弹窗全部移除。旧 `tile-jobs/`
-  原样留在磁盘上、不再被读取，不做迁移。
-- **新增模块五「45°地图编辑器」（`iso`）**：2:1 正交等距（默认 `64×96` 格），
-  地面 / 4×4 自动连接 / 多格高处物件 / 动画 / 标记 / 环绕 / 一键生成；
-  导入自己的 45° 素材 + 程序化内置素材；全本地零计费；导出 `dsh-gem-iso-map@1` + PNG + zip。
-- **现有模块六「地图编辑器」（`map`）不动**：`mapgeom` / `mapdoc` / `maprender` / `mapgen` /
-  `mapexport` 的口径、数据格式与自检期望一行未改；`verify-map` / `-pipeline` / `-gateway` 继续全绿（`verify-map-client` 的假 React harness 在本机有已知的 40 轮超时 / `data-loop` 取不到问题，与本次改动无关）。
-- wire 方法 176 → **183**（删 13 个 tile、加 20 个 iso）；`module` 枚举 `tile` → `iso`；
-  `STUDIO_MODULES` 顺序 `sprite,image,sequence,rig,iso,map,music,sfx`。
-- 项目 id 前缀 `g…`，数据在 `iso-jobs/<id>/`（`project.json` / `map.json` / `tilesets` /
-  `preview` / `export`）；资源 scope `iso-assets`（`AssetScope` / `resolveAssetTarget` / `SCOPES` /
-  `SERVABLE_ISO_DIRS` 四处同步）。
-- 自检：新增 `verify-iso` 39 / `verify-iso-pipeline` 39 / `verify-iso-gateway` 53 /
-  `verify-iso-client` 62；`verify-host` 方法数改为 183 并把资源路由段换成 iso；
-  `verify-tools` / `verify-feedback` / `verify-client` / `verify-i18n` 的 tile 期望同步改成 iso。
-- ⚠️ 宿主半区改动，**要重启 DSH**；浏览器半区刷新即可。
-
-### 0.10.0 发布说明（未发布）
-
-`package.json` 是 `0.10.0`。这是一次**对话工具面的破坏性重构**：
+#### ① 对话工具面收成单入口（破坏性）
 
 - 原来 8 个 `game_material_*` 工具合并成 1 个 `game_material`，用 `action` 选择
   `guide / intake / call / status / wait / review / approve / reviewMode / upload`。
@@ -250,7 +220,54 @@ Conventional Commits，中文描述：`feat(rig): …` / `docs: …` / `fix(spri
   `src/musicguide.ts` / `src/musicscoreguide.ts` / `src/sfxgen.ts` 里模型可见的旧工具名同步更新。
 - 自检：`verify-tools` 179 → **194**（新增常驻字节预算、guide 覆盖、隐藏模块不泄露手册）；
   `verify-map-gateway` 216 / `verify-music-gateway` 52 / `verify-sfx-gateway` 39 / `verify-music-client` 67。
-- ⚠️ 宿主半区改动，**要重启 DSH**；浏览器半区刷新即可。
+
+#### ② 模块五推倒重做：全本地 45° 地图编辑器（`iso`）
+
+- **删除旧「45°地图地块生成」（`tile`）**：`src/tilegen.ts` / `tilemap.ts` / `tilegeom.ts`、
+  13 个 tile 远程方法、`tile-assets` 路由、tile 界面与实验性弹窗全部移除。旧 `tile-jobs/`
+  原样留在磁盘上、不再被读取，不做迁移。
+- **新增「45°地图编辑器」（`iso`）**：2:1 正交等距（默认 `64×96` 格），
+  地面 / 4×4 自动连接 / 多格高处物件 / 动画 / 标记 / 环绕 / 一键生成；
+  导入自己的 45° 素材 + 程序化内置素材；全本地零计费；导出 `dsh-gem-iso-map@1` + PNG + zip。
+- 现有模块六「地图编辑器」（`map`）不动：`mapgeom` / `mapdoc` / `maprender` / `mapgen` /
+  `mapexport` 的口径、数据格式与自检期望一行未改。
+- wire 方法 176 → **183**（删 13 个 tile、加 20 个 iso）；`module` 枚举 `tile` → `iso`；
+  `STUDIO_MODULES` 顺序 `sprite,image,sequence,rig,iso,map,music,sfx`。
+- 项目 id 前缀 `g…`，数据在 `iso-jobs/<id>/`（`project.json` / `map.json` / `tilesets` /
+  `preview` / `export`）；资源 scope `iso-assets`（`AssetScope` / `resolveAssetTarget` / `SCOPES` /
+  `SERVABLE_ISO_DIRS` 四处同步）。
+
+#### ③ 45° 地图编辑器：AI 生成素材
+
+- 素材卡「AI 生成素材」→ 新对话 → 宿主 `composeIsoAsset` 抠绿 / 裁边 / 2:1 菱形或占格整理 →
+  回链打开「新增素材」预填，用户确认才导入。首版支持地面（2:1 菱形）与物件（整图 + footprint）；
+  自动连接 4×4 仍走手工导入。
+- 新增 `src/isocompose.ts`（纯像素整理）与 `isogen.composeIsoAsset`；`ai/` 加入 iso 资源目录。
+- 回链复用 `dialog=add&asset=…&shape=ground|object&frames=…&scale=…&cols=…&rows=…&keyed=1`，
+  iso 界面自动打开「新增素材」并预填；只整理、不自动导入。
+- wire 新增 `composeIsoAsset`，方法数 183 → **184**；新增 `iso-ai-asset` 工具手册。
+
+#### ④ 可选 ToAPIs 异步图片 / 视频后端（PR #7）
+
+- 由 [@ToAPIs-2025](https://github.com/ToAPIs-2025) 在
+  [PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7) 贡献（`feat(toapis)`）。
+- 设置页独立配置 ToAPIs（Base URL / Key / 图片模型与尺寸 / 视频开关与参数 / 超时），
+  生图后端可切 ToAPIs，图生视频可改走 ToAPIs 异步接口；默认后端仍是火山方舟 / MiniMax，
+  与 ComfyUI、自定义协议、本地处理互不影响。
+- 异步媒体协议（提交 → 轮询 → 下载），回执落在 `<DSH_HOME>/game-material-master/toapis-receipts/`，
+  提交不确定或缺 taskId 时**阻止重复付费提交**；取消本地等待不会取消远端付费任务。
+- 视频首版只接受文生视频或一张首帧图（MP4 / 无音频 / 16:9）；尾帧与多模态参考在付费提交前拒绝；
+  Seedance Global 变体拒绝。
+- 新增 `verify-toapis.mjs`（42 项，mock HTTP、零付费调用）；`verify-feedback` 覆盖设置页新选项与 Key 输入。
+
+#### 自检项数（0.10.0）
+
+`host 387` / `client 364` / `tools 196` / `feedback 214` / `comfy 124` / `custom-image 68` /
+`toapis 42` / `music 86` / `music-score 46` / `music-gateway 52` / `music-client 67` /
+`sfx 55` / `sfx-gateway 39` / `sfx-client 29` / `map 238` / `map-pipeline 416` /
+`map-gateway 216` / `map-client 457` / `iso 42` / `iso-pipeline 54` / `iso-gateway 58` / `iso-client 83`。
+
+> 自检脚本以仓库里的实际断言数为准；上面这组对应当前 `scripts/`。
 
 ### 0.9.0 发布说明（2026-10-18）
 
