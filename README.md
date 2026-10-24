@@ -555,3 +555,7 @@ T("第 {n0} 帧", { n0: index + 1 })                        // 带插值，英�
 设置页可独立配置 ToAPIs，再将生图后端切为 ToAPIs，或打开「使用 ToAPIs 生成视频」。默认仍是火山方舟／MiniMax，ComfyUI、自定义协议和本地处理保持可选。国内 `https://toapis.cn/v1`，国际 `https://toapis.com/v1`；异步任务需要专用协议，不是把 OpenAI 的地址换一下即可。
 
 [配置、计费与恢复说明](https://github.com/universe-st/dsh-game-material-master/blob/main/docs/TOAPIS.md)。API Key仅在宿主保存，生成真实计费；先在自己的账号核对报价和参数。
+
+## ToAPIs
+
+ToAPIs 可作为可选图片／视频 Provider，使用用户自己的 Key。官网：[国内站](https://toapis.cn/)／[国际站](https://toapis.com/)；Base URL 分别为 `https://toapis.cn/v1`／`https://toapis.com/v1`。[配置、价格口径与快速复用](https://github.com/universe-st/dsh-game-material-master/blob/main/docs/TOAPIS.md) · [真实 DSH 八方向与精灵导出验收](https://github.com/universe-st/dsh-game-material-master/blob/main/docs/toapis-live-20261024/README.md)。原生透明 GPT Image、方形视频与实测截图见文档；功能可用版本以合并／发布状态为准。

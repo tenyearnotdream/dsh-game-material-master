@@ -301,6 +301,8 @@ export async function generateToapisImage(
   const model = request.model?.trim() || config.toapisImageModel;
   assertToapisModel(model);
   if (!request.prompt.trim()) throw new Error("ToAPIs: empty prompt");
+  if (config.toapisImageBackground !== "auto" && !/^gpt-image-/i.test(model))
+    throw new Error("ToAPIs: explicit background is only supported for GPT Image models; choose auto for other models");
   const combined = context(
     { ...config, toapisTimeoutMs: request.timeoutMs ?? config.toapisTimeoutMs },
     signal,
@@ -316,6 +318,7 @@ export async function generateToapisImage(
   };
   if (config.toapisImageQuality.trim())
     body.quality = config.toapisImageQuality.trim();
+  if (config.toapisImageBackground !== "auto") body.background = config.toapisImageBackground;
   if (references.length) body.reference_images = references;
   let task = await submit(config, "images", body, combined, {
     ...body,
@@ -379,7 +382,7 @@ export async function submitToapisVideo(
     prompt: request.prompt,
     duration: config.toapisVideoDuration,
     resolution: config.toapisVideoResolution,
-    aspect_ratio: "16:9",
+    aspect_ratio: config.toapisVideoAspectRatio,
     generate_audio: false,
     output_format: "mp4",
   };
