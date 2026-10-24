@@ -19,6 +19,11 @@
 > 0.9.x 的 **音效生成**（Seed-Audio）与网络重试修复继续保留。
 >
 > **0.10.1 修复**：45° 地图编辑器「一键生成 → 大陆」不再崩溃（高度场中点插值写到了不存在的格子上）。
+>
+> **0.10.2 更新**：ToAPIs 生图可选**原生透明背景**（GPT Image，下载原图不再二次抠像），图生视频可选
+> **画幅比例**（方形角色用 1:1）；透明首帧会先铺白再交给视频模型。感谢
+> [PR #8](https://github.com/universe-st/dsh-game-material-master/pull/8)（[@YamiAnn](https://github.com/YamiAnn)）
+> 与真机验收记录。
 > 完整变更见 [AGENTS.md 发布记录](https://github.com/universe-st/dsh-game-material-master/blob/main/AGENTS.md#已发布版本)。
 
 ![游戏素材大师 · 工作台](https://raw.githubusercontent.com/universe-st/dsh-game-material-master/main/docs/images/gmm-00-workbench.png)
@@ -315,7 +320,7 @@ dsh plugin --profile web add /path/to/dsh-game-material-master
 ```
 
 包已发布到 npm：[dsh-game-material-master](https://www.npmjs.com/package/dsh-game-material-master)
-（当前 `0.10.1`，`latest`）。本包没有运行时依赖，`dsh plugin add` 拉下来即可用。
+（当前 `0.10.2`，`latest`）。本包没有运行时依赖，`dsh plugin add` 拉下来即可用。
 
 **DSH 版本**：`>=0.2.0-rc.2 <0.3.0`（`package.json` 的 `engines.dsh`；DSH 0.2.1 起插件管理器优先按它判断兼容性）。
 Web 部署用 `--public-url https://host/prefix/` 时，深链接与产物地址会跟着补路径前缀。

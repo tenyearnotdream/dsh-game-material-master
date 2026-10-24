@@ -110,11 +110,11 @@ node scripts/verify-host.mjs       # 宿主全链路（387 项）
 node scripts/verify-client.mjs     # 浏览器半区契约（362 项）
 node scripts/verify-tools.mjs      # 对话调用面（196 项，含常驻工具面 ≤6,000 B 预算）
 node scripts/verify-pipeline.mjs   # 抽帧 / 抠像 / 合成（40 项）
-node scripts/verify-feedback.mjs   # 浏览器半区真渲染（214 项，含功能管理、侧栏菜单、生图后端设置页、语义保存错误与草稿合并）
+node scripts/verify-feedback.mjs   # 浏览器半区真渲染（217 项，含功能管理、侧栏菜单、生图后端设置页、语义保存错误与草稿合并）
 node scripts/verify-i18n.mjs       # 中英词条表契约（9 项）
 node scripts/verify-comfy.mjs      # 本地 ComfyUI 后端（124 项，自起 mock ComfyUI，纯本地、不用装 ComfyUI）
 node scripts/verify-custom-image.mjs  # 自定义生图后端三协议（68 项：起本地假服务端，离线、零计费）
-node scripts/verify-toapis.mjs       # ToAPIs 可选异步图片 / 视频后端（42 项，mock HTTP、零付费调用）
+node scripts/verify-toapis.mjs       # ToAPIs 可选异步图片 / 视频后端（43 项，mock HTTP、零付费调用）
 node scripts/verify-music.mjs      # 音乐生成编辑：mock 谱乐 AI 的生成/轮询/下载/编辑/导出/工具/路由（86 项）
 node scripts/verify-music-score.mjs   # 谱曲模式：方案 / 假 Python / 内置试听 / 乐谱包 / Suno 上传+cover mock（46 项，纯本地）
 node scripts/verify-music-gateway.mjs  # 音乐走真实网关：wire schema 不丢键、工具面、深链接、隐藏模块、谱曲字段（52 项）
@@ -201,6 +201,7 @@ Conventional Commits，中文描述：`feat(rig): …` / `docs: …` / `fix(spri
 | `0.9.2` | 2026-10-18 13:11 | **音效生成网络重试**（`fix(sfx)`）：只对「TLS 握手尚未建立就断开」这类**请求还没发出**的错误自动重试最多 3 次（Clash / TUN 节点抖动常见）；已发出的请求不重试，避免重复计费。成功后日志写明重试次数；`verify-sfx` 54 → **55**。 |
 | `0.10.0` | 2026-10-24 06:49 | **对话工具面收成单入口**（`feat(tools)!`）：8 个 `game_material_*` 合并成 1 个 `game_material`，常驻 49,393 B → 约 3.9 KB，流程 / 方法表改由 `guide` 按需加载。**模块五推倒重做**（`feat(iso)!`）：删掉「45° 地图地块生成」，换成全本地 **45° 地图编辑器**（2:1 等距 / 4×4 自动连接 / 多格高处物件 / 动画地块 / 标记层 / 环绕 / 一键生成 / 内置素材 / 导出 PNG·JSON·zip），并支持**AI 生成素材**（开新对话 → `composeIsoAsset` → 回链确认）。**新增可选 ToAPIs 异步图片 / 视频后端**（`feat(toapis)`，[PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7) by [@ToAPIs-2025](https://github.com/ToAPIs-2025)）。wire 方法 176 → **184**；新增 `verify-iso*` 四件与 `verify-toapis`。⚠️ 宿主半区改动，需重启 DSH。 |
 | `0.10.1` | 2026-10-24 07:20 | **45° 地图编辑器修复**（`fix(iso)`）：「一键生成 · 大陆」的高度场中点插值把 `grid[8.5]` 当成格子写，点一次必抛 `TypeError`；现在 `step < 2` 时跳过这段（step = 1 的第一段已经把每格补满，中点那段本来就是重复的）。`verify-iso-pipeline` 54 → **55**（新增 continent 回归）。⚠️ 宿主半区改动，需重启 DSH。 |
+| `0.10.2` | 2026-10-24 07:28 | **ToAPIs 后端验收修复**（`fix(toapis)`，[PR #8](https://github.com/universe-st/dsh-game-material-master/pull/8) by [@YamiAnn](https://github.com/YamiAnn)）：生图新增**背景**选项（`auto` / `transparent` / `opaque`，GPT Image 原生透明 PNG，下载原图不再二次抠像）；图生视频新增**画幅比例**（默认 16:9，方形角色用 1:1），透明首帧先铺白再交给视频模型；补真实 DSH 八方向 / 精灵导出验收文档，新增 `verify-toapis-alpha`（原生透明、白底首帧、ZIP 原字节）与 Windows 临时文件锁回归 `verify-project-windows-lock`；`verify-toapis` 42 → **43**、`verify-feedback` 214 → **217**。⚠️ 宿主半区改动，需重启 DSH。 |
 
 ### 0.10.0 发布说明（2026-10-24）
 
