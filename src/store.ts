@@ -13,9 +13,10 @@
  *   out/sheet.png         最终整图
  */
 
-import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
+import { writeJsonAtomic } from "./jsonio.js";
 import {
   DEFAULT_TURN_PROMPT,
   DEFAULT_VIDEO_PROMPT,
@@ -518,10 +519,9 @@ export async function readProject(id: string): Promise<Project | undefined> {
 export async function writeProject(project: Project): Promise<void> {
   project.updatedAt = Date.now();
   const target = projectFile(project.id);
-  await mkdir(projectDir(project.id), { recursive: true });
-  const tmp = `${target}.tmp`;
-  await writeFile(tmp, `${JSON.stringify(project, null, 2)}\n`, "utf8");
-  await rename(tmp, target);
+  // Reuse the shared unique-temp + Windows sharing-violation retry path.
+  // A transient read/scanner handle must not abort a batch before recording its task.
+  await writeJsonAtomic(target, project);
 }
 
 export async function deleteProject(id: string): Promise<void> {

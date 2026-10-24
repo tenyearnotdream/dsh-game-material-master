@@ -47,9 +47,17 @@
       "ToAPIs：图片和视频使用独立的异步协议；每次生成会计费。": "ToAPIs uses asynchronous image/video endpoints. Each generation is billable.",
       "ToAPIs 图片模型": "ToAPIs image model",
       "ToAPIs 图片尺寸": "ToAPIs image size",
+      "按当前生图后端的账号价格计费，实际以平台账单为准": "Billed at your selected image provider's account price; check the platform's actual bill.",
       "ToAPIs 图片质量": "ToAPIs image quality",
+      "ToAPIs 图片背景（GPT Image）": "ToAPIs image background (GPT Image)",
+      "自动背景": "Automatic background",
+      "原生透明背景": "Native transparent background",
+      "不透明背景": "Opaque background",
+      "透明PNG无需绿幕抠像；MP4视频没有透明通道，视频抽帧仍需背景处理。": "Transparent PNGs need no chroma keying. MP4 video has no alpha channel; extracted video frames still need background removal.",
       "ToAPIs 视频模型": "ToAPIs video model",
       "ToAPIs 视频分辨率": "ToAPIs video resolution",
+      "ToAPIs 视频比例": "ToAPIs video aspect ratio",
+      "角色首帧为方形时建议1:1，避免宽屏裁掉头脚；MP4抽帧仍需去背景。": "Use 1:1 for square character first frames to avoid widescreen cropping of head and feet. MP4 frames still require background removal.",
       "国内地址 https://toapis.cn/v1；国际地址 https://toapis.com/v1。": "China: https://toapis.cn/v1; international: https://toapis.com/v1.",
       "ToAPIs 视频参数独立于 MiniMax；目前仅支持文生视频或一张首帧，不支持尾帧及多模态参考。": "ToAPIs video settings are independent of MiniMax. Currently supports text or one first frame, not last-frame/multimodal inputs.",
       "ToAPIs 视频时长（秒）": "ToAPIs video duration (seconds)",
@@ -382,7 +390,6 @@
       "已开始生成 {n0} 张": "Started generating {n0} images",
       "正在生成 {n0} 张图片…": "Generating {n0} images…",
       "生成 {n0} 张": "Generate {n0}",
-      "按 Seedream 刊例约 0.2 元/张，实际以方舟账单为准": "About ¥0.2 per image at Seedream list price; your Volcengine Ark bill is authoritative",
       "② 参考图（可留空）": "② Reference images (optional)",
       "最多 10 张。有参考图时走图生图；引用多张时可在提示词里写「图一」「图二」。": "Up to 10. With reference images it runs image-to-image; to cite several, write \"image 1\" and \"image 2\" in the prompt.",
       "把参考图拖到这里": "Drag reference images here",
@@ -15432,8 +15439,8 @@
       return shell(main);
     }
 
-
-    function ImageModule(props) {      useLocaleTick();
+    function ImageModule(props) {
+      useLocaleTick();
       const api = props.api;
       const [jobs, setJobs] = React.useState([]);
       const [jobId, setJobId] = React.useState(null);
@@ -15456,6 +15463,7 @@
        * 改提示词 / 尺寸时会被打回原形（同模块①的视频提示词）。判定见 `mergeDrafts`。
        */
       const loadedDrafts = React.useRef({ id: null, prompt: "", suffix: "", settings: {}, keying: {} });
+      const imageSaveQueue = React.useRef(Promise.resolve());
 
       React.useEffect(() => {
         if (intent === null) return;
@@ -15542,7 +15550,13 @@
         }, T("已新建图片任务"), { key: K_IMG_CREATE, label: T("正在新建任务…") });
       };
 
-      const saveJob = (patch) => run(() => api.saveImageJob({ jobId: job.id, ...patch }), T("已保存"));
+      const enqueueImageSave = (patch) => {
+        const id = job.id;
+        const pending = imageSaveQueue.current.catch(() => undefined).then(() => api.saveImageJob({ jobId: id, ...patch }));
+        imageSaveQueue.current = pending;
+        return pending;
+      };
+      const saveJob = (patch) => run(() => enqueueImageSave(patch), T("已保存"));
 
       const del = async () => {
         if (job === null) return;
@@ -15655,14 +15669,17 @@
                           disabled: promptDraft.trim() === "" || tasks.has(K_IMG_JOB),
                           onClick: () =>
                             void run(
-                              () => api.runImageJob({ jobId: job.id }),
+                              async () => {
+                                await enqueueImageSave({ prompt: promptDraft, suffix: suffixDraft, settings: settingsDraft });
+                                return api.runImageJob({ jobId: job.id });
+                              },
                               T("已开始生成 {n0} 张", { n0: settingsDraft.count ?? 1 }),
                               { key: K_IMG_JOB, label: T("正在生成 {n0} 张图片…", { n0: settingsDraft.count ?? 1 }) }
                             )
                         },
                         T("生成 {n0} 张", { n0: settingsDraft.count ?? 1 })
                       ),
-                      h("span", { className: "SPR_refRow" }, T("按 Seedream 刊例约 0.2 元/张，实际以方舟账单为准"))
+                      h("span", { className: "SPR_refRow" }, T("按当前生图后端的账号价格计费，实际以平台账单为准"))
                     )
                   ),
                   h(
@@ -20221,9 +20238,13 @@
                ["toapisImageSize",T("ToAPIs 图片尺寸")], ["toapisImageQuality",T("ToAPIs 图片质量")],
                ["toapisVideoModel",T("ToAPIs 视频模型")], ["toapisVideoResolution",T("ToAPIs 视频分辨率")] ].map(([key,label])=>
             h("label",{className:"SPR_field"},h("span",{className:"SPR_fieldLabel"},label),h("input",{className:"SPR_input",value:config[key] ?? "",onChange:(event)=>void patch({[key]:event.target.value})}))),
+          h("label",{className:"SPR_field"},h("span",{className:"SPR_fieldLabel"},T("ToAPIs 图片背景（GPT Image）")),h("select",{className:"SPR_input","data-testid":"cfg-toapis-background",value:config.toapisImageBackground ?? "auto",onChange:(event)=>void patch({toapisImageBackground:event.target.value})},h("option",{value:"auto"},T("自动背景")),h("option",{value:"transparent"},T("原生透明背景")),h("option",{value:"opaque"},T("不透明背景")))),
+          h("p",null,T("透明PNG无需绿幕抠像；MP4视频没有透明通道，视频抽帧仍需背景处理。")),
           h("p",null,T("国内地址 https://toapis.cn/v1；国际地址 https://toapis.com/v1。")),
           h("p",null,T("ToAPIs 视频参数独立于 MiniMax；目前仅支持文生视频或一张首帧，不支持尾帧及多模态参考。")),
           h(NumField,{label:T("超时（秒）"),value:Math.round((config.toapisTimeoutMs ?? 600000)/1000),min:10,max:3600,onChange:(value)=>void patch({toapisTimeoutMs:value*1000})}),
+          h("label",{className:"SPR_field"},h("span",{className:"SPR_fieldLabel"},T("ToAPIs 视频比例")),h("select",{className:"SPR_input","data-testid":"cfg-toapis-video-ratio",value:config.toapisVideoAspectRatio ?? "16:9",onChange:(event)=>void patch({toapisVideoAspectRatio:event.target.value})},...["16:9","9:16","1:1","4:3","3:4","21:9"].map(value=>h("option",{key:value,value},value)))),
+          h("p",null,T("角色首帧为方形时建议1:1，避免宽屏裁掉头脚；MP4抽帧仍需去背景。")),
           h(NumField,{label:T("ToAPIs 视频时长（秒）"),value:config.toapisVideoDuration ?? 4,min:4,max:15,onChange:(value)=>void patch({toapisVideoDuration:value})}),
           h("label",{className:"SPR_check"},h("input",{type:"checkbox",checked:config.toapisVideo === true,onChange:(event)=>void patch({toapisVideo:event.target.checked,...(event.target.checked?{comfyVideo:false}:{})})}),h("span",null,T("使用 ToAPIs 生成视频"))),
           h("p",null,config.toapisApiKeySet ? T("ToAPIs Key 已配置") : T("ToAPIs Key 未配置")),

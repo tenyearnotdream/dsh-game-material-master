@@ -45,7 +45,8 @@ import {
   downloadVideoTask,
   queryVideoTask,
   submitVideoTask,
-  videoFailureReason
+  videoFailureReason,
+  videoBackendOf
 } from "./videogen.js";
 import { composeSheet, keyGreen, type SheetRow } from "./chroma.js";
 import { encodePng } from "./png.js";
@@ -418,7 +419,7 @@ async function submitTurnVideo(projectId: string): Promise<void> {
   const startedAt = Date.now();
   try {
     const jpegRel = "videos/turn-first-frame.jpg";
-    const dataUri = await toJpegDataUri(assetPath(projectId, first.file), assetPath(projectId, jpegRel));
+    const dataUri = await toJpegDataUri(assetPath(projectId, first.file), assetPath(projectId, jpegRel), 1280, 3, videoBackendOf(config) === "toapis" ? "white" : undefined);
     const submitted = await submitVideoTask(config, {
       prompt,
       firstFrameImage: dataUri,
@@ -1034,7 +1035,7 @@ export function startVideos(projectId: string, keys?: string[]): { started: bool
 
       try {
         const jpegRel = `videos/${key}-first-frame.jpg`;
-        const dataUri = await toJpegDataUri(assetPath(projectId, image.file), assetPath(projectId, jpegRel));
+        const dataUri = await toJpegDataUri(assetPath(projectId, image.file), assetPath(projectId, jpegRel), 1280, 3, videoBackendOf(config) === "toapis" ? "white" : undefined);
         const prompt = (fresh.prompts.videoPerDirection?.[key] ?? fresh.prompts.video).trim();
         const submitted = await submitVideoTask(config, {
           prompt,
@@ -1055,6 +1056,8 @@ export function startVideos(projectId: string, keys?: string[]): { started: bool
           log(current, "info", `「${label}」视频任务已提交（${submitted.taskId}）`);
           for (const note of submitted.notes) log(current, "info", `「${label}」${note}`);
         });
+        // Start tracking accepted jobs immediately, even if another batch member fails locally.
+        ensurePoller(projectId);
       } catch (error) {
         const message = messageOf(error);
         await patchProject(projectId, (current) => {

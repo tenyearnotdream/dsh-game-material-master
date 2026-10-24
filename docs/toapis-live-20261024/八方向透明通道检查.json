@@ -1,0 +1,174 @@
+{
+  "project": "pmvlvn2j393a7db",
+  "rows": [
+    {
+      "direction": "back",
+      "status": "ready",
+      "file": "images/back.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "fully_transparent_fraction": 0.6911602020263672,
+      "visible_foreground_fraction": 0.3088397979736328,
+      "alpha_bbox": [
+        274,
+        34,
+        749,
+        978
+      ],
+      "sha256": "ab83607cdd517611df4561748f35fdf23de2d12c0d4882c6e78ca6418663cf56"
+    },
+    {
+      "direction": "upRight",
+      "status": "ready",
+      "file": "images/upRight.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "fully_transparent_fraction": 0.6821718215942383,
+      "visible_foreground_fraction": 0.3178281784057617,
+      "alpha_bbox": [
+        275,
+        24,
+        749,
+        991
+      ],
+      "sha256": "d6cc70a04480e161946e3b0fc251a70c3f3cb1e5b0f5fd5d51ef87b956bf27e8"
+    },
+    {
+      "direction": "right",
+      "status": "ready",
+      "file": "images/right.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "fully_transparent_fraction": 0.8010234832763672,
+      "visible_foreground_fraction": 0.1989765167236328,
+      "alpha_bbox": [
+        352,
+        16,
+        672,
+        967
+      ],
+      "sha256": "956bdaa9c037c7860f0e5467015b12df493935d4071b1e2481ea903cdea4312a"
+    },
+    {
+      "direction": "downRight",
+      "status": "ready",
+      "file": "images/downRight.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "fully_transparent_fraction": 0.697413444519043,
+      "visible_foreground_fraction": 0.30258655548095703,
+      "alpha_bbox": [
+        292,
+        25,
+        733,
+        971
+      ],
+      "sha256": "8e006317d6443a883199af8f3916e49d54629b46caa8446c2c68ab846b960c10"
+    },
+    {
+      "direction": "front",
+      "status": "ready",
+      "file": "images/front.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "fully_transparent_fraction": 0.6987152099609375,
+      "visible_foreground_fraction": 0.3012847900390625,
+      "alpha_bbox": [
+        275,
+        39,
+        749,
+        956
+      ],
+      "sha256": "6ffa2469ef76cd42f4b1a64eb49d67791da569651d06d30791b1433f086444cb"
+    },
+    {
+      "direction": "downLeft",
+      "status": "ready",
+      "file": "images/downLeft.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "fully_transparent_fraction": 0.6901636123657227,
+      "visible_foreground_fraction": 0.30983638763427734,
+      "alpha_bbox": [
+        262,
+        22,
+        718,
+        983
+      ],
+      "sha256": "091c6e31d1d2ff2b9bcd4fc647f879a979e8d3a841b63ad0af68d66f62abfab1"
+    },
+    {
+      "direction": "left",
+      "status": "ready",
+      "file": "images/left.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "fully_transparent_fraction": 0.8044090270996094,
+      "visible_foreground_fraction": 0.19559097290039062,
+      "alpha_bbox": [
+        341,
+        25,
+        665,
+        964
+      ],
+      "sha256": "3d11b1c179cface6b6c7c0720275d5900c5309cf12d7fc4ded8087bbd0408298"
+    },
+    {
+      "direction": "upLeft",
+      "status": "ready",
+      "file": "images/upLeft.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "alpha_extrema": [
+        0,
+        254
+      ],
+      "fully_transparent_fraction": 0.7004632949829102,
+      "visible_foreground_fraction": 0.29953670501708984,
+      "alpha_bbox": [
+        277,
+        24,
+        718,
+        981
+      ],
+      "sha256": "3dddf9d963d8ec34a62b2286b707eea3c018341401f31b2b3503bafca78c88e4"
+    }
+  ],
+  "display_note": "Contact sheet of real generated originals, with checkerboard only for alpha inspection; original files unchanged"
+}

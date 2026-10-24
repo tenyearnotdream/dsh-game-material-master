@@ -136,6 +136,8 @@ const config = normalizeConfig({
   toapisBaseUrl: origin + "/v1/",
   toapisApiKey: key,
   toapisVideo: true,
+  toapisImageBackground: "transparent",
+  toapisVideoAspectRatio: "1:1",
 });
 const postCount = () =>
   requests.filter((r) => r.method === "POST" && /\/generations$/.test(r.path))
@@ -216,6 +218,10 @@ try {
   check("host getConfig masks ToAPIs credentials", () =>
     assert(!JSON.stringify(view).includes(key)),
   );
+  check("host preserves transparent background option", () => {
+    assert.equal(view.toapisImageBackground, "transparent");
+    assert.equal(normalizeConfig({toapisImageBackground:"invalid"}).toapisImageBackground, "auto");
+  });
   check("host reports effective backend and model", () => {
     assert.equal(view.videoProviderBackend, "toapis");
     assert.equal(view.videoProviderModel, "seedance-2-mini");
@@ -250,6 +256,7 @@ try {
     assert.equal(imagePost.body.size, "4:3");
     assert.equal(imagePost.body.resolution, "1K");
     assert.equal(imagePost.body.quality, "low");
+    assert.equal(imagePost.body.background, "transparent");
     assert.equal(imagePost.body.n, 1);
     assert.equal(imagePost.body.watermark, undefined);
     assert.equal(
@@ -329,6 +336,7 @@ try {
     assert.equal(r.body.model, "seedance-2-mini");
     assert.equal(r.body.duration, 4);
     assert.equal(r.body.resolution, "480p");
+    assert.equal(r.body.aspect_ratio, "1:1");
     assert.equal(r.body.generate_audio, false);
     assert.equal(r.body.image_with_roles[0].role, "first_frame");
   });
