@@ -52,6 +52,9 @@ import { zipEntries, type ZipEntry } from "./zip.js";
  */
 export const OWN_JSON_FORMAT = "dsh-gem-map@4";
 
+/** 带标记语义字段 / 区域时使用；没有新字段的老文档仍然写 @4。 */
+export const OWN_JSON_FORMAT_META = "dsh-gem-map@5";
+
 export interface ExportFormatOptions {
   /** 合并 PNG（默认 true）。 */
   png?: boolean;
@@ -137,8 +140,11 @@ export function safeFileName(input: string, fallback = "map"): string {
  */
 export function buildOwnJson(context: RenderContext, doc: MapDoc, project: { id: string; name: string }): object {
   void project;
+  const hasMarkerMeta = doc.markers.some(
+    (marker) => marker.kind !== undefined || marker.color !== undefined || marker.note !== undefined || marker.tags !== undefined
+  );
   return {
-    format: OWN_JSON_FORMAT,
+    format: hasMarkerMeta ? OWN_JSON_FORMAT_META : OWN_JSON_FORMAT,
     grid: { tileWidth: context.grid.tileWidth, tileHeight: context.grid.tileHeight, wrap: context.grid.wrap },
     cols: doc.cols,
     rows: doc.rows,
@@ -153,7 +159,16 @@ export function buildOwnJson(context: RenderContext, doc: MapDoc, project: { id:
     })),
     legend: flatTiles(context.tilesets).map((flat) => ({ index: flat.index, tilesetId: flat.tilesetId, rect: flat.tile.rect })),
     layers: doc.layers.map((layer) => ({ name: layer.name, data: [...(doc.data[layer.id] ?? [])] })),
-    markers: doc.markers.map((marker, index) => ({ n: index + 1, name: marker.name, r: marker.r, c: marker.c })),
+    markers: doc.markers.map((marker, index) => ({
+      n: index + 1,
+      name: marker.name,
+      r: marker.r,
+      c: marker.c,
+      ...(marker.kind === undefined ? {} : { kind: marker.kind }),
+      ...(marker.color === undefined ? {} : { color: marker.color }),
+      ...(marker.note === undefined ? {} : { note: marker.note }),
+      ...(marker.tags === undefined ? {} : { tags: marker.tags })
+    })),
     stamps: doc.stamps.map((stamp) => {
       const tileset = context.tilesets.find((entry) => entry.id === stamp.tilesetId);
       const spec = tileset?.stamp;

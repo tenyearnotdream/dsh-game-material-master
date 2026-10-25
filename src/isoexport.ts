@@ -22,6 +22,9 @@ import type { IsoBounds } from "./isogeom.js";
 
 export const OWN_ISO_JSON_FORMAT = "dsh-gem-iso-map@1";
 
+/** 带标记语义字段时使用；没有新字段的老文档仍然写 @1。 */
+export const OWN_ISO_JSON_FORMAT_META = "dsh-gem-iso-map@2";
+
 export interface IsoExportFormats {
   png?: boolean;
   json?: boolean;
@@ -60,8 +63,11 @@ export interface IsoExportInput {
 /** `dsh-gem-iso-map@1` 的内容。 */
 export function buildIsoJson(context: IsoRenderContext, doc: IsoDoc, project: { id: string; name: string }): object {
   const legend = buildIsoPlan(context, doc, { includeLegend: true }).legend;
+  const hasMarkerMeta = doc.markers.some(
+    (marker) => marker.kind !== undefined || marker.color !== undefined || marker.note !== undefined || marker.tags !== undefined
+  );
   return {
-    format: OWN_ISO_JSON_FORMAT,
+    format: hasMarkerMeta ? OWN_ISO_JSON_FORMAT_META : OWN_ISO_JSON_FORMAT,
     projection: "isometric-2:1",
     cell: { width: context.cell.width, height: context.cell.height },
     grid: { stepX: context.layout.stepX, stepY: context.layout.stepY, wrap: context.layout.wrap },
@@ -89,7 +95,16 @@ export function buildIsoJson(context: IsoRenderContext, doc: IsoDoc, project: { 
       .filter((layer) => layer.kind === "ground")
       .map((layer) => ({ layerId: layer.id, data: doc.data[layer.id] ?? [] })),
     objects: doc.objects.map((object) => ({ id: object.id, layerId: object.layerId, tilesetId: object.tilesetId, r: object.r, c: object.c })),
-    markers: doc.markers.map((marker, index) => ({ n: index + 1, name: marker.name, r: marker.r, c: marker.c })),
+    markers: doc.markers.map((marker, index) => ({
+      n: index + 1,
+      name: marker.name,
+      r: marker.r,
+      c: marker.c,
+      ...(marker.kind === undefined ? {} : { kind: marker.kind }),
+      ...(marker.color === undefined ? {} : { color: marker.color }),
+      ...(marker.note === undefined ? {} : { note: marker.note }),
+      ...(marker.tags === undefined ? {} : { tags: marker.tags })
+    })),
     pass: passCellsOf(context, doc)
   };
 }

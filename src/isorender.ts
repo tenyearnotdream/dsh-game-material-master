@@ -34,6 +34,7 @@ import {
 } from "./isogeom.js";
 import { corner16Mask, nearestMask, type NeighborAt } from "./mapauto.js";
 import { applyLoop, flatTiles, type FlatTile, type MapRect, type MapTile } from "./maptiles.js";
+import { checkerBackground, drawDigits, fillCircle, fillDiamond, fillRect, strokeCircle, strokeDiamond } from "./imagedraw.js";
 import type { IsoTileset } from "./isotiles.js";
 
 /** 单张导出图的最大像素数（超过就明确拒绝，而不是把进程 OOM 掉）。 */
@@ -561,6 +562,288 @@ export function rasterizeIso(
     warnings.push(`素材「${name}」的图片没有解码出来，它上面的内容没有画进 PNG。`);
   }
   return { bitmap, bounds: plan.bounds, warnings, drawn };
+}
+
+
+// ── Agent 检查图：按区域渲染 + 叠加 ──────────────────────────────────────
+
+export interface IsoRenderOverlay {
+  markers?: boolean;
+  markerLabels?: boolean;
+  grid?: boolean;
+  axes?: boolean;
+  pass?: boolean;
+  outlines?: Array<{ r: number; c: number; color?: string; label?: string; width?: number; height?: number }>;
+}
+
+export interface IsoRenderOptions {
+  /** 请求的地格范围（右下开区间）；缺省 = 整张地图。 */
+  range?: IsoCellRange;
+  /** 额外多画几格（给高出地面的物件留边），默认 2。 */
+  padding?: number;
+  scale?: number;
+  layers?: number[];
+  frame?: number;
+  background?: "transparent" | "checker" | "white" | "dark";
+  overlay?: IsoRenderOverlay;
+  passCells?: Array<{ r: number; c: number; kind: number }>;
+  maxPixels?: number;
+}
+
+export interface IsoRenderResult {
+  bitmap: Bitmap;
+  crop: IsoBounds;
+  range: IsoCellRange;
+  scale: number;
+  drawn: number;
+  markersDrawn: number;
+  warnings: string[];
+}
+
+const ISO_MARKER_COLORS: Record<string, [number, number, number]> = {
+  spawn: [63, 185, 80],
+  exit: [88, 166, 255],
+  chest: [240, 192, 64],
+  boss: [255, 59, 48],
+  event: [163, 113, 247],
+  resource: [57, 197, 207],
+  npc: [255, 159, 26],
+  custom: [240, 192, 64]
+};
+
+function parseIsoColor(value: unknown, fallback: [number, number, number] = [240, 192, 64]): [number, number, number] {
+  if (typeof value !== "string") return fallback;
+  const match = /^#?([0-9a-f]{6})$/i.exec(value.trim());
+  if (match === null) return fallback;
+  const n = Number.parseInt(match[1], 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+function isoMarkerColor(marker: { kind?: unknown; color?: unknown }): [number, number, number] {
+  const kind = typeof marker.kind === "string" ? marker.kind : "custom";
+  return parseIsoColor(marker.color, ISO_MARKER_COLORS[kind] ?? ISO_MARKER_COLORS.custom);
+}
+
+function isoPassColor(kind: number): [number, number, number] {
+  if (kind === 0) return [255, 80, 80];
+  if (kind === 2) return [90, 160, 255];
+  return [90, 210, 120];
+}
+
+/** 一块地格范围的像素包围盒（只按整格；物件另算）。 */
+function isoRangeGroundBounds(layout: IsoLayout, range: IsoCellRange): IsoBounds {
+  const points = [
+    [range.r0, range.c0],
+    [range.r0, range.c1 - 1],
+    [range.r1 - 1, range.c0],
+    [range.r1 - 1, range.c1 - 1]
+  ];
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const [r, c] of points) {
+    const topLeft = cellTopLeft(layout, r, c, layout.cell.width, layout.cell.height);
+    minX = Math.min(minX, topLeft.x);
+    minY = Math.min(minY, topLeft.y);
+    maxX = Math.max(maxX, topLeft.x + layout.cell.width);
+    maxY = Math.max(maxY, topLeft.y + layout.cell.height);
+  }
+  const originX = Math.floor(minX);
+  const originY = Math.floor(minY);
+  return { originX, originY, width: Math.max(1, Math.ceil(maxX) - originX), height: Math.max(1, Math.ceil(maxY) - originY) };
+}
+
+function intersectsRange(object: IsoObject, footprint: IsoFootprint, range: IsoCellRange): boolean {
+  for (let dr = 0; dr < footprint.rows; dr++) {
+    for (let dc = 0; dc < footprint.cols; dc++) {
+      const r = object.r + dr;
+      const c = object.c + dc;
+      if (r >= range.r0 && r < range.r1 && c >= range.c0 && c < range.c1) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 渲染一块 45° 地图区域。与导出共用 `buildIsoPlan` 和同一个 `z` 排序；
+ * crop 会把区域内物件向上的溢出也算进去，避免树冠 / 屋顶被裁掉。
+ */
+export function renderIsoView(
+  context: IsoRenderContext,
+  doc: IsoDoc,
+  lookup: Map<string, Bitmap>,
+  options: IsoRenderOptions = {}
+): IsoRenderResult {
+  const layout = context.layout;
+  const requested = options.range ?? { r0: 0, c0: 0, r1: doc.rows, c1: doc.cols };
+  const range: IsoCellRange = {
+    r0: Math.round(requested.r0),
+    c0: Math.round(requested.c0),
+    r1: Math.round(requested.r1),
+    c1: Math.round(requested.c1)
+  };
+  if (!(range.r1 > range.r0) || !(range.c1 > range.c0)) throw new Error("渲染区域必须是正矩形（r1 > r0、c1 > c0）。");
+  const scale = Math.max(1, Math.min(4, Math.round(options.scale ?? 1)));
+  const pad = Math.max(0, Math.min(8, Math.round(options.padding ?? 2)));
+  const drawRange: IsoCellRange = { r0: range.r0 - pad, c0: range.c0 - pad, r1: range.r1 + pad, c1: range.c1 + pad };
+  const keepLayers = options.layers === undefined ? undefined : new Set(options.layers);
+  const plan = buildIsoPlan(context, doc, { range: drawRange, layers: options.layers, includeLegend: true });
+
+  let crop: IsoBounds;
+  if (options.range === undefined) {
+    crop = plan.bounds;
+  } else {
+    crop = isoRangeGroundBounds(layout, range);
+    for (const object of doc.objects) {
+      if (keepLayers !== undefined && !keepLayers.has(doc.layers.findIndex((layer) => layer.id === object.layerId))) continue;
+      const tileset = context.tilesets.find((entry) => entry.id === object.tilesetId);
+      if (tileset === undefined || tileset.kind !== "object" || tileset.footprint === undefined) continue;
+      if (!intersectsRange(object, tileset.footprint, range)) continue;
+      const rect = objectFrameRect(tileset);
+      if (rect === undefined) continue;
+      const topLeft = objectTopLeft(layout, object.r, object.c, tileset.footprint, rect.width, rect.height, tileset.anchor);
+      crop = expandBounds(crop, { x: topLeft.x, y: topLeft.y, width: rect.width, height: rect.height });
+    }
+    // 标记圆圈可能压住边缘；留一点余量，免得编号被裁掉。
+    crop = {
+      originX: crop.originX - 2,
+      originY: crop.originY - 2,
+      width: crop.width + 4,
+      height: crop.height + 4
+    };
+  }
+  const width = Math.max(1, Math.ceil(crop.width * scale));
+  const height = Math.max(1, Math.ceil(crop.height * scale));
+  const maxPixels = Math.max(1, Math.round(options.maxPixels ?? 16_000_000));
+  if (width * height > maxPixels) {
+    throw new Error(`检查图会到 ${width}×${height}（超过 ${maxPixels} 像素上限）：请缩小 region 或 scale。`);
+  }
+  const bitmap: Bitmap = { width, height, rgba: Buffer.alloc(width * height * 4) };
+  const background = options.background ?? "transparent";
+  if (background === "checker") checkerBackground(bitmap, Math.max(4, 8 * scale));
+  else if (background === "white") fillRect(bitmap, 0, 0, width, height, [255, 255, 255], 1);
+  else if (background === "dark") fillRect(bitmap, 0, 0, width, height, [42, 42, 42], 1);
+
+  const warnings = [...plan.warnings];
+  const legend = new Map(plan.legend.map((entry) => [entry.index, entry]));
+  const missing = new Set<string>();
+  let drawn = 0;
+  const frame = Math.max(0, Math.round(options.frame ?? 0));
+  const ops = plan.chunks.flatMap((chunk) => chunk.ops).sort((a, b) => a.z - b.z || a.r - b.r || a.c - b.c);
+  for (const op of ops) {
+    const entry = legend.get(op.t);
+    if (entry === undefined) continue;
+    let actual = entry;
+    if (op.cycle !== undefined && op.cycle.length > 0) {
+      actual = legend.get(op.cycle[frame % op.cycle.length]) ?? entry;
+    }
+    const source = lookup.get(actual.tilesetId);
+    if (source === undefined) {
+      missing.add(actual.tilesetId);
+      continue;
+    }
+    blitScaled(
+      bitmap,
+      source,
+      actual.rect,
+      Math.round((op.x - crop.originX) * scale),
+      Math.round((op.y - crop.originY) * scale),
+      scale,
+      op.a
+    );
+    drawn++;
+  }
+  for (const id of missing) {
+    const name = context.tilesets.find((tileset) => tileset.id === id)?.name ?? id;
+    warnings.push(`素材「${name}」的图片没有解码出来，它上面的内容没有画进检查图。`);
+  }
+
+  const overlay = options.overlay ?? {};
+  if (overlay.pass === true && Array.isArray(options.passCells)) {
+    for (const cell of options.passCells) {
+      if (cell.r < range.r0 || cell.r >= range.r1 || cell.c < range.c0 || cell.c >= range.c1) continue;
+      const center = cellCenter(layout, cell.r, cell.c);
+      fillDiamond(
+        bitmap,
+        (center.x - crop.originX) * scale,
+        (center.y - crop.originY) * scale,
+        (layout.cell.width / 2) * scale,
+        (layout.cell.width / 4) * scale,
+        isoPassColor(cell.kind),
+        0.16
+      );
+    }
+  }
+  if (overlay.grid === true) {
+    const gridColor: [number, number, number] = [255, 255, 255];
+    for (let r = range.r0; r < range.r1; r++) {
+      for (let c = range.c0; c < range.c1; c++) {
+        const center = cellCenter(layout, r, c);
+        strokeDiamond(
+          bitmap,
+          (center.x - crop.originX) * scale,
+          (center.y - crop.originY) * scale,
+          (layout.cell.width / 2) * scale,
+          (layout.cell.width / 4) * scale,
+          gridColor,
+          0.22,
+          1
+        );
+      }
+    }
+  }
+  if (overlay.axes === true) {
+    const labelColor: [number, number, number] = [255, 255, 255];
+    const every = Math.max(1, Math.ceil(Math.max(range.c1 - range.c0, range.r1 - range.r0) / 12));
+    for (let c = range.c0; c < range.c1; c += every) {
+      const center = cellCenter(layout, range.r0, c);
+      drawDigits(bitmap, String(((c % doc.cols) + doc.cols) % doc.cols), (center.x - crop.originX) * scale, 4 * scale, 5 * scale, labelColor, 0.8);
+    }
+    for (let r = range.r0; r < range.r1; r += every) {
+      const center = cellCenter(layout, r, range.c0);
+      drawDigits(bitmap, String(((r % doc.rows) + doc.rows) % doc.rows), 4 * scale, (center.y - crop.originY) * scale, 5 * scale, labelColor, 0.8);
+    }
+  }
+  if (Array.isArray(overlay.outlines)) {
+    for (const outline of overlay.outlines) {
+      if (outline.r < range.r0 || outline.r >= range.r1 || outline.c < range.c0 || outline.c >= range.c1) continue;
+      const center = cellCenter(layout, outline.r, outline.c);
+      const color = parseIsoColor(outline.color, [255, 59, 48]);
+      strokeDiamond(
+        bitmap,
+        (center.x - crop.originX) * scale,
+        (center.y - crop.originY) * scale,
+        (layout.cell.width / 2) * scale,
+        (layout.cell.width / 4) * scale,
+        color,
+        0.95,
+        Math.max(1, scale)
+      );
+      if (typeof outline.label === "string" && outline.label !== "") {
+        drawDigits(bitmap, outline.label, (center.x - crop.originX) * scale, (center.y - crop.originY) * scale, 5 * scale, color, 0.95);
+      }
+    }
+  }
+
+  let markersDrawn = 0;
+  if (overlay.markers === true) {
+    const byId = new Map(doc.markers.map((marker) => [marker.id, marker]));
+    for (const marker of plan.markers) {
+      if (marker.x < crop.originX || marker.x > crop.originX + crop.width || marker.y < crop.originY || marker.y > crop.originY + crop.height) continue;
+      const source = byId.get(marker.id);
+      const color = isoMarkerColor((source ?? {}) as any);
+      const cx = (marker.x - crop.originX) * scale;
+      const cy = (marker.y - crop.originY) * scale;
+      const radius = Math.max(4, marker.radius * scale);
+      fillCircle(bitmap, cx, cy, radius, [20, 20, 20], 0.88);
+      strokeCircle(bitmap, cx, cy, radius, [255, 214, 64], 0.95, Math.max(1, scale));
+      if (overlay.markerLabels !== false) drawDigits(bitmap, String(marker.n), cx, cy, Math.max(6, marker.font * scale), color, 1);
+      markersDrawn++;
+    }
+  }
+
+  return { bitmap, crop, range, scale, drawn, markersDrawn, warnings };
 }
 
 export function isoBitmapToPng(bitmap: Bitmap): Buffer {

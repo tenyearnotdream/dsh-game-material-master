@@ -183,6 +183,8 @@ export const METHOD_MODULE: Record<string, ModuleKey> = {
   isoUndo: "iso",
   isoRedo: "iso",
   isoPlan: "iso",
+  isoInspect: "iso",
+  isoRender: "iso",
   runIsoGenerate: "iso",
   runIsoPreview: "iso",
   runIsoExport: "iso",
@@ -206,6 +208,8 @@ export const METHOD_MODULE: Record<string, ModuleKey> = {
   mapUndo: "map",
   mapRedo: "map",
   mapPlan: "map",
+  mapInspect: "map",
+  mapRender: "map",
   runMapGenerate: "map",
   runMapPreview: "map",
   runMapExport: "map",
@@ -1155,7 +1159,8 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
         "kind 取值：sprite=source（源设定图）| video（**本地自选视频**，要用 `key` 指定槽位：turn=转圈视频，或 front/back/downLeft/downRight/upLeft/upRight/left/right 之一）；",
         "image=ref（参考图，最多 10 张）| item（直接加一张图，只做抠像用）；",
         "sequence=firstFrame | lastFrame | referenceImage | referenceVideo；rig=source（角色整图）| part（单个部件 PNG，文件名即部件名）；iso=tileset（素材原图，默认按地面切）；map=tileset（图集原图）；sfx=referenceImage（参考图）| referenceAudio（参考音频）。",
-        "限制：图片 ≤30MB，视频 ≤40MB（平台请求体上限 64MB；界面上那条本地上传路更宽），类型按文件头嗅探。"
+        "限制：图片 ≤30MB，视频 ≤40MB（平台请求体上限 64MB；界面上那条本地上传路更宽），类型按文件头嗅探。",
+        "map / iso 的 tileset 可带 `options`：cell / shape / kind / footprint / objectScale / pass / fps / loop 等，原样透传给导入。"
       ].join("\n"),
       parameters: {
         type: "object",
@@ -1166,7 +1171,8 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
           kind: { type: "string", enum: ["source", "video", "ref", "item", "firstFrame", "lastFrame", "referenceImage", "referenceVideo", "part", "tileset", "referenceAudio"], description: "上传到哪个槽位。" },
           key: { type: "string", description: "仅 sprite + kind=video 用：槽位 `turn`（转圈视频）或某个方向 key。" },
           path: { type: "string", description: "本机文件路径。" },
-          name: { type: "string", description: "可选：展示用的文件名。" }
+          name: { type: "string", description: "可选：展示用的文件名。" },
+          options: { type: "object", additionalProperties: true, description: "map / iso 的 tileset 导入选项（cell / shape / kind / footprint / objectScale / pass / fps / loop…），原样透传。" }
         },
         required: ["module", "id", "kind", "path"]
       },
@@ -1179,7 +1185,16 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
         const kind = asString(args?.kind);
         const path = asString(args?.path);
         if (path === "") throw new Error("path 不能为空");
-        return uploadFromPath(gateway, module, id, kind, path, asString(args?.name) || undefined, asString(args?.key) || undefined);
+        return uploadFromPath(
+          gateway,
+          module,
+          id,
+          kind,
+          path,
+          asString(args?.name) || undefined,
+          asString(args?.key) || undefined,
+          args?.options === undefined ? undefined : (args.options as Record<string, any>)
+        );
       }
     });
 
@@ -1343,9 +1358,12 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
           // 自己画一张」时挑序号。
           packet.tilesets = snapshot.tilesets;
           packet.layers = snapshot.layers;
+          packet.markers = snapshot.markers;
           packet.filled = snapshot.filled;
           packet.preview = snapshot.previewUrls;
           packet.previewUrls = snapshot.previewUrls;
+          packet.previewPaths = snapshot.previewPaths;
+          packet.revision = snapshot.revision;
           packet.exportBaseUrl = snapshot.exportBaseUrl;
           packet.exportFiles = snapshot.exportFiles;
           /** 导出目录的**绝对路径**（还没导出过 = 空串）：产物埋在 DSH_HOME 底下，模型直接报路径比让用户找方便。 */
@@ -1364,10 +1382,13 @@ export function registerStudioTools(host: StudioToolHost, gateway: GameStudioGat
           packet.rows = snapshot.rows;
           packet.tilesets = snapshot.tilesets;
           packet.layers = snapshot.layers;
+          packet.markers = snapshot.markers;
           packet.filled = snapshot.filled;
-          packet.objects = snapshot.objects;
+          packet.objects = snapshot.objectList;
           packet.preview = snapshot.previewUrls;
           packet.previewUrls = snapshot.previewUrls;
+          packet.previewPaths = snapshot.previewPaths;
+          packet.revision = snapshot.revision;
           packet.exportBaseUrl = snapshot.exportBaseUrl;
           packet.exportFiles = snapshot.exportFiles;
           packet.exportPath = snapshot.exportPath;
@@ -1955,7 +1976,8 @@ async function uploadFromPath(
   kind: string,
   path: string,
   name?: string,
-  key?: string
+  key?: string,
+  options?: Record<string, any>
 ): Promise<Record<string, any>> {
   if (id === "") throw new Error("id 不能为空");
   if (!UPLOAD_KINDS[module].includes(kind)) {
@@ -2018,14 +2040,20 @@ async function uploadFromPath(
     if (kind === "ref") await call.uploadImageRef({ jobId: id, name: fileName, data: base64 });
     else await call.addImageItem({ jobId: id, name: fileName, data: base64 });
   } else if (module === "map") {
-    await call.importMapTileset({ projectId: id, name: fileName, data: base64 });
+    await call.importMapTileset({ ...(options ?? {}), projectId: id, name: fileName, data: base64 });
   } else if (module === "rig") {
     if (kind === "part") await call.uploadRigPart({ jobId: id, name: fileName, data: base64 });
     else await call.uploadRigSource({ jobId: id, name: fileName, data: base64 });
   } else if (module === "iso") {
     // 上传只做「地面」这条最常用的路；自动连接 / 物件要带 4×4 / 占格参数，
     // 让 agent 走 importIsoTileset，避免把物件误切成格。
-    await call.importIsoTileset({ projectId: id, name: fileName, data: base64, kind: "ground" });
+    await call.importIsoTileset({
+      ...(options ?? {}),
+      projectId: id,
+      name: fileName,
+      data: base64,
+      kind: options?.kind === "autotile" || options?.kind === "object" || options?.kind === "ground" ? options.kind : "ground"
+    });
   } else if (module === "music") {
     throw new Error("音乐模块 v1 不导入本地音频：只用 runMusicGeneration 生成的歌曲；要编辑本地文件请等后续版本。");
   } else if (module === "sfx") {
@@ -2180,7 +2208,11 @@ function renderMapSummary(value: any): string[] {
     lines.push(`  素材「${tileset.name}」${tileset.imageWidth}×${tileset.imageHeight} · ${tileset.reason ?? ""} · ${tileset.tileCount} 块 · 笔刷 ${tileset.palette?.length ?? 0} 个`);
     if (typeof tileset.url === "string") lines.push(`      ${tileset.url}`);
   }
+  if (Array.isArray(value.markers) && value.markers.length > 0) {
+    lines.push(`  标记：${value.markers.map((marker: any) => `${marker.n}.${marker.name || `标记 ${marker.n}`}${marker.kind ? `(${marker.kind})` : ""}@(${marker.r},${marker.c})`).join("、")}`);
+  }
   for (const url of value.previewUrls ?? value.preview ?? []) lines.push(`  验收预览图：${url}`);
+  for (const path of value.previewPaths ?? []) lines.push(`      ${path}`);
   if (typeof value.exportBaseUrl === "string" && value.exportBaseUrl !== "") lines.push(`  导出目录：${value.exportBaseUrl}`);
   if (typeof value.exportPath === "string" && value.exportPath !== "") lines.push(`  导出目录（本机路径）：${value.exportPath}`);
   for (const file of value.exportFiles ?? []) lines.push(`      ${file}`);
@@ -2200,7 +2232,11 @@ function renderIsoSummary(value: any): string[] {
     lines.push(`  素材「${tileset.name}」${tileset.imageWidth}×${tileset.imageHeight} · ${tileset.reason ?? ""} · ${tileset.tileCount} 块 · 笔刷 ${tileset.palette?.length ?? 0} 个`);
     if (typeof tileset.url === "string") lines.push(`      ${tileset.url}`);
   }
+  if (Array.isArray(value.markers) && value.markers.length > 0) {
+    lines.push(`  标记：${value.markers.map((marker: any) => `${marker.n}.${marker.name || `标记 ${marker.n}`}${marker.kind ? `(${marker.kind})` : ""}@(${marker.r},${marker.c})`).join("、")}`);
+  }
   for (const url of value.previewUrls ?? value.preview ?? []) lines.push(`  验收预览图：${url}`);
+  for (const path of value.previewPaths ?? []) lines.push(`      ${path}`);
   if (typeof value.exportBaseUrl === "string" && value.exportBaseUrl !== "") lines.push(`  导出目录：${value.exportBaseUrl}`);
   if (typeof value.exportPath === "string" && value.exportPath !== "") lines.push(`  导出目录（本机路径）：${value.exportPath}`);
   for (const file of value.exportFiles ?? []) lines.push(`      ${file}`);

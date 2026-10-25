@@ -27,9 +27,9 @@ const LINKS = await import("../lib/links.js");
 const source = readFileSync(new URL("../src/wire.ts", import.meta.url), "utf8");
 
 section("1) 方法表 / 模块枚举");
-check("wire 方法总数为 184", WIRE.METHODS.length === 184, String(WIRE.METHODS.length));
+check("wire 方法总数为 188", WIRE.METHODS.length === 188, String(WIRE.METHODS.length));
 const names = new Set(WIRE.METHODS.map((method) => method.method));
-for (const method of ["listIsoProjects", "createIsoProject", "getIsoProject", "saveIsoProject", "deleteIsoProject", "importIsoTileset", "importIsoSampleTileset", "composeIsoAsset", "saveIsoTileset", "removeIsoTileset", "saveIsoDoc", "applyIsoOps", "isoUndo", "isoRedo", "isoPlan", "runIsoGenerate", "runIsoPreview", "runIsoExport", "cancelIsoJob", "setIsoApproved", "revealIsoProject"]) {
+for (const method of ["listIsoProjects", "createIsoProject", "getIsoProject", "saveIsoProject", "deleteIsoProject", "importIsoTileset", "importIsoSampleTileset", "composeIsoAsset", "saveIsoTileset", "removeIsoTileset", "saveIsoDoc", "applyIsoOps", "isoUndo", "isoRedo", "isoPlan", "isoInspect", "isoRender", "runIsoGenerate", "runIsoPreview", "runIsoExport", "cancelIsoJob", "setIsoApproved", "revealIsoProject"]) {
   check(`注册了 ${method}`, names.has(method));
 }
 check("不再注册 tile 方法", ![...names].some((method) => /^(list|create|get|save|delete|run|set|cancel|reveal)Tile/.test(method)));
@@ -67,8 +67,10 @@ parseCase("composeIsoAsset", {
 }, ["projectId", "name", "files", "kind", "footprint", "keyGreen"]);
 parseCase("saveIsoTileset", { projectId: "gabc1234", tilesetId: "ts1", name: "n", fps: null, loop: "reverse" }, ["projectId", "tilesetId", "name", "fps", "loop"]);
 parseCase("saveIsoDoc", { projectId: "gabc1234", name: "n", cols: 9, rows: 7, layers: [{ id: "l0", name: "x" }], addLayer: { name: "y", kind: "object" }, removeLayerId: "l2", moveLayer: { id: "l1", toIndex: 0 }, clearLayerId: "l1" }, ["projectId", "name", "cols", "rows", "layers", "addLayer", "removeLayerId", "moveLayer", "clearLayerId"]);
-parseCase("applyIsoOps", { projectId: "gabc1234", ops: [{ kind: "paint" }], stroke: "s1", have: ["0,0"] }, ["projectId", "ops", "stroke", "have"]);
+parseCase("applyIsoOps", { projectId: "gabc1234", ops: [{ kind: "paint" }], stroke: "s1", have: ["0,0"], dryRun: true, ifRevision: "abc" }, ["projectId", "ops", "stroke", "have", "dryRun", "ifRevision"]);
 parseCase("isoPlan", { projectId: "gabc1234", view: { x: 0, y: 0, width: 100, height: 100 }, have: ["0,0"], layerIds: [0], pending: [{ kind: "paint" }], pass: true }, ["projectId", "view", "have", "layerIds", "pending", "pass"]);
+parseCase("isoInspect", { projectId: "gabc1234", region: { r0: 0, c0: 0, r1: 8, c1: 8 }, layerIds: ["l0"], include: ["layers", "stats"], format: "both", maxCells: 4096, maxItems: 100 }, ["projectId", "region", "layerIds", "include", "format", "maxCells", "maxItems"]);
+parseCase("isoRender", { projectId: "gabc1234", region: { r0: 0, c0: 0, r1: 8, c1: 8 }, scale: 2, layerIds: ["l0"], frame: 0, background: "checker", overlay: { markers: true, markerLabels: true, grid: true, axes: true, pass: true, objects: true, regions: true, outlines: [{ r: 1, c: 1, color: "#ff0000", label: "1", width: 1, height: 1 }] }, maxPixels: 16000000, name: "check" }, ["projectId", "region", "scale", "layerIds", "frame", "background", "overlay", "maxPixels", "name"]);
 parseCase("runIsoGenerate", { projectId: "gabc1234", kind: "maze", tiles: [1, 2], seed: 7, layerId: "l0" }, ["projectId", "kind", "tiles", "seed", "layerId"]);
 parseCase("runIsoExport", { projectId: "gabc1234", scale: 2, formats: { png: true, json: true, tilesets: true, zip: false } }, ["projectId", "scale", "formats"]);
 parseCase("setIsoApproved", { projectId: "gabc1234", stage: "paint", approved: true }, ["projectId", "stage", "approved"]);

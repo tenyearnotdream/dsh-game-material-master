@@ -125,13 +125,14 @@ node scripts/verify-sfx-client.mjs  # 音效界面真渲染：新建卡 / 任务
 node scripts/verify-rig-runtime.mjs  # 骨骼改动：官方 Spine 4.2 实际加载/IK/Path/FFD/顶点求值（开发依赖）
 node scripts/verify-iso.mjs        # 45° 地图编辑器几何内核（42 项：2:1 步进 / 命中反解 / 物件锚点 / 环绕脏块 / 内置素材确定性 / 自动连接 mask / 水面无接缝 / 物件大小边界）
 node scripts/verify-iso-pipeline.mjs  # 45° 地图编辑器数据层与导出（54 项：导入 / 编辑 / 撤销 / 计划 / 动画 / 一键生成 / 导出可复现 / 删除素材重映射 / AI 整理 / 物件大小落盘）
-node scripts/verify-iso-gateway.mjs   # 45° 地图编辑器网关契约（58 项：21 个方法 / schema 逐键不丢 / 模块枚举 / 路由白名单 / AI 回链参数 / objectScale 透传）
+node scripts/verify-iso-gateway.mjs   # 45° 地图编辑器网关契约（64 项：23 个方法 / schema 逐键不丢 / 模块枚举 / 路由白名单 / AI 回链参数 / objectScale 透传 / isoInspect·isoRender）
 node scripts/verify-iso-client.mjs    # 45° 地图编辑器界面契约（83 项：客户端坐标函数与宿主逐点黄金对照 / 新增素材预览的菱形地格与「滑杆在图片下方」/ 按 z 绘制 / pending·have / 方法表 / AI 对话框与回链）
 
 node scripts/verify-map.mjs            # 地图编辑器几何 / 环绕 / 自动连接 / 标记点 / AI 素材按形态规整与「收口 + 无缝」/ 播放速度 / 清晰度重采样 / 循环方式 / 自动裁边 / 换向与斜接 / 整图（多格印花）的内核（239 项，含反向验证与术语黑名单）
+node scripts/verify-map-agent.mjs      # 地图编辑器 Agent 读模型 / 检查图（35 项：inspect 逐格与预算 / dryRun+ifRevision / render 区域裁切与标记叠加 / 标记语义与 @5 导出 / iso 同链路）
 node scripts/verify-map-pipeline.mjs   # 地图编辑器数据层与流水线（429 项，含 A2 每格 4 条 op、动画循环、翻页图调色板每列一条、dropKeys、标记点 op 与撤销、老文档升级、导出逐字段与真解包的 ZIP）
-node scripts/verify-map-gateway.mjs    # 地图编辑器走真实网关（218 项，含资源路由 403 / 目录穿越 / zip 的 MIME / 并发提交 / 标记 op 的 schema 穿透 / `ai/` 白名单 / AI 素材的形态透传与 openUrl）
-node scripts/verify-map-client.mjs     # 地图编辑器界面真渲染 + 黄金对照（472 项：坐标函数逐点一致、drawImage 序列 == 宿主计划、挂载首帧 == 同视口的计划、导出卡片的选择/执行/下载三段、图层改名与标记层圆圈数字、工具小标签的 z-index 层级、「素材说明」三页的示例图逐字节 == 生成器产出且网格百分比按真实列数现算、网格循环动画的数值，「模块⑥已转正」的角标 / 弹窗 / 常驻提示条三处反向验证，以及「AI 生成素材」（提示词的形态判据与「一块无缝砖」约定 / 用法控件 / 帧数为 1 时视频模型点不动 / 点生成时用假 sessions 断言建的会话与发出去的正文 / 回链按 shape 预填「新增素材」））
+node scripts/verify-map-gateway.mjs    # 地图编辑器走真实网关（228 项，含资源路由 403 / 目录穿越 / zip 的 MIME / 并发提交 / 标记 op 的 schema 穿透 / `ai/` 白名单 / AI 素材的形态透传与 openUrl / mapInspect·mapRender·dryRun·标记语义）
+node scripts/verify-map-client.mjs     # 地图编辑器界面真渲染 + 黄金对照（474 项：坐标函数逐点一致、drawImage 序列 == 宿主计划、挂载首帧 == 同视口的计划、导出卡片的选择/执行/下载三段、图层改名与标记层圆圈数字、工具小标签的 z-index 层级、「素材说明」三页的示例图逐字节 == 生成器产出且网格百分比按真实列数现算、网格循环动画的数值，「模块⑥已转正」的角标 / 弹窗 / 常驻提示条三处反向验证，以及「AI 生成素材」（提示词的形态判据与「一块无缝砖」约定 / 用法控件 / 帧数为 1 时视频模型点不动 / 点生成时用假 sessions 断言建的会话与发出去的正文 / 回链按 shape 预填「新增素材」））
 ```
 
 `scripts/find-missing-i18n.mjs` 不是断言脚本，是**工具**：列出所有还没进词条表的

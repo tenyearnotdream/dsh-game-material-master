@@ -35,7 +35,7 @@
 
 import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { appendJobLog, messageOf, readJson, sweepTempFiles, writeJsonAtomic, type JobLogEntry } from "./jsonio.js";
 import { dataRoot } from "./config.js";
@@ -44,6 +44,7 @@ import { keyGreen, DEFAULT_KEY_OPTIONS } from "./chroma.js";
 import {
   addLayer,
   applyOps,
+  cellIndex,
   clearLayer,
   cloneDoc,
   createMapDoc,
@@ -69,6 +70,7 @@ import {
   normalizeGrid,
   parseChunkKey,
   viewCellRange,
+  wrapCell,
   MAX_MAP_DIM,
   MAX_PLAN_CHUNKS,
   type MapGrid
@@ -77,6 +79,7 @@ import {
   bitmapToPng,
   buildPlan,
   rasterize,
+  renderMapView,
   stampCellsOf,
   type PlanBounds,
   type PlanChunk,
@@ -126,7 +129,7 @@ import {
   assertStampFitsProject,
 } from "./maptiles.js";
 import { exportMap, safeFileName, type ExportFormatOptions, type ExportManifest } from "./mapexport.js";
-import { assetBasePath } from "./links.js";
+import { assetBasePath, originForLinks } from "./links.js";
 import { primeSampleTextures, renderSampleTilesets } from "./mapsamplegen.js";
 
 export type MapStage = "assets" | "rules" | "paint" | "export";
@@ -617,6 +620,13 @@ export function renderContextFor(project: MapProject, doc: MapDoc): RenderContex
 
 export interface ApplyOpsOutcome {
   changed: number;
+  /** 写入后的版本哈希；Agent 用它防止旧状态覆盖。 */
+  revision?: string;
+  /** 这是 `dryRun` 的预演结果（没有写盘、没有进撤销栈）。 */
+  dryRun?: boolean;
+  /** 写入期间文档被别的编辑改过（仅在返回前后各取一次 revision 时出现）。 */
+  stale?: boolean;
+  summary?: { cells: number; markers: number; stamps: number; objects: number };
   /**
    * 本次动到的**整图张数**（新增 + 删除）。
    *
@@ -716,18 +726,39 @@ function allCells(doc: MapDoc): Array<{ r: number; c: number }> {
  * 返回「脏 chunk + 该丢哪些客户端缓存」：界面照做即可，不需要自己算
  * 「这一笔影响了哪几格的过渡块」—— 那是宿主的知识。
  */
-export async function applyMapOps(projectId: string, ops: readonly unknown[], opts: { stroke?: string; have?: readonly string[] } = {}): Promise<ApplyOpsOutcome> {
+export async function applyMapOps(
+  projectId: string,
+  ops: readonly unknown[],
+  opts: { stroke?: string; have?: readonly string[]; dryRun?: boolean; ifRevision?: string } = {}
+): Promise<ApplyOpsOutcome> {
   const project = await readProjectOrThrow(projectId);
   const doc = await theDocOrFresh(projectId);
-  const layout = layoutOf(project.grid, doc.cols, doc.rows);
-  const result = applyOps(doc, ops, layout, { stampSpecOf: stampSpecResolver(project) });
+  const currentRevision = await mapRevision(project, doc);
+  if (opts.ifRevision !== undefined && opts.ifRevision !== "" && opts.ifRevision !== currentRevision) {
+    throw new Error(`版本不一致：当前 ${currentRevision}，请求 ${opts.ifRevision}；请重新 mapInspect 后再改。`);
+  }
+  const target = opts.dryRun === true ? cloneDoc(doc) : doc;
+  const layout = layoutOf(project.grid, target.cols, target.rows);
+  const result = applyOps(target, ops, layout, { stampSpecOf: stampSpecResolver(project) });
   // `touched`（标记改名这类不占格的改动）也要记一步撤销 —— 只看 `changed > 0` 的话，
   // 改名会「生效了但撤不回来」。
-  if (result.changed > 0 || result.touched === true) {
+  if (opts.dryRun !== true && (result.changed > 0 || result.touched === true)) {
     pushHistory(projectId, { undo: result.undo, redo: ops as MapOp[], stroke: opts.stroke }, doc);
     scheduleDocWrite(projectId, doc);
   }
-  return outcomeOf(projectId, result.changed, result.skipped, layout, result.dirty, opts.have, doc, result.stamps);
+  const summary = {
+    cells: result.changed,
+    markers: ops.filter((op) => (op as any)?.kind === "marker").length,
+    stamps: result.stamps,
+    objects: 0
+  };
+  const revision = opts.dryRun === true ? currentRevision : await mapRevision(project, doc);
+  return {
+    ...outcomeOf(projectId, result.changed, result.skipped, layout, result.dirty, opts.have, target, result.stamps),
+    revision,
+    ...(opts.dryRun === true ? { dryRun: true } : {}),
+    summary
+  };
 }
 
 export async function undoMap(projectId: string, have?: readonly string[]): Promise<ApplyOpsOutcome> {
@@ -750,14 +781,14 @@ export async function undoMap(projectId: string, have?: readonly string[]): Prom
       // （界面里抛异常就是「点了撤销整个面板报错」）。
       state.entries.splice(state.index, 1);
       state.index = Math.max(-1, state.index - 1);
-      return outcomeOf(projectId, 0, [], layoutOf(project.grid, doc.cols, doc.rows), [], have, doc);
+      return { ...outcomeOf(projectId, 0, [], layoutOf(project.grid, doc.cols, doc.rows), [], have, doc), revision: await mapRevision(project, doc) };
     }
     cells = indexCells(indices, doc);
   }
   state.index--;
   scheduleDocWrite(projectId, doc);
   // 结构快照可能把尺寸改回去了 —— 脏块必须按**改完之后**的布局算。
-  return outcomeOf(projectId, cells.length, [], layoutOf(project.grid, doc.cols, doc.rows), cells, have, doc);
+  return { ...outcomeOf(projectId, cells.length, [], layoutOf(project.grid, doc.cols, doc.rows), cells, have, doc), revision: await mapRevision(project, doc) };
 }
 
 export async function redoMap(projectId: string, have?: readonly string[]): Promise<ApplyOpsOutcome> {
@@ -776,14 +807,14 @@ export async function redoMap(projectId: string, have?: readonly string[]): Prom
       indices = revertOps(doc, entry.redo, { stampSpecOf: stampSpecResolver(project) });
     } catch {
       state.entries.splice(state.index + 1, 1);
-      return outcomeOf(projectId, 0, [], layoutOf(project.grid, doc.cols, doc.rows), [], have, doc);
+      return { ...outcomeOf(projectId, 0, [], layoutOf(project.grid, doc.cols, doc.rows), [], have, doc), revision: await mapRevision(project, doc) };
     }
     cells = indexCells(indices, doc);
   }
   state.index++;
   scheduleDocWrite(projectId, doc);
   // 结构快照可能改掉了尺寸 —— 脏块按**改完之后**的布局算（同 undoMap）。
-  return outcomeOf(projectId, cells.length, [], layoutOf(project.grid, doc.cols, doc.rows), cells, have, doc);
+  return { ...outcomeOf(projectId, cells.length, [], layoutOf(project.grid, doc.cols, doc.rows), cells, have, doc), revision: await mapRevision(project, doc) };
 }
 
 // ── 结构操作（存快照，可撤销）─────────────────────────────────────────────
@@ -801,7 +832,10 @@ export interface DocStructurePatch {
   wrap?: boolean;
 }
 
-export async function saveMapDocStructure(projectId: string, patch: DocStructurePatch): Promise<{ doc: MapDoc; dropped: number; warnings: string[] }> {
+export async function saveMapDocStructure(
+  projectId: string,
+  patch: DocStructurePatch
+): Promise<{ doc: MapDoc; dropped: number; warnings: string[]; revision: string }> {
   const project = await readProjectOrThrow(projectId);
   const doc = await theDocOrFresh(projectId);
   const before = cloneDoc(doc);
@@ -873,7 +907,7 @@ export async function saveMapDocStructure(projectId: string, patch: DocStructure
     });
   }
   if (structural) await flushMapDoc(projectId);
-  return { doc: cloneDoc(doc), dropped, warnings };
+  return { doc: cloneDoc(doc), dropped, warnings, revision: await mapRevision(await readProjectOrThrow(projectId), doc) };
 }
 
 // ── 素材：导入 / 改形态 / 删除 ────────────────────────────────────────────
@@ -1151,6 +1185,10 @@ export interface ComposeMapAssetInput {
 export interface ComposeMapAssetResult {
   /** 相对项目目录的路径（`ai/<干名>.png`），资源路由是 `map-assets/<项目 id>/<它>`。 */
   file: string;
+  /** 本机绝对路径（Agent 用 read_image 看整理结果）。 */
+  localPath: string;
+  /** 检查图路径（目前就是整理后的素材图本身）。 */
+  previewPath: string;
   name: string;
   /** `plain` / `corner16` / `a2quad` / `stamp`：界面据此预选「这块素材怎么用」。 */
   shape: TilesetShape;
@@ -1372,8 +1410,11 @@ export async function composeMapAsset(input: ComposeMapAssetInput): Promise<Comp
     );
   });
 
+  const localPath = mapAssetPath(project.id, file);
   return {
     file,
+    localPath,
+    previewPath: localPath,
     name,
     shape,
     cell,
@@ -1838,7 +1879,7 @@ async function normalizeTilePool(tiles: readonly number[] | undefined, project: 
 export async function runMapGenerate(
   projectId: string,
   opts: { kind: "random" | "maze" | "continent"; tiles?: readonly number[]; seed?: number; layerId?: string }
-): Promise<{ changed: number; seed: number; warnings: string[] }> {
+): Promise<{ changed: number; seed: number; warnings: string[]; revision?: string }> {
   const project = await readProjectOrThrow(projectId);
   const doc = await theDocOrFresh(projectId);
   const layerId = typeof opts.layerId === "string" && doc.layers.some((layer) => layer.id === opts.layerId) ? opts.layerId : doc.layers[0]?.id;
@@ -1861,7 +1902,7 @@ export async function runMapGenerate(
     const label = opts.kind === "random" ? "随机铺满" : opts.kind === "maze" ? "迷宫" : "大陆";
     appendJobLog(fresh.logs, "info", `一键生成（${label}）：改了 ${result.changed} 格，种子 ${seed}`);
   });
-  return { changed: result.changed, seed, warnings: [...warnings, ...result.skipped] };
+  return { changed: result.changed, seed, warnings: [...warnings, ...result.skipped], revision: result.revision };
 }
 
 function generateValues(kind: "random" | "maze" | "continent", cols: number, rows: number, tiles: readonly number[], seed: number, warnings: string[]): number[] {
@@ -2241,6 +2282,8 @@ export interface MapProjectView {
   grid: MapGrid;
   cols: number;
   rows: number;
+  /** 文档 + 素材元数据 + 素材图 mtime 的短哈希；读写两边用它判断「是不是同一版」。 */
+  revision: string;
   tilesets: MapViewTileset[];
   legend: PlanLegendEntry[];
   layers: Array<{ id: string; name: string; filled: number }>;
@@ -2250,7 +2293,7 @@ export interface MapProjectView {
    * 与 `mapPlan` 回的那份**用途不同**：这里给列表 / 悬停小标签 / 命中判断用，
    * 画布上的圆圈数字一律用 `mapPlan` 那份（圆心与字号是宿主算的，界面不许自己推）。
    */
-  markers: Array<{ id: string; n: number; r: number; c: number; name: string }>;
+  markers: Array<{ id: string; n: number; r: number; c: number; name: string; kind?: string; color?: string; note?: string; tags?: string[] }>;
   filled: number;
   stages: MapProject["stages"];
   reviewMode?: "auto" | "manual";
@@ -2263,6 +2306,8 @@ export interface MapProjectView {
   logs: MapProject["logs"];
   /** `preview/` 下的文件名（相对路径，界面拼 assetBase）。 */
   preview: string[];
+  /** 预览图的本机绝对路径（与 `preview` 一一对应；Agent 用 read_image 看）。 */
+  previewPaths: string[];
   /** `export/<安全名>/`。 */
   exportBase: string;
   exportFiles: string[];
@@ -2307,6 +2352,314 @@ async function fileRevision(path: string): Promise<number | undefined> {
   }
 }
 
+
+// ── Agent 语义读模型 ────────────────────────────────────────────────────
+
+/** 格子范围，右下开区间（`r1` / `c1` 不含）。 */
+export interface MapInspectRegion {
+  r0: number;
+  c0: number;
+  r1: number;
+  c1: number;
+}
+
+export interface MapInspectOptions {
+  region?: MapInspectRegion;
+  layerIds?: string[];
+  include?: string[];
+  format?: "text" | "json" | "both";
+  maxCells?: number;
+  maxItems?: number;
+}
+
+export interface MapInspectResult {
+  module: "map";
+  projectId: string;
+  revision: string;
+  cols: number;
+  rows: number;
+  grid: MapGrid;
+  range: MapInspectRegion;
+  truncated: boolean;
+  nextRange: MapInspectRegion | null;
+  truncatedItems: string[];
+  legend: Array<Record<string, unknown>>;
+  layers: Array<Record<string, unknown>>;
+  markers?: Array<Record<string, unknown>>;
+  stamps?: Array<Record<string, unknown>>;
+  pass?: Array<{ r: number; c: number; kind: number }>;
+  stats: Record<string, unknown>;
+  warnings: string[];
+  busy: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  text?: string;
+}
+
+const INSPECT_SYMBOLS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+function inspectInt(value: unknown, fallback: number, min: number, max: number): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function inspectRegion(value: unknown, doc: MapDoc): MapInspectRegion {
+  const raw = (value ?? {}) as Record<string, unknown>;
+  const r0 = inspectInt(raw.r0, 0, -MAX_MAP_DIM, MAX_MAP_DIM);
+  const c0 = inspectInt(raw.c0, 0, -MAX_MAP_DIM, MAX_MAP_DIM);
+  const r1 = inspectInt(raw.r1, doc.rows, -MAX_MAP_DIM, MAX_MAP_DIM);
+  const c1 = inspectInt(raw.c1, doc.cols, -MAX_MAP_DIM, MAX_MAP_DIM);
+  if (r1 <= r0 || c1 <= c0) throw new Error("region 必须是正矩形（r1 > r0、c1 > c0）。");
+  return { r0, c0, r1, c1 };
+}
+
+function regionCellCount(region: MapInspectRegion): number {
+  return (region.r1 - region.r0) * (region.c1 - region.c0);
+}
+
+function nextInspectRange(region: MapInspectRegion, limit: number): MapInspectRegion {
+  const width = Math.max(1, Math.min(region.c1 - region.c0, limit));
+  const height = Math.max(1, Math.min(region.r1 - region.r0, Math.ceil(limit / width)));
+  return { r0: region.r0, c0: region.c0, r1: region.r0 + height, c1: region.c0 + width };
+}
+
+/**
+ * 读一块地图的语义状态：逐格图块索引（文本 + 可选数组）、标记、整图、通行性、统计。
+ *
+ * 与 `mapPlan` 的区别：这里不返回像素坐标 / chunk / `have`，也不按视口变化。
+ * 它是 Agent 回答「这一片是什么」的稳定入口。
+ */
+export async function mapInspect(projectId: string, options: MapInspectOptions = {}): Promise<MapInspectResult> {
+  const project = await readProjectOrThrow(projectId);
+  const doc = await theDocOrFresh(projectId);
+  const layout = layoutOf(project.grid, doc.cols, doc.rows);
+  const region = inspectRegion(options.region, doc);
+  const maxCells = inspectInt(options.maxCells, 4096, 1, 65_536);
+  const maxItems = inspectInt(options.maxItems, 200, 1, 2_000);
+  const format = options.format === "text" || options.format === "json" ? options.format : "both";
+  const include = new Set(options.include ?? ["layers", "markers", "stamps", "pass", "stats", "legend"]);
+  const layerFilter = options.layerIds === undefined ? undefined : new Set(options.layerIds.map(String));
+  const cells = regionCellCount(region);
+  const truncated = cells > maxCells;
+  const nextRange = truncated ? nextInspectRange(region, maxCells) : null;
+  const flat = flatTiles(project.tilesets);
+  const byIndex = new Map(flat.map((entry) => [entry.index, entry]));
+  const used = new Map<number, number>();
+  const symbolOf = new Map<number, string>();
+  const symbolFor = (index: number): string => {
+    const existing = symbolOf.get(index);
+    if (existing !== undefined) return existing;
+    const symbol = symbolOf.size < INSPECT_SYMBOLS.length ? INSPECT_SYMBOLS[symbolOf.size] : "?";
+    symbolOf.set(index, symbol);
+    return symbol;
+  };
+
+  const layers: Array<Record<string, unknown>> = [];
+  const rowsByLayer = new Map<string, string[]>();
+  const histogram = new Map<number, number>();
+  let filled = 0;
+  const wantRows = !truncated && format !== "json";
+  for (const layer of doc.layers) {
+    if (layerFilter !== undefined && !layerFilter.has(layer.id)) continue;
+    const data = doc.data[layer.id] ?? [];
+    const rows: string[] = [];
+    let layerFilled = 0;
+    for (let r = region.r0; r < region.r1; r++) {
+      let row = "";
+      for (let c = region.c0; c < region.c1; c++) {
+        const wrapped = wrapCell(layout, r, c);
+        const outside = wrapped.r < 0 || wrapped.c < 0 || wrapped.r >= doc.rows || wrapped.c >= doc.cols;
+        const value = outside ? 0 : data[cellIndex(doc, wrapped.r, wrapped.c)] ?? 0;
+        if (value > 0) {
+          layerFilled++;
+          filled++;
+          used.set(value, (used.get(value) ?? 0) + 1);
+          histogram.set(value, (histogram.get(value) ?? 0) + 1);
+        }
+        if (!wantRows) continue;
+        if (outside) row += "#";
+        else if (value <= 0) row += "·";
+        else row += symbolFor(value);
+      }
+      if (wantRows) rows.push(row);
+    }
+    rowsByLayer.set(layer.id, rows);
+    layers.push({
+      id: layer.id,
+      name: layer.name,
+      filled: layerFilled,
+      ...(format === "text" || truncated ? {} : { rows })
+    });
+  }
+
+  const legend = [...used.keys()]
+    .sort((a, b) => a - b)
+    .slice(0, INSPECT_SYMBOLS.length)
+    .map((index) => {
+      const entry = byIndex.get(index);
+      const tileset = entry === undefined ? undefined : project.tilesets.find((item) => item.id === entry.tilesetId);
+      return {
+        symbol: symbolFor(index),
+        index,
+        ...(entry === undefined
+          ? {}
+          : {
+              tilesetId: entry.tilesetId,
+              tilesetName: tileset?.name ?? entry.tilesetId,
+              tileId: entry.tile.id,
+              rect: entry.tile.rect,
+              shape: tileset?.shape,
+              mask: entry.tile.mask,
+              variant: entry.tile.variant,
+              frame: entry.tile.frame
+            })
+      };
+    });
+
+  const markersInRegion = doc.markers.filter(
+    (marker) => marker.r >= region.r0 && marker.r < region.r1 && marker.c >= region.c0 && marker.c < region.c1
+  );
+  const markers = markersInRegion
+    .slice(0, maxItems)
+    .map((marker) => ({
+      id: marker.id,
+      n: doc.markers.indexOf(marker) + 1,
+      r: marker.r,
+      c: marker.c,
+      name: marker.name,
+      kind: (marker as any).kind ?? "custom",
+      color: (marker as any).color ?? null,
+      note: (marker as any).note ?? "",
+      tags: (marker as any).tags ?? []
+    }));
+
+  const stampsInRegion = doc.stamps.filter(
+    (stamp) => stamp.r >= region.r0 && stamp.r < region.r1 && stamp.c >= region.c0 && stamp.c < region.c1
+  );
+  const stamps = stampsInRegion
+    .slice(0, maxItems)
+    .map((stamp) => {
+      const tileset = project.tilesets.find((entry) => entry.id === stamp.tilesetId);
+      const spec = tileset?.stamp;
+      return {
+        id: stamp.id,
+        layerId: stamp.layerId,
+        tilesetId: stamp.tilesetId,
+        name: tileset?.name ?? stamp.tilesetId,
+        r: stamp.r,
+        c: stamp.c,
+        rot: stamp.rot,
+        cols: spec?.cols,
+        rows: spec?.rows,
+        frames: spec?.frames
+      };
+    });
+
+  const pass = passCellsOf(project, doc).filter((cell) => cell.r >= region.r0 && cell.r < region.r1 && cell.c >= region.c0 && cell.c < region.c1);
+  const markersByKind = new Map<string, number>();
+  for (const marker of doc.markers) {
+    if (marker.r < region.r0 || marker.r >= region.r1 || marker.c < region.c0 || marker.c >= region.c1) continue;
+    const kind = typeof (marker as any).kind === "string" && (marker as any).kind !== "" ? (marker as any).kind : "custom";
+    markersByKind.set(kind, (markersByKind.get(kind) ?? 0) + 1);
+  }
+  const stats = {
+    cells,
+    filled,
+    empty: Math.max(0, cells * Math.max(1, doc.layers.length) - filled),
+    fillRate: cells > 0 ? filled / (cells * Math.max(1, doc.layers.length)) : 0,
+    byLayer: layers.map((layer) => ({ id: layer.id, name: layer.name, filled: layer.filled })),
+    tileHistogram: [...histogram.entries()].sort((a, b) => a[0] - b[0]).map(([index, count]) => ({ index, count })),
+    markersByKind: [...markersByKind.entries()].map(([kind, count]) => ({ kind, count })),
+    stamps: doc.stamps.length,
+    objects: 0
+  };
+
+  const text = format === "json"
+    ? undefined
+    : [
+        `地图 ${doc.cols}×${doc.rows} · 区域 (${region.r0},${region.c0})–(${region.r1 - 1},${region.c1 - 1})`,
+        ...layers.map((layer) => `${String(layer.name)}\n${(rowsByLayer.get(String(layer.id)) ?? []).join("\n") || "（内容过大，已省略逐格文本）"}`),
+        `图例：${legend.map((entry) => `${String(entry.symbol)}=${String(entry.tilesetName ?? entry.tilesetId ?? "未知")}/${String(entry.index)}`).join(" ")}`
+      ].join("\n\n");
+
+  return {
+    module: "map",
+    projectId,
+    revision: await mapRevision(project, doc),
+    cols: doc.cols,
+    rows: doc.rows,
+    grid: project.grid,
+    range: region,
+    truncated,
+    nextRange,
+    truncatedItems: [
+      ...(markersInRegion.length > markers.length ? ["markers"] : []),
+      ...(stampsInRegion.length > stamps.length ? ["stamps"] : [])
+    ],
+    legend: include.has("legend") ? legend : [],
+    layers: include.has("layers") ? layers : [],
+    markers: include.has("markers") ? markers : undefined,
+    stamps: include.has("stamps") ? stamps : undefined,
+    pass: include.has("pass") ? pass : undefined,
+    stats,
+    warnings: [...warningsFor(project, doc), ...(used.size > INSPECT_SYMBOLS.length ? [`不同图块超过 ${INSPECT_SYMBOLS.length} 种，文本网格用 ? 代替，精确值请用 format=json。`] : [])],
+    busy: mapBusy(projectId),
+    canUndo: historyState(projectId).canUndo,
+    canRedo: historyState(projectId).canRedo,
+    ...(text === undefined ? {} : { text })
+  };
+}
+
+/**
+ * 文档 + 素材元数据 + 素材图 mtime 的短哈希。
+ *
+ * 不落盘（派生数据），同一状态稳定；写入 / 撤销 / 预览 / 检查图都带它，Agent 用它
+ * 防止拿旧状态覆盖新状态。素材文件 mtime 也进哈希，因为 `recomposeMapTileset`
+ * 会原地换图、元数据一个字段都不变。
+ */
+export async function mapRevision(
+  project: MapProject,
+  doc: MapDoc,
+  revisions?: Map<string, number | undefined>
+): Promise<string> {
+  const revs = revisions ?? (await tilesetRevisions(project.id));
+  const payload = JSON.stringify({
+    grid: project.grid,
+    doc: {
+      cols: doc.cols,
+      rows: doc.rows,
+      layers: doc.layers,
+      data: doc.data,
+      markers: doc.markers,
+      stamps: doc.stamps
+    },
+    tilesets: project.tilesets.map((tileset) => ({
+      id: tileset.id,
+      name: tileset.name,
+      file: tileset.file,
+      imageWidth: tileset.imageWidth,
+      imageHeight: tileset.imageHeight,
+      cell: tileset.cell,
+      shape: tileset.shape,
+      animRows: tileset.animRows,
+      variants: tileset.variants,
+      loop: tileset.loop,
+      clarity: tileset.clarity,
+      fps: tileset.fps,
+      stamp: tileset.stamp,
+      builtin: tileset.builtin === true,
+      tileCount: tileset.tiles.length
+    })),
+    files: project.tilesets.map((tileset) => [tileset.id, revisionsOr(revs, tileset.id)])
+  });
+  return createHash("sha1").update(payload).digest("hex").slice(0, 12);
+}
+
+function revisionsOr(revisions: Map<string, number | undefined>, id: string): number {
+  return revisions.get(id) ?? 0;
+}
+
 export async function mapView(p: MapProject, options: { projectId?: string; origin?: string } = {}): Promise<MapProjectView> {
   void options;
   const doc = await theDocOrFresh(p.id);
@@ -2316,6 +2669,7 @@ export async function mapView(p: MapProject, options: { projectId?: string; orig
   const layers = doc.layers.map((layer) => ({ id: layer.id, name: layer.name, filled: filledCount(doc, layer.id) }));
   // 素材图的版本号（mtime）先批量取好：`map` 里不能用 await，只能先算。
   const revisions = await tilesetRevisions(p.id);
+  const preview = (await readPreviewFiles(p.id)).map((name) => `preview/${name}`);
   return {
     id: p.id,
     name: p.name,
@@ -2323,6 +2677,7 @@ export async function mapView(p: MapProject, options: { projectId?: string; orig
     grid: p.grid,
     cols: doc.cols,
     rows: doc.rows,
+    revision: await mapRevision(p, doc, revisions),
     tilesets: p.tilesets.map((tileset) => ({
       id: tileset.id,
       name: tileset.name,
@@ -2345,7 +2700,17 @@ export async function mapView(p: MapProject, options: { projectId?: string; orig
     })),
     legend: flat.map((tile) => ({ index: tile.index, tilesetId: tile.tilesetId, rect: tile.tile.rect })),
     layers,
-    markers: doc.markers.map((marker, index) => ({ id: marker.id, n: index + 1, r: marker.r, c: marker.c, name: marker.name })),
+    markers: doc.markers.map((marker, index) => ({
+      id: marker.id,
+      n: index + 1,
+      r: marker.r,
+      c: marker.c,
+      name: marker.name,
+      ...(marker.kind === undefined ? {} : { kind: marker.kind }),
+      ...(marker.color === undefined ? {} : { color: marker.color }),
+      ...(marker.note === undefined ? {} : { note: marker.note }),
+      ...(marker.tags === undefined ? {} : { tags: marker.tags })
+    })),
     filled: layers.reduce((sum, layer) => sum + layer.filled, 0),
     stages: p.stages,
     reviewMode: p.reviewMode,
@@ -2355,7 +2720,8 @@ export async function mapView(p: MapProject, options: { projectId?: string; orig
     maxChunks: MAX_PLAN_CHUNKS,
     warnings: warningsFor(p, doc),
     logs: p.logs.slice(-40),
-    preview: (await readPreviewFiles(p.id)).map((name) => `preview/${name}`),
+    preview,
+    previewPaths: preview.map((relative) => join(mapProjectDir(p.id), relative)),
     exportBase: listing?.base ?? "",
     exportFiles: listing?.files ?? [],
     exportPath: listing === undefined ? "" : join(mapProjectDir(p.id), "export", listing.dirName)
@@ -2519,7 +2885,9 @@ async function decodeTilesets(project: MapProject): Promise<Map<string, Bitmap>>
 }
 
 /** 验收预览（本地免费）：只出**一张**地图渲染图 `preview/map.png`。 */
-export async function runPreviewStage(projectId: string): Promise<{ started: boolean; reason?: string }> {
+export async function runPreviewStage(
+  projectId: string
+): Promise<{ started: boolean; reason?: string; previewPath?: string; revisionAtStart?: string }> {
   const reason = reserve(projectId);
   if (reason !== undefined) return { started: false, reason };
   let project: MapProject;
@@ -2529,10 +2897,12 @@ export async function runPreviewStage(projectId: string): Promise<{ started: boo
     reserved.delete(projectId);
     throw error;
   }
+  const previewPath = join(mapProjectDir(projectId), "preview", "map.png");
   if (project.tilesets.length === 0) {
     reserved.delete(projectId);
-    return { started: false, reason: "还没有导入素材。" };
+    return { started: false, reason: "还没有导入素材。", previewPath };
   }
+  const revisionAtStart = await mapRevision(project, await theDocOrFresh(projectId));
   void background(projectId, "paint", async () => {
     const fresh = await readProjectOrThrow(projectId);
     const doc = await theDocOrFresh(projectId);
@@ -2551,7 +2921,134 @@ export async function runPreviewStage(projectId: string): Promise<{ started: boo
       for (const warning of raster.warnings) appendJobLog(current.logs, "warn", `预览告警：${warning}`);
     });
   });
-  return { started: true };
+  return { started: true, previewPath, revisionAtStart };
+}
+
+// ── Agent 检查图（同步、按区域、可叠加）─────────────────────────────────
+
+export interface MapRenderRequest {
+  region?: MapInspectRegion;
+  scale?: number;
+  layerIds?: string[];
+  frame?: number;
+  background?: "transparent" | "checker" | "white" | "dark";
+  overlay?: {
+    markers?: boolean;
+    markerLabels?: boolean;
+    grid?: boolean;
+    axes?: boolean;
+    pass?: boolean;
+    outlines?: Array<{ r: number; c: number; color?: string; label?: string; width?: number; height?: number }>;
+  };
+  maxPixels?: number;
+  name?: string;
+}
+
+export interface MapRenderOutcome {
+  module: "map";
+  projectId: string;
+  revision: string;
+  revisionAtStart: string;
+  stale: boolean;
+  file: string;
+  localPath: string;
+  url: string;
+  width: number;
+  height: number;
+  crop: { x: number; y: number; width: number; height: number };
+  scale: number;
+  range: MapInspectRegion;
+  drawn: number;
+  markersDrawn: number;
+  warnings: string[];
+  elapsedMs: number;
+}
+
+/** 检查图目录里只留最近 20 张；失败不影响本次渲染。 */
+async function pruneAgentRenders(projectId: string, keep = 20): Promise<void> {
+  const dir = join(mapProjectDir(projectId), "preview", "agent");
+  let names: string[];
+  try {
+    names = (await readdir(dir)).filter((name) => name.endsWith(".png"));
+  } catch {
+    return;
+  }
+  if (names.length <= keep) return;
+  const entries = await Promise.all(
+    names.map(async (name) => {
+      try {
+        return { name, mtime: (await stat(join(dir, name))).mtimeMs };
+      } catch {
+        return { name, mtime: 0 };
+      }
+    })
+  );
+  entries.sort((a, b) => b.mtime - a.mtime);
+  for (const entry of entries.slice(keep)) await rm(join(dir, entry.name), { force: true }).catch(() => undefined);
+}
+
+/**
+ * 同步渲染一块地图区域，供 Agent 用 `read_image` 看。
+ *
+ * 与 `runMapPreview` 的分工：这个不写阶段、不触发验收、不排队；它就是一张检查图。
+ * 渲染走 `renderMapView`（同一份 `buildPlan`），所以区域图与导出图不会各算一套。
+ */
+export async function runMapRender(projectId: string, options: MapRenderRequest = {}): Promise<MapRenderOutcome> {
+  const startedAt = Date.now();
+  const project = await readProjectOrThrow(projectId);
+  const doc = await theDocOrFresh(projectId);
+  const revisionAtStart = await mapRevision(project, doc);
+  const region = inspectRegion(options.region, doc);
+  const layerIndexes =
+    options.layerIds === undefined
+      ? undefined
+      : options.layerIds
+          .map((id) => doc.layers.findIndex((layer) => layer.id === id))
+          .filter((index) => index >= 0);
+  const context = renderContextFor(project, doc);
+  const lookup = await decodeTilesets(project);
+  const passCells = options.overlay?.pass === true ? passCellsOf(project, doc) : undefined;
+  const rendered = renderMapView(context, doc, lookup, {
+    range: { r0: region.r0, c0: region.c0, r1: region.r1, c1: region.c1 },
+    scale: options.scale,
+    layers: layerIndexes,
+    frame: options.frame,
+    background: options.background,
+    overlay: options.overlay,
+    passCells,
+    maxPixels: options.maxPixels
+  });
+  const dir = join(mapProjectDir(projectId), "preview", "agent");
+  await mkdir(dir, { recursive: true });
+  const safe = safeFileName(options.name ?? "inspect", "inspect");
+  const optionsHash = createHash("sha1")
+    .update(JSON.stringify({ region, scale: rendered.scale, layerIndexes, frame: options.frame ?? 0, background: options.background ?? "transparent", overlay: options.overlay ?? {} }))
+    .digest("hex")
+    .slice(0, 8);
+  const file = `preview/agent/${safe}-${revisionAtStart}-${optionsHash}.png`;
+  const localPath = join(mapProjectDir(projectId), file);
+  await writeFile(localPath, bitmapToPng(rendered.bitmap));
+  await pruneAgentRenders(projectId);
+  const revision = await mapRevision(project, doc);
+  return {
+    module: "map",
+    projectId,
+    revision,
+    revisionAtStart,
+    stale: revision !== revisionAtStart,
+    file,
+    localPath,
+    url: `${originForLinks()}${mapAssetBase(projectId)}${file}`,
+    width: rendered.bitmap.width,
+    height: rendered.bitmap.height,
+    crop: rendered.crop,
+    scale: rendered.scale,
+    range: rendered.range,
+    drawn: rendered.drawn,
+    markersDrawn: rendered.markersDrawn,
+    warnings: rendered.warnings,
+    elapsedMs: Date.now() - startedAt
+  };
 }
 
 /**

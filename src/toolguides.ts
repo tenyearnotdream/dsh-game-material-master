@@ -20,6 +20,7 @@ export const GUIDE_TOPICS = [
   "methods",
   "ai-asset",
   "iso-ai-asset",
+  "map-agent",
   ...STUDIO_MODULES
 ] as const;
 
@@ -116,6 +117,7 @@ function overviewText(options: GuideOptions): string {
     "- `config` — 配置方法、生图后端与连接测试。",
     "- `methods` — 全部可见方法目录（可按 `module` 过滤）。",
     "- `ai-asset` — 俯视地图编辑器「AI 生成素材」自动任务。",
+    "- `map-agent` — 两套地图编辑器的 Agent 工作流（读状态 / 画 / 看效果图 / 防旧覆盖）。",
     "",
     "## 硬规则",
     "- 生成 / 视频 / 音乐 / 音效都可能**真实计费**：不要为了确认状态重复提交；提交后先 `action:\"wait\"`。",
@@ -332,6 +334,7 @@ const MODULE_TEXTS: Record<StudioModule, string> = {
   iso: [
     "## 全本地、零计费",
     "导入自己的 45° 素材图（也可以先用内置素材），三个阶段：素材 → 地图 → 导出。没有任何一步需要 API Key。",
+    "**动手前先读 `guide` 的 `map-agent` 主题**：读状态用 `isoInspect`，看效果用 `isoRender` + `read_image`，不要拿 `isoPlan` 当状态查询。",
     "",
     "## 几何口径",
     "2:1 正交等距：格子 `cell.width × cell.height`（默认 64×96），菱形宽 = cell.width、高 = cell.width/2；相邻格步进 `(cell.width/2, cell.width/4)`。项目建完格子不能改。",
@@ -344,13 +347,14 @@ const MODULE_TEXTS: Record<StudioModule, string> = {
     "",
     "## 方法",
     "- `listIsoProjects()` / `createIsoProject({name?,cell?,cols?,rows?,wrap?})` / `getIsoProject({projectId})` / `saveIsoProject({projectId,name?,wrap?})` / `deleteIsoProject({projectId})`",
-    "- `importIsoTileset({projectId,name,data:base64,kind:'ground'|'autotile'|'object',sourceCell?,animRows?,frames?,fps?,loop?,clarity?,footprint?,anchor?,objectScale?,pass?,keyGreen?})`【属性一次定死；kind 必给，避免把物件误切成格；objectScale 仅物件，1 = 图片宽度正好占满 footprint，0.1~4】",
+    "- `importIsoTileset({projectId,name,data:base64 | path,kind:'ground'|'autotile'|'object',sourceCell?,animRows?,frames?,fps?,loop?,clarity?,footprint?,anchor?,objectScale?,pass?,keyGreen?})`【属性一次定死；kind 必给，避免把物件误切成格；objectScale 仅物件，1 = 图片宽度正好占满 footprint，0.1~4；有 `path` 时宿主自己读盘，优先于 data】",
     "- `importIsoSampleTileset({projectId})`【内置素材：草地/泥土/石地/水面/水岸自动连接 + 树/石头/灌木/木桶/石屋，本机现算】",
-    "- `composeIsoAsset({projectId,name?,files:[本机绝对路径…],kind:'ground'|'object',footprint?,keyGreen?})`【AI 生成素材的整理终点：地面 / 物件；只整理、不进素材列表；返回 openUrl 让用户点「新增素材」确认】",
+    "- `composeIsoAsset({projectId,name?,files:[本机绝对路径…],kind:'ground'|'object',footprint?,keyGreen?})`【AI 生成素材的整理终点：地面 / 物件；只整理、不进素材列表；返回 localPath / previewPath 与 openUrl 让用户点「新增素材」确认】",
     "- `saveIsoTileset({projectId,tilesetId,name?,fps?,loop?})`【只改表现层；形态/格子/占格不能改】 / `removeIsoTileset({projectId,tilesetId})`",
     "- `saveIsoDoc({projectId,name?,cols?,rows?,layers?,addLayer?,removeLayerId?,moveLayer?,clearLayerId?})`【改尺寸/图层】",
-    "- `applyIsoOps({projectId,ops,stroke?,have?})`【ops：paint / fill / rect / replace / object(add/move/remove) / marker(add/remove/move/rename)；tile 取 `getIsoProject` 的 `tilesets[].palette[].index`（1 起，0 = 空）】",
-    "- `isoUndo({projectId,have?})` / `isoRedo({projectId,have?})` / `isoPlan({projectId,view:{x,y,width,height},have?,layerIds?,pending?,pass?})`",
+    "- `applyIsoOps({projectId,ops,stroke?,have?,dryRun?,ifRevision?})`【ops：paint / fill / rect / replace / object(add/move/remove/duplicate) / marker(add/remove/move/rename/update)；tile 取 `getIsoProject` 的 `tilesets[].palette[].index`（1 起，0 = 空）；标记新增用 `markerKind` / color / note / tags，更新用 `{op:'update',patch:{kind,color,note,tags}}`；先 dryRun 验证，ifRevision 防旧覆盖】",
+    "- `isoUndo({projectId,have?})` / `isoRedo({projectId,have?})` / `isoInspect({projectId,region?,layerIds?,include?,format?,maxCells?,maxItems?})`【读逐格 / 物件 / 标记 / 通行性；不要拿 isoPlan 当状态查询】 / `isoPlan({projectId,view:{x,y,width,height},have?,layerIds?,pending?,pass?})`",
+    "- `isoRender({projectId,region?,scale?,layerIds?,frame?,background?,overlay?,maxPixels?,name?})`【同步出检查图，返回 localPath / url；overlay 可开 markers/grid/axes/pass/outlines，交给 read_image 看】",
     "- `runIsoGenerate({projectId,kind:'random'|'maze'|'continent',tiles?,seed?,layerId?})`【本地免费、同种子逐字节一致】 / `runIsoPreview({projectId})` / `runIsoExport({projectId,scale?,formats?})`",
     "- `cancelIsoJob({projectId})` / `setIsoApproved({projectId,stage?,approved})` / `revealIsoProject({projectId,target?})`",
     "",
@@ -366,17 +370,19 @@ const MODULE_TEXTS: Record<StudioModule, string> = {
   map: [
     "## 全本地、零计费",
     "导入自己的素材图，四步：素材图 → 自动连接 → 环绕画布 → 导出 PNG/存档。没有任何一步需要 API Key。",
+    "**动手前先读 `guide` 的 `map-agent` 主题**：读状态用 `mapInspect`，看效果用 `mapRender` + `read_image`，不要拿 `mapPlan` 当状态查询。",
     "",
     "## 方法",
     "- `listMapProjects()` / `createMapProject({name,grid?,cols?,rows?})` / `getMapProject({projectId,lang?})` / `saveMapProject({projectId,name})` / `deleteMapProject({projectId})`",
-    "- `importMapTileset({projectId,name,data:素材图base64,cell?,shape?,animRows?,fps?,clarity?,scale?})`【新增素材：属性一次定死；cell/shape/animRows 留空 = 自动识别；fps 是这个素材自己的动画速度（0.5~30 帧/秒，留空跟全局）；clarity = smooth|sharp|crisp；scale = 素材图每格几倍】",
+    "- `importMapTileset({projectId,name,data:素材图base64 | path,cell?,shape?,animRows?,fps?,clarity?,scale?})`【新增素材：属性一次定死；cell/shape/animRows 留空 = 自动识别；fps 是这个素材自己的动画速度（0.5~30 帧/秒，留空跟全局）；clarity = smooth|sharp|crisp；scale = 素材图每格几倍；有 `path` 时宿主自己读盘】",
     "- `importSampleTileset({projectId})`【内置素材：本机现算、零成本，4 张自动连接图 + 1 张道具图；可删可恢复】",
-    "- `composeMapAsset({projectId,name?,files:[本机绝对路径…],shape?,cell?,animRows?,stampCols?,stampRows?})`【把 AI 生成的图按素材形态整理成一张待确认素材图，落在 `ai/`；**只整理、不进素材列表**；返回 openUrl 让用户点「新增素材」确认】",
+    "- `composeMapAsset({projectId,name?,files:[本机绝对路径…],shape?,cell?,animRows?,stampCols?,stampRows?})`【把 AI 生成的图按素材形态整理成一张待确认素材图，落在 `ai/`；**只整理、不进素材列表**；返回 localPath / previewPath 与 openUrl 让用户点「新增素材」确认】",
     "- `recomposeMapTileset({projectId,tilesetId,files,clarity?})`【原地重烘一张素材：保留素材 id 与图块序号，已经画好的格子不用重画；删掉重导会清空它画过的格子】",
     "- `saveMapTileset({projectId,tilesetId,name?,cell?,shape?,animRows?,fps?})` / `removeMapTileset({projectId,tilesetId})`",
     "- `saveMapDoc({projectId,name?,cols?,rows?,layers?,addLayer?,removeLayerId?,moveLayer?,clearLayerId?,wrap?})`【地图只有一张：改尺寸/图层/环绕都走它】",
-    "- `applyMapOps({projectId,ops,stroke?,have?})`【agent 也能画：ops = [{kind:'paint',layerId,cells:[{r,c,tile}]}, {kind:'fill',...}, {kind:'rect',...}, {kind:'replace',...}]；tile 取 `getMapProject` 的 `view.tilesets[].palette[].index`（1 起，0 = 空）】",
-    "- `mapUndo({projectId,have?})` / `mapRedo({projectId,have?})` / `mapPlan({projectId,view:{x,y,width,height},have?,layerIds?})`",
+    "- `applyMapOps({projectId,ops,stroke?,have?,dryRun?,ifRevision?})`【agent 也能画：ops = [{kind:'paint',layerId,cells:[{r,c,tile}]}, {kind:'fill',...}, {kind:'rect',...}, {kind:'replace',...}, {kind:'marker',op:'add'|'remove'|'move'|'rename'|'update',...}, {kind:'stampPlace'|'stampRemove'|'stampMove'|'stampRotate',...}]；标记新增用 `markerKind` / color / note / tags，更新用 `{op:'update',patch:{kind,color,note,tags}}`；tile 取 `getMapProject` 的 `view.tilesets[].palette[].index`（1 起，0 = 空）；先 dryRun 验证】",
+    "- `mapUndo({projectId,have?})` / `mapRedo({projectId,have?})` / `mapInspect({projectId,region?,layerIds?,include?,format?,maxCells?,maxItems?})`【读逐格 / 标记 / 整图 / 通行性；不要拿 mapPlan 当状态查询】 / `mapPlan({projectId,view:{x,y,width,height},have?,layerIds?})`",
+    "- `mapRender({projectId,region?,scale?,layerIds?,frame?,background?,overlay?,maxPixels?,name?})`【同步出检查图，返回 localPath / url；overlay 可开 markers/grid/axes/pass/outlines，交给 read_image 看】",
     "- `runMapGenerate({projectId,kind:'random'|'maze'|'continent',tiles?,seed?,layerId?})` / `runMapPreview({projectId})` / `runMapExport({projectId,scale?,formats?})`",
     "- `cancelMapJob({projectId})` / `setMapApproved({projectId,stage?,approved})` / `revealMapProject({projectId,target?})`",
     "",
@@ -487,6 +493,44 @@ const AI_ASSET_TEXT = [
   "auto 模式：自己核对；失败只重跑失败的那一步。manual 模式：每步产出后贴 `openUrl` 并停下等用户说「通过」。"
 ].join("\n");
 
+const MAP_AGENT_TEXT = [
+  "# 地图编辑器 Agent 工作流",
+  "",
+  "两套编辑器（45° `iso` / 俯视 `map`）共用同一条闭环：**读状态 → 出方案 → 批量执行 → 看效果图 → 校验 / 迭代**。",
+  "地图渲染、检查、撤销全部本地免费；AI 生图仍走图片 / 序列帧模块（可能计费）。",
+  "",
+  "## 1. 读状态",
+  "- 项目与调色板：`getMapProject` / `getIsoProject`。`palette[].index` 是写进格子的笔刷值（1 起，0 = 空）。",
+  "- 逐格状态：`mapInspect({projectId, region?, include?, format?, maxCells?})` / `isoInspect`。",
+  "  默认预算 4096 格（64×64）；超了会回 `truncated:true` + `nextRange`，**不要**把整张 512×512 一次查出来。",
+  "- 不要用 `mapPlan` / `isoPlan` 读状态：那是界面增量绘制的 chunk 计划，按视口变化，还只回缺失块。",
+  "",
+  "## 2. 出方案 / 批量执行",
+  "- 写格子：`applyMapOps` / `applyIsoOps`；`tile` 用调色板 index，0 = 清空。",
+  "- 先 `dryRun:true` 看 `skipped` / `summary`，确认后再正式提交；带上 `ifRevision` 防止覆盖用户的新编辑。",
+  "- 45° 物件用 `{kind:'object', op:'add'|'move'|'remove'|'duplicate', ...}`；俯视整图用 `stampPlace` / `stampRemove` / `stampMove` / `stampRotate`。",
+  "- 标记新增用 `markerKind`（spawn/exit/chest/boss/event/resource/npc/custom）与 `color` / `note` / `tags`；已有标记用 `{kind:'marker',op:'update',patch:{kind,color,note,tags}}`（注意 update 的 patch 里字段叫 `kind`）。",
+  "- 不要自己算像素坐标、自动连接、变体或 z 排序——宿主会算。",
+  "",
+  "## 3. 看效果图",
+  "- `mapRender` / `isoRender`：同步、按 `region` 裁、`scale` 1~4、可叠加 `markers` / `grid` / `pass` / `outlines`。",
+  "  返回 `localPath`（本机绝对路径）与 `url`；把 `localPath` 交给宿主的 `read_image` 看，不要只把 URL 贴给用户。",
+  "- 预览图默认不含标记（导出 PNG 也不画标记）；要看标记位置必须打开 `overlay.markers`。",
+  "- 渲染返回的 `revision` 与开始时的 `revisionAtStart` 不同代表 `stale:true`：重新 inspect 后再判断。",
+  "",
+  "## 4. 校验 / 迭代",
+  "- 用 `revision` 判断是不是同一版；改坏了用 `*Undo` / `*Redo`。",
+  "- 验收用 `runMapPreview` / `runIsoPreview`（全图）→ `wait` → `review`；检查图只是检查，不代替阶段通过。",
+  "- 导出用 `runMapExport` / `runIsoExport`，再 `wait`；产物路径在 `review` / `get*Project` 里。",
+  "",
+  "## 硬规则",
+  "- 不要用 shell 改 `map.json` / `project.json` / `iso map.json`——绕过宿主归一化与校验。",
+  "- 地图四周环绕；坐标越界由宿主取模，物件占格必须完整落地。",
+  "- 标记是源数据（导出 JSON 带坐标），不是画在 PNG 上的圆圈。",
+  "- AI 素材仍然走图片 / 序列帧 → `compose*` → 用户确认；`compose*` 不自动导入。",
+  "- 生成 / 视频 / 音乐 / 音效可能真实计费；地图模块的 inspect / render / 导出全本地免费。"
+].join("\n");
+
 const ISO_AI_ASSET_TEXT = [
   "# 45° 地图编辑器「AI 生成素材」自动任务",
   "",
@@ -526,5 +570,6 @@ export function buildGuide(topic: GuideTopic, options: GuideOptions): GuideResul
   if (topic === "methods") return { title: "游戏素材大师 · 方法目录", text: methodsText(options) };
   if (topic === "ai-asset") return { title: "游戏素材大师 · AI 生成素材", text: AI_ASSET_TEXT };
   if (topic === "iso-ai-asset") return { title: "游戏素材大师 · 45° 地图编辑器 AI 生成素材", text: ISO_AI_ASSET_TEXT };
+  if (topic === "map-agent") return { title: "游戏素材大师 · 地图编辑器 Agent 工作流", text: MAP_AGENT_TEXT };
   return { title: `游戏素材大师 · ${options.labels[topic]}`, text: moduleText(topic, options) };
 }

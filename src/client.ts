@@ -136,6 +136,11 @@
       "刷新列表": "Refresh list",
       "重命名": "Rename",
       "删除项目": "Delete project",
+      "复制 ID": "Copy ID",
+      "复制项目 ID": "Copy project ID",
+      "复制项目 ID：{n0}": "Copy project ID: {n0}",
+      "已复制": "Copied",
+      "复制失败": "Copy failed",
       "新建项目": "New project",
       "实验性": "Experimental",
       "项目（{n0}）": "Projects ({n0})",
@@ -2943,6 +2948,8 @@
       ["isoUndo", true],
       ["isoRedo", true],
       ["isoPlan", true],
+      ["isoInspect", true],
+      ["isoRender", true],
       ["runIsoGenerate", true],
       ["runIsoPreview", true],
       ["runIsoExport", true],
@@ -2966,6 +2973,8 @@
       ["mapUndo", true],
       ["mapRedo", true],
       ["mapPlan", true],
+      ["mapInspect", true],
+      ["mapRender", true],
       ["runMapGenerate", true],
       ["runMapPreview", true],
       ["runMapExport", true],
@@ -3542,6 +3551,20 @@
 .SPR_projItem{display:flex;flex-direction:column;gap:2px;text-align:left;width:100%;font:inherit;cursor:pointer;background:transparent;border:1px solid transparent;border-radius:8px;padding:7px 9px;color:var(--dsw-alias-label-primary)}
 .SPR_projItem:hover{background:var(--dsw-alias-interactive-bg-hover)}
 .SPR_projItem[data-active=true]{background:var(--dsw-alias-bg-layer-3);border-color:var(--dsw-alias-border-l1)}
+.SPR_copyId{display:inline-flex;align-items:center;justify-content:center;gap:4px;font:inherit;font-size:11px;line-height:1;white-space:nowrap;cursor:pointer;padding:4px 7px;border-radius:6px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary)}
+.SPR_copyId:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}
+.SPR_copyId[data-copied=true]{border-color:var(--dsw-alias-state-success-primary);color:var(--dsw-alias-state-success-primary)}
+.SPR_copyId[data-failed=true]{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
+.SPR_copyIdInline{padding:0 3px;border:0;background:transparent;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:16px}
+.SPR_copyIdInline:hover{background:transparent;color:var(--dsw-alias-label-primary)}
+.SPR_projNameRow{display:flex;align-items:center;gap:6px;min-width:0}
+.SPR_projNameRow>.SPR_projName{flex:1;min-width:0}
+.SPR_mapEdTop .SPR_copyId,.SPR_isoTop .SPR_copyId{color:#f7f3ec;border-color:#232323;background:linear-gradient(#5d5d5d,#4b4b4b)}
+.SPR_mapEdTop .SPR_copyId:hover,.SPR_isoTop .SPR_copyId:hover{background:linear-gradient(#6a6a6a,#555);color:#fff}
+.SPR_mapEdTop .SPR_copyId[data-copied=true],.SPR_isoTop .SPR_copyId[data-copied=true]{border-color:#5bd08a;color:#b8ffd0}
+.SPR_mapEdMenu .SPR_copyIdInline,.SPR_isoMenu .SPR_copyIdInline{color:#c9c4bb}
+.SPR_mapEdMenu .SPR_copyIdInline:hover,.SPR_isoMenu .SPR_copyIdInline:hover{color:#fff}
+.SPR_mapEdMenu .SPR_projNameRow,.SPR_isoMenu .SPR_projNameRow{width:100%}
 .SPR_projName{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .SPR_projMeta{font-size:11px;color:var(--dsw-alias-label-tertiary);font-variant-numeric:tabular-nums}
 .SPR_main{flex:1;min-width:0;overflow:auto;padding:16px 18px 40px}
@@ -5278,6 +5301,7 @@
                 h(Btn, { onClick: () => void refreshProjects(), disabled: loading }, T("刷新列表")),
                 project !== null ? h(Btn, { onClick: renameCurrent }, T("重命名")) : null,
                 project !== null ? h(Btn, { onClick: deleteCurrent, danger: true }, T("删除项目")) : null,
+                project !== null ? h(CopyIdButton, { id: project.id }) : null,
                 h(Btn, { onClick: createProject, primary: true }, T("新建项目"))
               )
             : null
@@ -5336,7 +5360,10 @@
                       "data-active": summary.id === projectId ? "true" : "false",
                       onClick: () => setProjectId(summary.id)
                     },
-                    h("span", { className: "SPR_projName" }, summary.name),
+                    h("span", { className: "SPR_projNameRow" },
+                      h("span", { className: "SPR_projName" }, summary.name),
+                      h(CopyIdButton, { id: summary.id, inline: true })
+                    ),
                     h(
                       "span",
                       { className: "SPR_projMeta" },
@@ -7719,6 +7746,88 @@
     }
 
     /** 一份任务/项目列表（左侧栏）。 */
+    /**
+     * 把一段文本复制到剪贴板。
+     *
+     * 浏览器半区可能跑在 Electron / 普通网页 / 自检桩里：优先用 Clipboard API，
+     * 失败再退回旧式 `execCommand("copy")`。返回是否成功，界面据此显示「已复制 / 复制失败」。
+     */
+    async function copyIdText(text) {
+      if (typeof navigator !== "undefined" && navigator.clipboard !== undefined && typeof navigator.clipboard.writeText === "function") {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          /* 剪贴板权限被拒时走下面的兜底 */
+        }
+      }
+      try {
+        if (typeof document === "undefined" || document.body === undefined || document.body === null) return false;
+        const area = document.createElement("textarea");
+        area.value = text;
+        area.setAttribute("readonly", "readonly");
+        area.style.position = "fixed";
+        area.style.left = "-9999px";
+        area.style.top = "0";
+        document.body.appendChild(area);
+        area.select();
+        const ok = typeof document.execCommand === "function" ? document.execCommand("copy") : false;
+        document.body.removeChild(area);
+        return ok === true;
+      } catch {
+        return false;
+      }
+    }
+
+    /**
+     * 「复制项目 ID」按钮。
+     *
+     * 所有模块的项目 / 任务共用它：把当前 id 一键复制给 agent，省得用户从日志或
+     * 回复里翻 ID。`inline` 用在侧栏项目行里（span，避免 button 套 button）。
+     */
+    function CopyIdButton({ id, inline = false, className = "" }) {
+      const [state, setState] = React.useState("idle");
+      const timer = React.useRef(null);
+      React.useEffect(() => () => {
+        if (timer.current !== null) clearTimeout(timer.current);
+      }, []);
+      if (id === null || id === undefined || id === "") return null;
+      const text = String(id);
+      const copy = async (event) => {
+        if (event !== null && event !== undefined && typeof event.stopPropagation === "function") event.stopPropagation();
+        const ok = await copyIdText(text);
+        setState(ok ? "ok" : "failed");
+        if (timer.current !== null) clearTimeout(timer.current);
+        timer.current = setTimeout(() => {
+          timer.current = null;
+          setState("idle");
+        }, 1600);
+      };
+      const label = state === "ok" ? T("已复制") : state === "failed" ? T("复制失败") : inline ? "⧉" : T("复制 ID");
+      const tag = inline ? "span" : "button";
+      return h(
+        tag,
+        {
+          ...(inline ? { role: "button", tabIndex: 0 } : { type: "button" }),
+          className: `SPR_copyId${inline ? " SPR_copyIdInline" : ""}${className === "" ? "" : ` ${className}`}`,
+          "data-copied": state === "ok" ? "true" : undefined,
+          "data-failed": state === "failed" ? "true" : undefined,
+          title: T("复制项目 ID：{n0}", { n0: text }),
+          "aria-label": T("复制项目 ID"),
+          onClick: copy,
+          onKeyDown: inline
+            ? (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  void copy(event);
+                }
+              }
+            : undefined
+        },
+        label
+      );
+    }
+
     function JobSidebar({ title, items, activeId, onSelect, onCreate, renderMeta }) {
       return h(
         "div",
@@ -7735,7 +7844,10 @@
               "data-active": item.id === activeId ? "true" : "false",
               onClick: () => onSelect(item.id)
             },
-            h("span", { className: "SPR_projName" }, item.name),
+            h("span", { className: "SPR_projNameRow" },
+              h("span", { className: "SPR_projName" }, item.name),
+              h(CopyIdButton, { id: item.id, inline: true })
+            ),
             h("span", { className: "SPR_projMeta" }, renderMeta(item))
           )
         ),
@@ -11151,7 +11263,10 @@
                 void loadProject(entry.id);
               }
             },
-            entry.name
+            h("span", { className: "SPR_projNameRow" },
+              h("span", { className: "SPR_projName" }, entry.name),
+              h(CopyIdButton, { id: entry.id, inline: true })
+            )
           )
         )
       );
@@ -11176,6 +11291,7 @@
           ),
           menuOpen === true ? menu : null
         ),
+        h(CopyIdButton, { id: view.id }),
         h("span", { className: "SPR_mapEdSpacer" }),
         h(
           "button",
@@ -12973,6 +13089,7 @@
             "div",
             { className: "SPR_musicJobHead" },
             h("h3", null, T("谱曲（本地 MIDI）")),
+            h(CopyIdButton, { id: job.id }),
             selected !== null ? h(Chip, { kind: "ready", text: T("第 {n0} 版", { n0: compositions.indexOf(selected) + 1 }) }) : null,
             h("span", { className: "SPR_spacer" }),
             h(Btn, { onClick: () => void loadJob(job.id) }, T("重新读取"))
@@ -13087,6 +13204,7 @@
                   "div",
                   { className: "SPR_musicJobHead" },
                   h("h3", null, job.name),
+                  h(CopyIdButton, { id: job.id }),
                   job.workflow === "compose" ? h(Chip, { kind: "stale", text: T("谱曲模式") }) : null,
                   h("span", { className: "SPR_musicMeta" }, job.workflow === "compose"
                     ? T("谱曲 {n0} 版 · {n1}/{n2} 首就绪 · {n3} 个版本", { n0: (job.compositions ?? []).length, n1: job.songsReady ?? 0, n2: job.songsTotal ?? 0, n3: (job.versions ?? []).filter((entry) => entry.status === "ready").length })
@@ -13194,7 +13312,10 @@
                 h(
                   "button",
                   { key: entry.id, type: "button", className: "SPR_projItem", "data-active": entry.id === jobId ? "true" : "false", onClick: () => void loadJob(entry.id) },
-                  h("span", { className: "SPR_projName" }, entry.name),
+                  h("span", { className: "SPR_projNameRow" },
+                    h("span", { className: "SPR_projName" }, entry.name),
+                    h(CopyIdButton, { id: entry.id, inline: true })
+                  ),
                   h("span", { className: "SPR_projMeta" }, entry.workflow === "compose"
                     ? T("谱曲 {n0} 版 · {n1}/{n2} 首", { n0: entry.compositions ?? 0, n1: entry.songsReady, n2: entry.songsTotal })
                     : T("{n0}/{n1} 首 · {n2} 个版本", { n0: entry.songsReady, n1: entry.songsTotal, n2: entry.versions }))
@@ -13567,6 +13688,7 @@
                 { className: "SPR_musicCard", "data-testid": "sfx-job" },
                 h("div", { className: "SPR_musicJobHead" },
                   h("h3", null, job.name),
+                  h(CopyIdButton, { id: job.id }),
                   h(Chip, { kind: job.busy ? "running" : job.status === "error" ? "error" : takes.length > 0 ? "ready" : "stale", text: job.busy ? T("生成中…") : job.status === "error" ? T("失败") : takes.length > 0 ? T("已完成") : T("还没生成") }),
                   job.reviewMode ? h("span", { className: "SPR_musicMeta" }, job.reviewMode === "manual" ? T("每一步人工审核") : T("自动审核")) : null,
                   h("span", { className: "SPR_musicMeta" }, T("{n0} 条生成 · 上限 120 秒", { n0: takes.length }))
@@ -13688,7 +13810,10 @@
                 h(
                   "button",
                   { key: entry.id, type: "button", className: "SPR_projItem", "data-active": entry.id === jobId ? "true" : "false", onClick: () => void loadJob(entry.id) },
-                  h("span", { className: "SPR_projName" }, entry.name),
+                  h("span", { className: "SPR_projNameRow" },
+                    h("span", { className: "SPR_projName" }, entry.name),
+                    h(CopyIdButton, { id: entry.id, inline: true })
+                  ),
                   h("span", { className: "SPR_projMeta" }, `${entry.takes ?? 0} 条${entry.latestDuration ? ` · ${Number(entry.latestDuration).toFixed(2)}s` : ""}${entry.busy ? " · ⏳" : ""}`)
                 )
               )
@@ -15285,7 +15410,12 @@
         h("button", { type: "button", className: "SPR_isoMenuItem", onClick: () => { setMenuOpen(false); setNameAsk({ mode: "rename", title: T("重命名项目"), value: view.name }); } }, T("重命名")),
         h("button", { type: "button", className: "SPR_isoMenuItem", onClick: () => { setMenuOpen(false); void deleteProject(); } }, T("删除项目")),
         h("div", { className: "SPR_isoMenuLabel" }, T("切换项目")),
-        projects.map((entry) => h("button", { key: entry.id, type: "button", className: "SPR_isoMenuItem", "data-on": entry.id === view.id ? "true" : undefined, onClick: () => { setMenuOpen(false); void loadProject(entry.id); } }, entry.name))
+        projects.map((entry) => h("button", { key: entry.id, type: "button", className: "SPR_isoMenuItem", "data-on": entry.id === view.id ? "true" : undefined, onClick: () => { setMenuOpen(false); void loadProject(entry.id); } },
+          h("span", { className: "SPR_projNameRow" },
+            h("span", { className: "SPR_projName" }, entry.name),
+            h(CopyIdButton, { id: entry.id, inline: true })
+          )
+        ))
       );
 
       const palette = h("div", { className: "SPR_isoPalette" },
@@ -15494,6 +15624,7 @@
           h("button", { type: "button", className: "SPR_isoProj", "data-open": menuOpen === true ? "true" : undefined, onClick: () => setMenuOpen((value) => value !== true) }, h("span", { className: "SPR_isoProjName" }, view.name), h("span", null, "▾")),
           menuOpen === true ? menu : null
         ),
+        h(CopyIdButton, { id: view.id }),
         h("span", { style: { flex: 1 } }),
         h(Btn, { on: openCard === "assets", onClick: () => setOpenCard(openCard === "assets" ? null : "assets") }, T("素材")),
         h(Btn, { on: openCard === "export", onClick: () => setOpenCard(openCard === "export" ? null : "export") }, T("导出")),
@@ -15705,6 +15836,7 @@
               { className: "SPR_toolbar" },
               h(BusyBtn, { onClick: create, primary: true, busy: tasks.has(K_IMG_CREATE), busyText: T("正在新建…") }, T("新建任务")),
               job !== null ? h(Btn, { onClick: del, danger: true }, T("删除任务")) : null,
+              job !== null ? h(CopyIdButton, { id: job.id }) : null,
               h(BusyBadge, { show: tasks.active, text: tasks.label(K_IMG_JOB) ?? tasks.label(K_IMG_KEY) ?? tasks.label(K_IMG_UPLOAD) ?? tasks.firstLabel ?? T("正在调用接口…") })
             ),
             job === null
@@ -16163,6 +16295,7 @@
               { className: "SPR_toolbar" },
               h(BusyBtn, { onClick: create, primary: true, busy: tasks.has(K_SEQ_CREATE), busyText: T("正在新建…") }, T("新建任务")),
               job !== null ? h(Btn, { onClick: del, danger: true }, T("删除任务")) : null,
+              job !== null ? h(CopyIdButton, { id: job.id }) : null,
               h(BusyBadge, { show: tasks.active, text: tasks.firstLabel ?? T("正在调用接口…") })
             ),
             job === null
@@ -19625,6 +19758,7 @@
                   jobs.map((entry) => h("option", { key: entry.id, value: entry.id }, T("{n0}（部件 {n1}）", { n0: entry.name, n1: entry.partCount })))
                 ),
                 job !== null ? h("span", { className: "SPR_badge" }, job.id) : null,
+                job !== null ? h(CopyIdButton, { id: job.id }) : null,
                 stageBusy ? h(BusyBadge, { show: true, text: T("本阶段进行中…") }) : null
               ),
               job === null
@@ -21472,6 +21606,8 @@
         isoUndo: (payload) => call("isoUndo", payload),
         isoRedo: (payload) => call("isoRedo", payload),
         isoPlan: (payload) => call("isoPlan", payload),
+        isoInspect: (payload) => call("isoInspect", payload),
+        isoRender: (payload) => call("isoRender", payload),
         runIsoGenerate: (payload) => call("runIsoGenerate", payload),
         runIsoPreview: (payload) => call("runIsoPreview", payload),
         runIsoExport: (payload) => call("runIsoExport", payload),
@@ -21498,6 +21634,8 @@
         mapUndo: (payload) => call("mapUndo", payload),
         mapRedo: (payload) => call("mapRedo", payload),
         mapPlan: (payload) => call("mapPlan", payload),
+        mapInspect: (payload) => call("mapInspect", payload),
+        mapRender: (payload) => call("mapRender", payload),
         runMapGenerate: (payload) => call("runMapGenerate", payload),
         runMapPreview: (payload) => call("runMapPreview", payload),
         runMapExport: (payload) => call("runMapExport", payload),

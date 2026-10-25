@@ -593,9 +593,19 @@ try {
   }
 
   const REGISTERED = {};
+  /**
+   * 插件启动时会通过 `ctx.get("remote.gameStudio")` 调 `reportClientOrigin`。
+   *
+   * 假 ctx 直接返回 undefined 的话，那次调用会失败并按退避重试 60 次，
+   * harness 一轮轮放定时器时就误报「setState 死循环」。这里给一个只实现
+   * `reportClientOrigin` 的假远程服务；面板自身的 API 仍是下面单独的 `api` 桥。
+   */
+  const fakeRemote = {
+    reportClientOrigin: async () => ({ ok: true, value: { ok: true } })
+  };
   const fakeCtx = {
     effect: (fn) => fn(),
-    get: () => undefined,
+    get: (name) => (name === "remote.gameStudio" ? fakeRemote : undefined),
     slots: {
       register: (options, component) => void (REGISTERED[options.name] = component),
       inject: (name, fn) => fn()
@@ -814,6 +824,14 @@ try {
     approvals: []
   };
   const apiRaw = {
+    /**
+     * 插件启动时会调用它上报 origin；假桥必须成功返回。
+     *
+     * 少了这一条，`reportClientOrigin` 会按失败退避重试 60 次（每 500ms 一次），
+     * harness 把定时器一轮轮放出来时就会超过 40 轮，误报「setState 死循环」。
+     * 这是测试夹具漏了一个远程方法，不是面板真的在循环。
+     */
+    reportClientOrigin: async () => ({ ok: true }),
     listMapProjects: async () => ({ projects: await G.listMapProjects() }),
     createMapProject: async ({ name, cols, rows, grid }) => {
       apiLog.created.push({ name, cols, rows, grid });
@@ -1102,6 +1120,20 @@ try {
   check("顶栏没有「已通过」这类阶段向导按钮", !topButtons.some((text) => /阶段|下一步|①②③④/.test(text)), topButtons.join(" / "));
   // 用户反馈：画的时候那个「已自动保存」一直闪，不需要 —— 整块拿掉了
   check("顶栏不再显示保存状态（那颗会闪的字去掉了）", byClass(tree, "SPR_mapEdSave").length === 0 && !/已自动保存|还没有改动|正在保存/.test(textOf(tree)));
+  {
+    let copiedId = "";
+    Object.defineProperty(globalThis, "navigator", {
+      value: { clipboard: { writeText: async (text) => { copiedId = String(text); } } },
+      configurable: true
+    });
+    const copyElement = collect(tree, (node) => typeof node.type === "function" && node.type.name === "CopyIdButton")[0];
+    const copyButton = copyElement === undefined
+      ? undefined
+      : byClass(await withFreshHooks(() => copyElement.type(copyElement.props)), "SPR_copyId")[0];
+    check("项目顶栏有「复制 ID」按钮", copyButton !== undefined && textOf(copyButton).includes("复制 ID"), textOf(copyButton ?? null));
+    if (copyButton !== undefined) await copyButton.props.onClick({ stopPropagation() {} });
+    check("点「复制 ID」真的把 projectId 交给剪贴板", copiedId === projectId, copiedId);
+  }
   check("**没有阶段条**：渲染结果里一个 .SPR_step 元素都没有", byClass(tree, "SPR_step").length === 0 && byClass(tree, "SPR_steps").length === 0, `${byClass(tree, "SPR_step").length}`);
   if (projButton !== undefined) {
     projButton.props.onClick();

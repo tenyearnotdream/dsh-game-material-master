@@ -39,6 +39,10 @@ export interface IsoMarker {
   r: number;
   c: number;
   name: string;
+  kind?: string;
+  color?: string;
+  note?: string;
+  tags?: string[];
 }
 
 export interface IsoDoc {
@@ -182,7 +186,20 @@ function normalizeMarkers(raw: unknown, cols: number, rows: number): IsoMarker[]
     const given = typeof marker?.id === "string" && marker.id !== "" ? marker.id : "";
     const id = given !== "" && !used.has(given) ? given : nextId();
     used.add(id);
-    out.push({ id, r, c, name: typeof marker?.name === "string" ? marker.name : "" });
+    const kind = typeof marker?.kind === "string" && marker.kind.trim() !== "" ? marker.kind.trim() : undefined;
+    const color = typeof marker?.color === "string" && /^#[0-9a-f]{6}$/i.test(marker.color.trim()) ? marker.color.trim() : undefined;
+    const note = typeof marker?.note === "string" && marker.note !== "" ? marker.note : undefined;
+    const tags = Array.isArray(marker?.tags) ? marker.tags.filter((tag): tag is string => typeof tag === "string" && tag !== "") : undefined;
+    out.push({
+      id,
+      r,
+      c,
+      name: typeof marker?.name === "string" ? marker.name : "",
+      ...(kind === undefined ? {} : { kind }),
+      ...(color === undefined ? {} : { color }),
+      ...(note === undefined ? {} : { note }),
+      ...(tags === undefined || tags.length === 0 ? {} : { tags })
+    });
   }
   return out;
 }
@@ -315,10 +332,17 @@ export type IsoOp =
   | { kind: "object"; op: "add"; layerId: string; tilesetId: string; r: number; c: number; id?: string }
   | { kind: "object"; op: "move"; id: string; r: number; c: number }
   | { kind: "object"; op: "remove"; id: string }
-  | { kind: "marker"; op: "add"; r: number; c: number; name?: string; id?: string }
+  | { kind: "object"; op: "duplicate"; id: string; r: number; c: number; newId?: string }
+  | { kind: "marker"; op: "add"; r: number; c: number; name?: string; id?: string; markerKind?: string; color?: string; note?: string; tags?: string[] }
   | { kind: "marker"; op: "remove"; id: string }
   | { kind: "marker"; op: "move"; id: string; r: number; c: number }
-  | { kind: "marker"; op: "rename"; id: string; name: string };
+  | { kind: "marker"; op: "rename"; id: string; name: string }
+  | {
+      kind: "marker";
+      op: "update";
+      id: string;
+      patch: { name?: string; kind?: string; color?: string; note?: string; tags?: string[] };
+    };
 
 export interface IsoApplyOptions {
   /** 物件素材的占格；宿主从 project.tilesets 查。 */
@@ -497,6 +521,40 @@ export function applyIsoOps(doc: IsoDoc, ops: readonly unknown[], layout: IsoLay
     }
   };
 
+  const applyObjectDuplicate = (op: Extract<IsoOp, { kind: "object"; op: "duplicate" }>, recordUndo: boolean): void => {
+    const object = doc.objects.find((entry) => entry.id === op.id);
+    if (object === undefined) {
+      skipped.push(`没有这个物件：${op.id}`);
+      return;
+    }
+    const fp = footprintOf(object.tilesetId) ?? { cols: 1, rows: 1 };
+    if (!footprintInside(layout, op.r, op.c, fp)) {
+      skipped.push("物件放不下：占格超出了地图");
+      return;
+    }
+    if (doc.objects.length >= MAX_ISO_OBJECTS) {
+      skipped.push(`物件太多了（上限 ${MAX_ISO_OBJECTS} 个）`);
+      return;
+    }
+    const occupied = objectOccupied(doc, layout, footprintOf);
+    for (const cell of footprintCells(op.r, op.c, fp)) {
+      const wrapped = wrapPoint(layout, cell.r, cell.c);
+      if (wrapped === undefined) continue;
+      if (occupied.has(`${object.layerId}|${wrapped.r},${wrapped.c}`)) {
+        skipped.push("目标位置已经有物件了");
+        return;
+      }
+    }
+    let id = typeof op.newId === "string" && op.newId !== "" && !doc.objects.some((entry) => entry.id === op.newId) ? op.newId : makeObjectId(doc);
+    doc.objects.push({ id, tilesetId: object.tilesetId, layerId: object.layerId, r: op.r, c: op.c });
+    for (const cell of footprintCells(op.r, op.c, fp)) markDirty(changedCells, cell.r, cell.c);
+    changed++;
+    if (recordUndo) {
+      undo.push({ kind: "object", op: "remove", id });
+      redo.push({ kind: "object", op: "add", layerId: object.layerId, tilesetId: object.tilesetId, r: op.r, c: op.c, id });
+    }
+  };
+
   const applyObjectRemove = (op: Extract<IsoOp, { kind: "object"; op: "remove" }>, recordUndo: boolean): void => {
     const index = doc.objects.findIndex((entry) => entry.id === op.id);
     if (index < 0) {
@@ -619,6 +677,18 @@ export function applyIsoOps(doc: IsoDoc, ops: readonly unknown[], layout: IsoLay
         );
       } else if (action === "move") {
         applyObjectMove({ kind: "object", op: "move", id: String(op.id ?? ""), r: Math.round(Number(op.r)), c: Math.round(Number(op.c)) }, true);
+      } else if (action === "duplicate") {
+        applyObjectDuplicate(
+          {
+            kind: "object",
+            op: "duplicate",
+            id: String(op.id ?? ""),
+            r: Math.round(Number(op.r)),
+            c: Math.round(Number(op.c)),
+            newId: typeof op.newId === "string" ? op.newId : undefined
+          },
+          true
+        );
       } else if (action === "remove") {
         applyObjectRemove({ kind: "object", op: "remove", id: String(op.id ?? "") }, true);
       } else {
@@ -628,6 +698,19 @@ export function applyIsoOps(doc: IsoDoc, ops: readonly unknown[], layout: IsoLay
     }
     if (kind === "marker") {
       const action = op.op;
+      const meta = (input: { kind?: unknown; markerKind?: unknown; color?: unknown; note?: unknown; tags?: unknown }, includeKind = true): Pick<IsoMarker, "kind" | "color" | "note" | "tags"> => {
+        const rawKind = input.markerKind !== undefined ? input.markerKind : includeKind ? input.kind : undefined;
+        const kindValue = typeof rawKind === "string" && rawKind.trim() !== "" ? rawKind.trim() : undefined;
+        const color = typeof input.color === "string" && /^#[0-9a-f]{6}$/i.test(input.color.trim()) ? input.color.trim() : undefined;
+        const note = typeof input.note === "string" && input.note !== "" ? input.note : undefined;
+        const tags = Array.isArray(input.tags) ? input.tags.filter((tag): tag is string => typeof tag === "string" && tag !== "") : undefined;
+        return {
+          ...(kindValue === undefined ? {} : { kind: kindValue }),
+          ...(color === undefined ? {} : { color }),
+          ...(note === undefined ? {} : { note }),
+          ...(tags === undefined || tags.length === 0 ? {} : { tags })
+        };
+      };
       if (action === "add") {
         const hit = wrapPoint(layout, Math.round(Number(op.r)), Math.round(Number(op.c)));
         if (hit === undefined) {
@@ -640,12 +723,24 @@ export function applyIsoOps(doc: IsoDoc, ops: readonly unknown[], layout: IsoLay
         }
         const id = typeof op.id === "string" && op.id !== "" && !doc.markers.some((marker) => marker.id === op.id) ? op.id : makeMarkerId(doc);
         const name = typeof op.name === "string" ? op.name : "";
-        doc.markers.push({ id, r: hit.r, c: hit.c, name });
+        doc.markers.push({ id, r: hit.r, c: hit.c, name, ...meta(op, false) });
         markDirty(changedCells, hit.r, hit.c);
         changed++;
         touched = true;
         undo.push({ kind: "marker", op: "remove", id });
-        redo.push({ kind: "marker", op: "add", r: hit.r, c: hit.c, name, id });
+        const added = meta(op, false);
+        redo.push({
+          kind: "marker",
+          op: "add",
+          r: hit.r,
+          c: hit.c,
+          name,
+          id,
+          ...(added.kind === undefined ? {} : { markerKind: added.kind }),
+          ...(added.color === undefined ? {} : { color: added.color }),
+          ...(added.note === undefined ? {} : { note: added.note }),
+          ...(added.tags === undefined ? {} : { tags: added.tags })
+        });
         continue;
       }
       if (action === "remove") {
@@ -660,7 +755,19 @@ export function applyIsoOps(doc: IsoDoc, ops: readonly unknown[], layout: IsoLay
         markDirty(changedCells, marker.r, marker.c);
         changed++;
         touched = true;
-        undo.push({ kind: "marker", op: "add", r: marker.r, c: marker.c, name: marker.name, id: marker.id });
+        const saved = meta(marker);
+        undo.push({
+          kind: "marker",
+          op: "add",
+          r: marker.r,
+          c: marker.c,
+          name: marker.name,
+          id: marker.id,
+          ...(saved.kind === undefined ? {} : { markerKind: saved.kind }),
+          ...(saved.color === undefined ? {} : { color: saved.color }),
+          ...(saved.note === undefined ? {} : { note: saved.note }),
+          ...(saved.tags === undefined ? {} : { tags: saved.tags })
+        });
         redo.push({ kind: "marker", op: "remove", id: marker.id });
         continue;
       }
@@ -690,6 +797,51 @@ export function applyIsoOps(doc: IsoDoc, ops: readonly unknown[], layout: IsoLay
         redo.push({ kind: "marker", op: "move", id: marker.id, r: hit.r, c: hit.c });
         continue;
       }
+      if (action === "update") {
+        const marker = doc.markers.find((entry) => entry.id === op.id);
+        if (marker === undefined) {
+          skipped.push(`没有这个标记：${String(op.id)}`);
+          continue;
+        }
+        const updateOp = op as Extract<IsoOp, { kind: "marker"; op: "update" }>;
+        const patch = updateOp.patch ?? {};
+        const before: IsoMarker = { ...marker };
+        if (typeof patch.name === "string") marker.name = patch.name;
+        if (patch.kind !== undefined) {
+          if (patch.kind.trim() === "") delete marker.kind;
+          else marker.kind = patch.kind.trim();
+        }
+        if (patch.color !== undefined) {
+          if (patch.color.trim() === "") delete marker.color;
+          else if (/^#[0-9a-f]{6}$/i.test(patch.color.trim())) marker.color = patch.color.trim();
+        }
+        if (patch.note !== undefined) {
+          if (patch.note === "") delete marker.note;
+          else marker.note = patch.note;
+        }
+        if (patch.tags !== undefined) {
+          const tags = patch.tags.filter((tag) => typeof tag === "string" && tag !== "");
+          if (tags.length === 0) delete marker.tags;
+          else marker.tags = tags;
+        }
+        if (JSON.stringify(before) === JSON.stringify(marker)) continue;
+        touched = true;
+        undo.push({
+          kind: "marker",
+          op: "update",
+          id: marker.id,
+          patch: {
+            name: before.name,
+            kind: before.kind ?? "",
+            color: before.color ?? "",
+            note: before.note ?? "",
+            tags: before.tags ?? []
+          }
+        });
+        redo.push({ kind: "marker", op: "update", id: marker.id, patch });
+        continue;
+      }
+
       if (action === "rename") {
         const marker = doc.markers.find((entry) => entry.id === op.id);
         if (marker === undefined) {

@@ -10,8 +10,8 @@ import {assertVideoBackendReady,videoBackendOf} from "./videogen.js";
 * 直接发给浏览器——否则界面每帧都要靠 RPC 传 base64，又慢又费内存。
 */
 import { createReadStream, readdirSync, statSync } from "node:fs";
-import { mkdir, stat, writeFile } from "node:fs/promises";
-import { basename, dirname, extname, join } from "node:path";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
@@ -249,6 +249,17 @@ function safeFileName(input) {
   const base = basename(input).replace(/[^\w.\-()\u4e00-\u9fa5]+/g, "_");
   return base === "" ? "source" : base.slice(0, 120);
 }
+/** 工具面路径导入：宿主读盘、按文件头嗅探，返回 base64（供 import* 复用）。 */
+async function readImageBase64FromPath(path: string): Promise<string> {
+  const absolute = resolve(path);
+  const info = await stat(absolute);
+  if (!info.isFile()) throw new Error(`不是文件：${absolute}`);
+  if (info.size > 30 * 1024 * 1024) throw new Error(`素材图 ${(info.size / 1024 / 1024).toFixed(1)}MB 超过 30MB 上限：${absolute}`);
+  const base64 = (await readFile(absolute)).toString("base64");
+  if (sniffImage(base64) === undefined) throw new Error(`无法识别的图片格式（支持 PNG / JPEG / WebP / GIF / BMP）：${absolute}`);
+  return base64;
+}
+
 export class GameStudioGateway extends TypertRemoteService {
   ffmpegCache;
   constructor(ctx) {
@@ -996,7 +1007,9 @@ export class GameStudioGateway extends TypertRemoteService {
   }
   async importIsoTileset(payload: any) {
     const input = asRecord(payload);
-    const result = await isogen.importIsoTileset(asString(input.projectId), asString(input.name), asString(input.data), {
+    const data = asString(input.path) !== "" ? await readImageBase64FromPath(asString(input.path)) : asString(input.data);
+    if (data === "") throw new Error("importIsoTileset 需要 data（base64）或 path（本机绝对路径）。");
+    const result = await isogen.importIsoTileset(asString(input.projectId), asString(input.name), data, {
       kind: input.kind,
       sourceCell: input.sourceCell as any,
       animRows: input.animRows,
@@ -1063,7 +1076,9 @@ export class GameStudioGateway extends TypertRemoteService {
     const input = asRecord(payload);
     return isogen.applyIsoOps(asString(input.projectId), Array.isArray(input.ops) ? (input.ops as any[]) : [], {
       stroke: typeof input.stroke === "string" ? input.stroke : undefined,
-      have: Array.isArray(input.have) ? (input.have as string[]) : undefined
+      have: Array.isArray(input.have) ? (input.have as string[]) : undefined,
+      dryRun: input.dryRun === true,
+      ifRevision: typeof input.ifRevision === "string" ? input.ifRevision : undefined
     });
   }
   async isoUndo(payload: any) {
@@ -1082,6 +1097,30 @@ export class GameStudioGateway extends TypertRemoteService {
       layerIds: Array.isArray(input.layerIds) ? (input.layerIds as number[]) : undefined,
       pending: Array.isArray(input.pending) ? (input.pending as any[]) : undefined,
       pass: input.pass === true
+    });
+  }
+  async isoInspect(payload: any) {
+    const input = asRecord(payload);
+    return isogen.isoInspect(asString(input.projectId), {
+      region: input.region as any,
+      layerIds: Array.isArray(input.layerIds) ? input.layerIds.map((entry: unknown) => String(entry)) : undefined,
+      include: Array.isArray(input.include) ? input.include.map((entry: unknown) => String(entry)) : undefined,
+      format: input.format === "text" || input.format === "json" || input.format === "both" ? input.format : undefined,
+      maxCells: typeof input.maxCells === "number" ? input.maxCells : undefined,
+      maxItems: typeof input.maxItems === "number" ? input.maxItems : undefined
+    });
+  }
+  async isoRender(payload: any) {
+    const input = asRecord(payload);
+    return isogen.runIsoRender(asString(input.projectId), {
+      region: input.region as any,
+      scale: typeof input.scale === "number" ? input.scale : undefined,
+      layerIds: Array.isArray(input.layerIds) ? input.layerIds.map((entry: unknown) => String(entry)) : undefined,
+      frame: typeof input.frame === "number" ? input.frame : undefined,
+      background: input.background as any,
+      overlay: input.overlay as any,
+      maxPixels: typeof input.maxPixels === "number" ? input.maxPixels : undefined,
+      name: typeof input.name === "string" ? input.name : undefined
     });
   }
   async runIsoGenerate(payload: any) {
@@ -1176,7 +1215,9 @@ export class GameStudioGateway extends TypertRemoteService {
   }
   async importMapTileset(payload: any) {
     const input = asRecord(payload);
-    const result = await mapgen.importMapTileset(asString(input.projectId), asString(input.name), asString(input.data), {
+    const data = asString(input.path) !== "" ? await readImageBase64FromPath(asString(input.path)) : asString(input.data);
+    if (data === "") throw new Error("importMapTileset 需要 data（base64）或 path（本机绝对路径）。");
+    const result = await mapgen.importMapTileset(asString(input.projectId), asString(input.name), data, {
       cell: input.cell,
       shape: input.shape,
       animRows: input.animRows,
@@ -1280,7 +1321,9 @@ export class GameStudioGateway extends TypertRemoteService {
     const input = asRecord(payload);
     return mapgen.applyMapOps(asString(input.projectId), Array.isArray(input.ops) ? (input.ops as unknown[]) : [], {
       stroke: typeof input.stroke === "string" && input.stroke !== "" ? input.stroke : undefined,
-      have: mapHave(input.have)
+      have: mapHave(input.have),
+      dryRun: input.dryRun === true,
+      ifRevision: typeof input.ifRevision === "string" ? input.ifRevision : undefined
     });
   }
   async mapUndo(payload: any) {
@@ -1300,6 +1343,30 @@ export class GameStudioGateway extends TypertRemoteService {
       layerIds: Array.isArray(input.layerIds) ? input.layerIds.map((entry: unknown) => Number(entry)) : undefined,
       pending: Array.isArray(input.pending) ? input.pending : undefined,
       pass: input.pass === true
+    });
+  }
+  async mapInspect(payload: any) {
+    const input = asRecord(payload);
+    return mapgen.mapInspect(asString(input.projectId), {
+      region: input.region as any,
+      layerIds: Array.isArray(input.layerIds) ? input.layerIds.map((entry: unknown) => String(entry)) : undefined,
+      include: Array.isArray(input.include) ? input.include.map((entry: unknown) => String(entry)) : undefined,
+      format: input.format === "text" || input.format === "json" || input.format === "both" ? input.format : undefined,
+      maxCells: typeof input.maxCells === "number" ? input.maxCells : undefined,
+      maxItems: typeof input.maxItems === "number" ? input.maxItems : undefined
+    });
+  }
+  async mapRender(payload: any) {
+    const input = asRecord(payload);
+    return mapgen.runMapRender(asString(input.projectId), {
+      region: input.region as any,
+      scale: typeof input.scale === "number" ? input.scale : undefined,
+      layerIds: Array.isArray(input.layerIds) ? input.layerIds.map((entry: unknown) => String(entry)) : undefined,
+      frame: typeof input.frame === "number" ? input.frame : undefined,
+      background: input.background as any,
+      overlay: input.overlay as any,
+      maxPixels: typeof input.maxPixels === "number" ? input.maxPixels : undefined,
+      name: typeof input.name === "string" ? input.name : undefined
     });
   }
   /** 一键生成：整层一次提交（一次撤销就能回去），同种子逐字节可复现。 */

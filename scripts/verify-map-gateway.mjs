@@ -83,7 +83,7 @@ const actionOf = (name) => (name === "game_material" ? "" : name.replace(/^game_
 const inputFor = (name, args) => (actionOf(name) === "" ? args : { action: actionOf(name), ...args });
 const run = async (name, args) => tool(name).execute(inputFor(name, args), { signal: undefined });
 
-/** 契约 §8 的 21 个方法（顺序即清单顺序）。 */
+/** 契约 §8 的 24 个方法（顺序即清单顺序）。 */
 
 const CONTRACT_METHODS = [
   "listMapProjects",
@@ -94,6 +94,7 @@ const CONTRACT_METHODS = [
   "importMapTileset",
   "importSampleTileset",
   "composeMapAsset",
+  "recomposeMapTileset",
   "saveMapTileset",
   "removeMapTileset",
   "saveMapDoc",
@@ -101,6 +102,8 @@ const CONTRACT_METHODS = [
   "mapUndo",
   "mapRedo",
   "mapPlan",
+  "mapInspect",
+  "mapRender",
   "runMapGenerate",
   "runMapPreview",
   "runMapExport",
@@ -188,12 +191,12 @@ try {
   // ══ 1. wire 方法表与契约 §8 逐条对齐 ═════════════════════════════════════
   section("1) wire 方法表与契约 §8 逐条对齐");
   const declared = wire.METHODS.map((entry) => entry.method).filter((method) => CONTRACT_METHODS.includes(method) || REMOVED_METHODS.includes(method));
-  check("wire 声明的地图方法恰好是契约里的 21 个（不多不少）", declared.length === 21 && CONTRACT_METHODS.every((method) => declared.includes(method)), declared.join(","));
-  check("契约 §8 的 21 个方法一个不少", CONTRACT_METHODS.every((method) => specOf(method) !== undefined), CONTRACT_METHODS.filter((method) => specOf(method) === undefined).join(","));
-  check("网关上真的实现了这 21 个方法", CONTRACT_METHODS.every((method) => typeof studio[method] === "function"), CONTRACT_METHODS.filter((method) => typeof studio[method] !== "function").join(","));
+  check("wire 声明的地图方法恰好是契约里的 24 个（不多不少）", declared.length === 24 && CONTRACT_METHODS.every((method) => declared.includes(method)), declared.join(","));
+  check("契约 §8 的 24 个方法一个不少", CONTRACT_METHODS.every((method) => specOf(method) !== undefined), CONTRACT_METHODS.filter((method) => specOf(method) === undefined).join(","));
+  check("网关上真的实现了这 24 个方法", CONTRACT_METHODS.every((method) => typeof studio[method] === "function"), CONTRACT_METHODS.filter((method) => typeof studio[method] !== "function").join(","));
   const invocations = captured.manifest?.invocations ?? [];
   const invocationIds = new Set(invocations.map((entry) => entry.method));
-  check("typert manifest 里也有这 21 个方法", CONTRACT_METHODS.every((method) => invocationIds.has(method)));
+  check("typert manifest 里也有这 24 个方法", CONTRACT_METHODS.every((method) => invocationIds.has(method)));
   check(
     "每个地图方法都有 result codec（且能 create 出 schema）",
     invocations.filter((entry) => CONTRACT_METHODS.includes(entry.method)).every((entry) => typeof entry.result?.create === "function")
@@ -224,6 +227,38 @@ try {
     (() => {
       const parsed = parseOf("mapPlan", { projectId: "m1", view: { x: 1, y: 2, width: 3, height: 4 }, have: ["0,0"], layerIds: [1] });
       return parsed.view.x === 1 && parsed.view.y === 2 && parsed.view.width === 3 && parsed.view.height === 4 && parsed.have[0] === "0,0" && parsed.layerIds[0] === 1;
+    })()
+  );
+  check(
+    "mapInspect：region / include / format / 预算都进 schema",
+    (() => {
+      const parsed = parseOf("mapInspect", {
+        projectId: "m1",
+        region: { r0: 0, c0: 0, r1: 8, c1: 8 },
+        layerIds: ["l0"],
+        include: ["layers", "markers"],
+        format: "text",
+        maxCells: 1024,
+        maxItems: 50
+      });
+      return parsed.region.r1 === 8 && parsed.include[0] === "layers" && parsed.format === "text" && parsed.maxCells === 1024 && parsed.maxItems === 50;
+    })()
+  );
+  check(
+    "mapRender：overlay 的 markers / grid / outlines 原样穿过 schema",
+    (() => {
+      const parsed = parseOf("mapRender", {
+        projectId: "m1",
+        region: { r0: 0, c0: 0, r1: 8, c1: 8 },
+        scale: 2,
+        layerIds: ["l0"],
+        frame: 0,
+        background: "checker",
+        overlay: { markers: true, markerLabels: true, grid: true, axes: true, pass: true, outlines: [{ r: 1, c: 1, color: "#ff0000", label: "1" }] },
+        maxPixels: 16000000,
+        name: "check"
+      });
+      return parsed.overlay.markers === true && parsed.overlay.grid === true && parsed.overlay.outlines[0].label === "1" && parsed.scale === 2;
     })()
   );
   check(
@@ -327,6 +362,10 @@ try {
   check("视图里素材带可访问的相对 file 路径", withTileset.tilesets[0].file.startsWith("tilesets/") && withTileset.tilesets[0].file.endsWith(".png"), withTileset.tilesets[0].file);
   check("视图里素材带识别说明与调色板（普通素材每格一个笔刷）", withTileset.tilesets[0].reason.includes("正方形网格") && withTileset.tilesets[0].palette.length === 16, withTileset.tilesets[0].reason);
   check("视图里 legend 覆盖全部块", withTileset.legend.length === 16 && withTileset.legend[0].index === 1);
+  const pathSheetFile = join(HOME, "path-sheet.png");
+  await writeFile(pathSheetFile, sheetPng(128, 128, 32));
+  const pathImported = await gw("importMapTileset", { projectId, name: "路径图", path: pathSheetFile });
+  check("importMapTileset.path：宿主自己读盘，不贴 base64", pathImported.tilesets.length === 1 && pathImported.tilesets[0].cell.width === 32 && pathImported.tilesets[0].tileCount === 16, JSON.stringify(pathImported.tilesets[0]));
   const sampled = await gw("importSampleTileset", { projectId });
   check("importSampleTileset 一次装 5 张（4 张 A2 + 1 张道具）", sampled.tilesets.length === 5 && sampled.tilesets.filter((t) => t.shape === "a2quad").length === 4, sampled.tilesets.map((t) => t.name).join("、"));
   check("再装一次不重复（跳过并说明）", (await gw("importSampleTileset", { projectId })).tilesets.length === 0);
@@ -524,6 +563,15 @@ try {
   check("反向验证：不传 pass 时不带这个字段（不让客户端多算）", (await gw("mapPlan", { projectId, view: { x: 0, y: 0, width: 32 * 8, height: 32 * 8 }, have: [] })).pass === undefined);
   const erased = await gw("applyMapOps", { projectId, ops: [{ kind: "paint", layerId: stampLayer, cells: [{ r: 2, c: 2, tile: 0 }] }] });
   check("★ 擦一格 → 整张整图没了（stamps 1）", erased.stamps === 1);
+  await gw("applyMapOps", { projectId, ops: [{ kind: "stampPlace", layerId: stampLayer, tilesetId: stampTileset.id, r: 1, c: 1, rot: 0 }] });
+  const stampId = (await mapgen.readTheDoc(projectId)).stamps.at(-1).id;
+  const moved = await gw("applyMapOps", { projectId, ops: [{ kind: "stampMove", id: stampId, r: 5, c: 5 }] });
+  const movedStamp = (await mapgen.readTheDoc(projectId)).stamps.find((stamp) => stamp.id === stampId);
+  check("stampMove 走网关：参考点移动", moved.stamps === 1 && movedStamp.r === 5 && movedStamp.c === 5, JSON.stringify(movedStamp));
+  const rotated = await gw("applyMapOps", { projectId, ops: [{ kind: "stampRotate", id: stampId, rot: 1 }] });
+  const rotatedStamp = (await mapgen.readTheDoc(projectId)).stamps.find((stamp) => stamp.id === stampId);
+  check("stampRotate 走网关：旋转档落盘", rotated.stamps === 1 && rotatedStamp.rot === 1, JSON.stringify(rotatedStamp));
+  await gw("applyMapOps", { projectId, ops: [{ kind: "stampRemove", id: stampId }] });
 
   /** ★ 循环方式：同一个 schema 陷阱（字段不在 schema 里就被静默丢掉）。 */
   const loopImported = await gw("importMapTileset", { projectId, name: "倒放图", data: sheetPng(128, 128, 32).toString("base64"), animRows: true, loop: "reverse" });
@@ -652,6 +700,16 @@ try {
   check("mapPlan 走网关也带 fpsMax（客户端据此推时钟）", gwPlan.fpsMax === 1 && gwPlan.fps === 1, `fps=${gwPlan.fps} fpsMax=${gwPlan.fpsMax}`);
   const gwPlanMark = (gwPlan.markers ?? [])[0];
   check("mapPlan：标记带圆心 / 半径 / 字号 / 数字（界面只 arc + fillText）", gwPlanMark !== undefined && gwPlanMark.x === 6 * 32 + 16 && gwPlanMark.y === 6 * 32 + 16 && gwPlanMark.radius > 0 && gwPlanMark.font > 0 && gwPlanMark.n === 1, JSON.stringify(gwPlanMark ?? null));
+  const gwInspect = await gw("mapInspect", { projectId, region: { r0: 0, c0: 0, r1: 8, c1: 8 }, include: ["layers", "markers", "stats", "legend"], format: "both", maxCells: 4096, maxItems: 50 });
+  check("mapInspect 走网关：逐格文本 / 标记 / 统计都有", Array.isArray(gwInspect.layers) && typeof gwInspect.layers[0].rows?.[0] === "string" && gwInspect.markers.some((marker) => marker.name === "网关标记") && gwInspect.stats.filled > 0, JSON.stringify({ rows: gwInspect.layers[0].rows?.[0], markers: gwInspect.markers.length }));
+  check("mapInspect 的 revision 与视图一致", gwInspect.revision === (await gw("getMapProject", { projectId })).revision, gwInspect.revision);
+  const gwRender = await gw("mapRender", { projectId, region: { r0: 0, c0: 0, r1: 8, c1: 8 }, scale: 2, overlay: { markers: true, grid: true, outlines: [{ r: 3, c: 3, color: "#ff0000", label: "3" }] }, name: "gateway-check" });
+  check("mapRender 走网关：返回本机 PNG / 尺寸 / 标记数", gwRender.localPath.includes("preview/agent") && gwRender.width === 8 * 32 * 2 && gwRender.markersDrawn >= 1 && typeof gwRender.revision === "string", JSON.stringify({ file: gwRender.file, width: gwRender.width, markers: gwRender.markersDrawn }));
+  const gwDry = await gw("applyMapOps", { projectId, dryRun: true, ifRevision: gwInspect.revision, ops: [{ kind: "paint", layerId: layer0, cells: [{ r: 0, c: 0, tile: base }] }] });
+  check("applyMapOps.dryRun 走网关：标 dryRun 且不写 revision", gwDry.dryRun === true && gwDry.revision === gwInspect.revision, JSON.stringify({ dryRun: gwDry.dryRun, revision: gwDry.revision }));
+  const gwMarkMeta = await gw("applyMapOps", { projectId, ops: [{ kind: "marker", op: "update", id: gwView.markers[0].id, patch: { kind: "chest", color: "#ffcc00", note: "网关备注", tags: ["a"] } }] });
+  const gwMetaView = await gw("getMapProject", { projectId });
+  check("marker update 走网关：kind / color / note / tags 落进视图", gwMarkMeta.changed === 0 && gwMetaView.markers[0].kind === "chest" && gwMetaView.markers[0].color === "#ffcc00" && gwMetaView.markers[0].note === "网关备注" && gwMetaView.markers[0].tags?.[0] === "a", JSON.stringify(gwMetaView.markers[0]));
   const dropped = await gw("applyMapOps", { projectId, ops: [{ kind: "paint", layerId: layer0, cells: [{ r: 3, c: 3, tile: base }] }], have: ["0,0", "9,9"] });
   check("applyMapOps.have 生效（真的算出该丢哪个 chunk）", dropped.dropKeys.includes("0,0") && !dropped.dropKeys.includes("9,9"), JSON.stringify({ dirty: dropped.dirtyChunks, drop: dropped.dropKeys }));
   const depth0 = mapgen.historyState(projectId).depth;

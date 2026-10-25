@@ -342,7 +342,7 @@ not pay for them in context.
 
 | action | What it does |
 |---|---|
-| `guide` | Read the manual: `overview` / `workflow` / `config` / `methods` / `ai-asset` / eight module topics |
+| `guide` | Read the manual: `overview` / `workflow` / `config` / `methods` / `ai-asset` / `map-agent` / eight module topics |
 | `intake` | **Step 0 of the fixed workflow**: nail down the key parameters and review mode before doing anything |
 | `call` | Universal channel: every remote method of the plugin is individually callable (`{method, payload}`) |
 | `upload` | Upload assets by local file path (character sheet / reference image / first and last frames / parts…) |
@@ -361,12 +361,23 @@ game_material({ action: "call", method: "runTurnVideo", payload: { projectId } }
 game_material({ action: "wait", module: "sprite", id: projectId })
 ```
 
+The map editors also expose an Agent loop — inspect state, draw, render a check image, then read it:
+
+```js
+game_material({ action: "call", method: "mapInspect", payload: { projectId, region: { r0: 0, c0: 0, r1: 16, c1: 16 } } })
+game_material({ action: "call", method: "mapRender", payload: { projectId, region: { r0: 0, c0: 0, r1: 16, c1: 16 }, overlay: { markers: true, grid: true } } })
+// pass the returned localPath to read_image; use isoInspect / isoRender for the 45° editor
+```
+
 The old per-tool registrations (`game_material_call` / `game_material_status` / …) have been merged into this single
 tool; see [docs/ENGINEERING.md](docs/ENGINEERING.md#对话调用agent-也能驱动整条流水线) for the migration mapping.
 
 Review links are **deep links**: an `openUrl` posted by the agent in its reply takes you straight to the
 matching plugin page when clicked, landing on the right module / project / stage without any navigating
 on your part.
+
+Every project / task header also has a **Copy ID** button (side-list rows show `⧉`); one click copies
+the `projectId` / `jobId` to the clipboard so you can paste it to the agent.
 
 ---
 

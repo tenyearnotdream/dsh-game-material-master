@@ -7,7 +7,7 @@
  */
 
 import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { appendJobLog, messageOf, readJson, sweepTempFiles, writeJsonAtomic, type JobLogEntry } from "./jsonio.js";
 import { dataRoot } from "./config.js";
@@ -47,6 +47,7 @@ import {
   normalizeIsoCell,
   parseChunkKey,
   viewCellRange,
+  wrapCell,
   type IsoBounds,
   type IsoCell,
   type IsoCellRange,
@@ -57,6 +58,7 @@ import {
   addLayer as docAddLayer,
   applyIsoOps as applyOpsToDoc,
   clearLayer as docClearLayer,
+  cellIndex,
   cloneIsoDoc,
   createIsoDoc,
   filledCount,
@@ -92,11 +94,11 @@ import {
   type IsoTilesetBrief,
   type IsoTilesetKind
 } from "./isotiles.js";
-import { buildIsoPlan, isoBitmapToPng, isoRenderContext, passCellsOf, planBounds, rasterizeIso, type IsoPlanChunk, type IsoPlanLegendEntry, type IsoPlanMarker, type IsoRenderPlan } from "./isorender.js";
+import { buildIsoPlan, isoBitmapToPng, isoRenderContext, passCellsOf, planBounds, rasterizeIso, renderIsoView, type IsoPlanChunk, type IsoPlanLegendEntry, type IsoPlanMarker, type IsoRenderPlan } from "./isorender.js";
 import { exportIsoMap, type IsoExportManifest } from "./isoexport.js";
 import { renderIsoSamples } from "./isosamplegen.js";
 import { composeIsoFrames, type IsoAiAssetKind } from "./isocompose.js";
-import { assetBasePath } from "./links.js";
+import { assetBasePath, originForLinks } from "./links.js";
 
 export type IsoStage = "assets" | "paint" | "export";
 export const ISO_STAGES: readonly IsoStage[] = ["assets", "paint", "export"];
@@ -811,6 +813,10 @@ export interface ComposeIsoAssetInput {
 
 export interface ComposeIsoAssetResult {
   file: string;
+  /** 本机绝对路径（Agent 用 read_image 看整理结果）。 */
+  localPath: string;
+  /** 检查图路径（目前就是整理后的素材图本身）。 */
+  previewPath: string;
   name: string;
   kind: IsoAiAssetKind;
   cell: IsoCell;
@@ -870,8 +876,11 @@ export async function composeIsoAsset(input: ComposeIsoAssetInput): Promise<Comp
       }，落在 ${file}，等你在「新增素材」里确认）`
     );
   });
+  const localPath = isoAssetPath(project.id, file);
   return {
     file,
+    localPath,
+    previewPath: localPath,
     name,
     kind: input.kind,
     cell: project.cell,
@@ -1070,12 +1079,14 @@ export interface IsoProjectView {
   wrap: boolean;
   cols: number;
   rows: number;
+  /** 文档 + 素材元数据 + 素材图 mtime 的短哈希。 */
+  revision: string;
   layout: { stepX: number; stepY: number; diamondHeight: number };
   bounds: IsoBounds;
   tilesets: IsoViewTileset[];
   legend: IsoPlanLegendEntry[];
   layers: IsoLayerView[];
-  markers: Array<{ id: string; n: number; r: number; c: number; name: string }>;
+  markers: Array<{ id: string; n: number; r: number; c: number; name: string; kind?: string; color?: string; note?: string; tags?: string[] }>;
   filled: number;
   objects: number;
   objectList: Array<{ id: string; layerId: string; tilesetId: string; r: number; c: number; cols: number; rows: number }>;
@@ -1088,6 +1099,8 @@ export interface IsoProjectView {
   warnings: string[];
   logs: JobLogEntry[];
   preview: string[];
+  /** 预览图的本机绝对路径（与 `preview` 一一对应）。 */
+  previewPaths: string[];
   exportBase: string;
   exportFiles: string[];
   exportPath: string;
@@ -1115,6 +1128,54 @@ export async function tilesetRevisions(projectId: string): Promise<Map<string, n
   );
 }
 
+/**
+ * 文档 + 素材元数据 + 素材图 mtime 的短哈希（与 `mapgen.mapRevision` 同口径）。
+ * 不落盘；同一状态稳定。
+ */
+export async function isoRevision(
+  project: IsoProject,
+  doc: IsoDoc,
+  revisions?: Map<string, number | undefined>
+): Promise<string> {
+  const revs = revisions ?? (await tilesetRevisions(project.id));
+  const payload = JSON.stringify({
+    cell: project.cell,
+    wrap: project.wrap,
+    doc: {
+      cols: doc.cols,
+      rows: doc.rows,
+      layers: doc.layers,
+      data: doc.data,
+      objects: doc.objects,
+      markers: doc.markers
+    },
+    tilesets: project.tilesets.map((tileset) => ({
+      id: tileset.id,
+      name: tileset.name,
+      file: tileset.file,
+      imageWidth: tileset.imageWidth,
+      imageHeight: tileset.imageHeight,
+      cell: tileset.cell,
+      kind: tileset.kind,
+      columns: tileset.columns,
+      frames: tileset.frames,
+      variants: tileset.variants,
+      animRows: tileset.animRows,
+      footprint: tileset.footprint,
+      anchor: tileset.anchor,
+      objectScale: tileset.objectScale,
+      pass: tileset.pass,
+      loop: tileset.loop,
+      clarity: tileset.clarity,
+      fps: tileset.fps,
+      builtin: tileset.builtin === true,
+      tileCount: tileset.tiles.length
+    })),
+    files: project.tilesets.map((tileset) => [tileset.id, revs.get(tileset.id) ?? 0])
+  });
+  return createHash("sha1").update(payload).digest("hex").slice(0, 12);
+}
+
 export async function isoView(project: IsoProject): Promise<IsoProjectView> {
   const doc = await theDocOrFresh(project.id);
   const layout = layoutOf(project.cell, doc.cols, doc.rows, project.wrap);
@@ -1123,6 +1184,7 @@ export async function isoView(project: IsoProject): Promise<IsoProjectView> {
   const state = historyState(project.id);
   const layers = doc.layers.map((layer) => ({ ...layer, filled: filledCount(doc, layer.id) }));
   const listing = await readExportListingRelative(project);
+  const preview = (await readPreviewFiles(project.id)).map((name) => `preview/${name}`);
   return {
     id: project.id,
     name: project.name,
@@ -1131,6 +1193,7 @@ export async function isoView(project: IsoProject): Promise<IsoProjectView> {
     wrap: project.wrap,
     cols: doc.cols,
     rows: doc.rows,
+    revision: await isoRevision(project, doc, revisions),
     layout: { stepX: layout.stepX, stepY: layout.stepY, diamondHeight: layout.diamondHeight },
     bounds: planBounds(isoRenderContext(project, doc, project.tilesets), doc),
     tilesets: project.tilesets.map((tileset) => briefOf(tileset, revisions.get(tileset.id), project.tilesets)),
@@ -1139,7 +1202,17 @@ export async function isoView(project: IsoProject): Promise<IsoProjectView> {
       return { index: flat.index, tilesetId: flat.tilesetId, rect: flat.tile.rect, kind: (tileset?.kind ?? "ground") as IsoPlanLegendEntry["kind"] };
     }),
     layers,
-    markers: doc.markers.map((marker, index) => ({ id: marker.id, n: index + 1, r: marker.r, c: marker.c, name: marker.name })),
+    markers: doc.markers.map((marker, index) => ({
+      id: marker.id,
+      n: index + 1,
+      r: marker.r,
+      c: marker.c,
+      name: marker.name,
+      ...(marker.kind === undefined ? {} : { kind: marker.kind }),
+      ...(marker.color === undefined ? {} : { color: marker.color }),
+      ...(marker.note === undefined ? {} : { note: marker.note }),
+      ...(marker.tags === undefined ? {} : { tags: marker.tags })
+    })),
     filled: filledCount(doc),
     objects: objectCount(doc),
     objectList: doc.objects.map((object) => {
@@ -1154,10 +1227,283 @@ export async function isoView(project: IsoProject): Promise<IsoProjectView> {
     maxChunks: MAX_ISO_PLAN_CHUNKS,
     warnings: warningsFor(project, doc),
     logs: project.logs.slice(-40),
-    preview: (await readPreviewFiles(project.id)).map((name) => `preview/${name}`),
+    preview,
+    previewPaths: preview.map((relative) => join(isoProjectDir(project.id), relative)),
     exportBase: listing?.base ?? "",
     exportFiles: listing?.files ?? [],
     exportPath: listing === undefined ? "" : join(isoProjectDir(project.id), "export", isoExportDirName(doc, project))
+  };
+}
+
+
+// ── Agent 语义读模型 ────────────────────────────────────────────────────
+
+/** 格子范围，右下开区间（`r1` / `c1` 不含）。 */
+export interface IsoInspectRegion {
+  r0: number;
+  c0: number;
+  r1: number;
+  c1: number;
+}
+
+export interface IsoInspectOptions {
+  region?: IsoInspectRegion;
+  layerIds?: string[];
+  include?: string[];
+  format?: "text" | "json" | "both";
+  maxCells?: number;
+  maxItems?: number;
+}
+
+export interface IsoInspectResult {
+  module: "iso";
+  projectId: string;
+  revision: string;
+  cols: number;
+  rows: number;
+  cell: IsoCell;
+  wrap: boolean;
+  range: IsoInspectRegion;
+  truncated: boolean;
+  nextRange: IsoInspectRegion | null;
+  truncatedItems: string[];
+  legend: Array<Record<string, unknown>>;
+  layers: Array<Record<string, unknown>>;
+  markers?: Array<Record<string, unknown>>;
+  objects?: Array<Record<string, unknown>>;
+  pass?: Array<{ r: number; c: number; kind: number }>;
+  stats: Record<string, unknown>;
+  warnings: string[];
+  busy: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  text?: string;
+}
+
+const ISO_INSPECT_SYMBOLS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+function isoInspectInt(value: unknown, fallback: number, min: number, max: number): number {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function isoInspectRegion(value: unknown, doc: IsoDoc): IsoInspectRegion {
+  const raw = (value ?? {}) as Record<string, unknown>;
+  const r0 = isoInspectInt(raw.r0, 0, -MAX_ISO_DIM, MAX_ISO_DIM);
+  const c0 = isoInspectInt(raw.c0, 0, -MAX_ISO_DIM, MAX_ISO_DIM);
+  const r1 = isoInspectInt(raw.r1, doc.rows, -MAX_ISO_DIM, MAX_ISO_DIM);
+  const c1 = isoInspectInt(raw.c1, doc.cols, -MAX_ISO_DIM, MAX_ISO_DIM);
+  if (r1 <= r0 || c1 <= c0) throw new Error("region 必须是正矩形（r1 > r0、c1 > c0）。");
+  return { r0, c0, r1, c1 };
+}
+
+function isoInspectNextRange(region: IsoInspectRegion, limit: number): IsoInspectRegion {
+  const width = Math.max(1, Math.min(region.c1 - region.c0, limit));
+  const height = Math.max(1, Math.min(region.r1 - region.r0, Math.ceil(limit / width)));
+  return { r0: region.r0, c0: region.c0, r1: region.r0 + height, c1: region.c0 + width };
+}
+
+function isoObjectInRegion(object: IsoObject, footprint: IsoFootprint, region: IsoInspectRegion): boolean {
+  for (let dr = 0; dr < footprint.rows; dr++) {
+    for (let dc = 0; dc < footprint.cols; dc++) {
+      const r = object.r + dr;
+      const c = object.c + dc;
+      if (r >= region.r0 && r < region.r1 && c >= region.c0 && c < region.c1) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 读一块 45° 地图的语义状态：地面网格、物件、标记、通行性、统计。
+ * 与 `isoPlan` 分开：这里没有像素坐标 / chunk / visibleKeys。
+ */
+export async function isoInspect(projectId: string, options: IsoInspectOptions = {}): Promise<IsoInspectResult> {
+  const project = await readProjectOrThrow(projectId);
+  const doc = await theDocOrFresh(projectId);
+  const layout = layoutOf(project.cell, doc.cols, doc.rows, project.wrap);
+  const region = isoInspectRegion(options.region, doc);
+  const maxCells = isoInspectInt(options.maxCells, 4096, 1, 65_536);
+  const maxItems = isoInspectInt(options.maxItems, 200, 1, 2_000);
+  const format = options.format === "text" || options.format === "json" ? options.format : "both";
+  const include = new Set(options.include ?? ["layers", "markers", "objects", "pass", "stats", "legend"]);
+  const layerFilter = options.layerIds === undefined ? undefined : new Set(options.layerIds.map(String));
+  const cells = (region.r1 - region.r0) * (region.c1 - region.c0);
+  const truncated = cells > maxCells;
+  const nextRange = truncated ? isoInspectNextRange(region, maxCells) : null;
+  const flat = flatTiles(project.tilesets as any);
+  const byIndex = new Map(flat.map((entry) => [entry.index, entry]));
+  const used = new Map<number, number>();
+  const symbolOf = new Map<number, string>();
+  const symbolFor = (index: number): string => {
+    const existing = symbolOf.get(index);
+    if (existing !== undefined) return existing;
+    const symbol = symbolOf.size < ISO_INSPECT_SYMBOLS.length ? ISO_INSPECT_SYMBOLS[symbolOf.size] : "?";
+    symbolOf.set(index, symbol);
+    return symbol;
+  };
+
+  const layers: Array<Record<string, unknown>> = [];
+  const rowsByLayer = new Map<string, string[]>();
+  const histogram = new Map<number, number>();
+  let filled = 0;
+  const wantRows = !truncated && format !== "json";
+  for (const layer of doc.layers) {
+    if (layerFilter !== undefined && !layerFilter.has(layer.id)) continue;
+    if (layer.kind === "object") {
+      const count = objectCount(doc, layer.id);
+      layers.push({ id: layer.id, name: layer.name, kind: layer.kind, filled: count });
+      rowsByLayer.set(layer.id, []);
+      continue;
+    }
+    const data = doc.data[layer.id] ?? [];
+    const rows: string[] = [];
+    let layerFilled = 0;
+    for (let r = region.r0; r < region.r1; r++) {
+      let row = "";
+      for (let c = region.c0; c < region.c1; c++) {
+        const wrapped = wrapCell(layout, r, c);
+        const outside = wrapped.r < 0 || wrapped.c < 0 || wrapped.r >= doc.rows || wrapped.c >= doc.cols;
+        const value = outside ? 0 : data[cellIndex(doc, wrapped.r, wrapped.c)] ?? 0;
+        if (value > 0) {
+          layerFilled++;
+          filled++;
+          used.set(value, (used.get(value) ?? 0) + 1);
+          histogram.set(value, (histogram.get(value) ?? 0) + 1);
+        }
+        if (!wantRows) continue;
+        if (outside) row += "#";
+        else if (value <= 0) row += "·";
+        else row += symbolFor(value);
+      }
+      if (wantRows) rows.push(row);
+    }
+    rowsByLayer.set(layer.id, rows);
+    layers.push({ id: layer.id, name: layer.name, kind: layer.kind, filled: layerFilled, ...(format === "text" || truncated ? {} : { rows }) });
+  }
+
+  const legend = [...used.keys()]
+    .sort((a, b) => a - b)
+    .slice(0, ISO_INSPECT_SYMBOLS.length)
+    .map((index) => {
+      const entry = byIndex.get(index);
+      const tileset = entry === undefined ? undefined : project.tilesets.find((item) => item.id === entry.tilesetId);
+      return {
+        symbol: symbolFor(index),
+        index,
+        ...(entry === undefined
+          ? {}
+          : {
+              tilesetId: entry.tilesetId,
+              tilesetName: tileset?.name ?? entry.tilesetId,
+              tileId: entry.tile.id,
+              rect: entry.tile.rect,
+              kind: tileset?.kind,
+              mask: entry.tile.mask,
+              variant: entry.tile.variant,
+              frame: entry.tile.frame
+            })
+      };
+    });
+
+  const markersInRegion = doc.markers.filter(
+    (marker) => marker.r >= region.r0 && marker.r < region.r1 && marker.c >= region.c0 && marker.c < region.c1
+  );
+  const markers = markersInRegion.slice(0, maxItems).map((marker) => ({
+    id: marker.id,
+    n: doc.markers.indexOf(marker) + 1,
+    r: marker.r,
+    c: marker.c,
+    name: marker.name,
+    kind: (marker as any).kind ?? "custom",
+    color: (marker as any).color ?? null,
+    note: (marker as any).note ?? "",
+    tags: (marker as any).tags ?? []
+  }));
+
+  const objectsInRegion = doc.objects.filter((object) => {
+    if (layerFilter !== undefined && !layerFilter.has(object.layerId)) return false;
+    const tileset = project.tilesets.find((entry) => entry.id === object.tilesetId);
+    return isoObjectInRegion(object, tileset?.footprint ?? { cols: 1, rows: 1 }, region);
+  });
+  const objects = objectsInRegion.slice(0, maxItems).map((object) => {
+    const tileset = project.tilesets.find((entry) => entry.id === object.tilesetId);
+    const footprint = tileset?.footprint ?? { cols: 1, rows: 1 };
+    return {
+      id: object.id,
+      layerId: object.layerId,
+      tilesetId: object.tilesetId,
+      name: tileset?.name ?? object.tilesetId,
+      r: object.r,
+      c: object.c,
+      cols: footprint.cols,
+      rows: footprint.rows,
+      pass: tileset?.pass ?? []
+    };
+  });
+
+  const pass = passCellsOf(isoRenderContext(project, doc, project.tilesets), doc).filter(
+    (cell) => cell.r >= region.r0 && cell.r < region.r1 && cell.c >= region.c0 && cell.c < region.c1
+  );
+
+  const markersByKind = new Map<string, number>();
+  for (const marker of markersInRegion) {
+    const kind = typeof (marker as any).kind === "string" && (marker as any).kind !== "" ? (marker as any).kind : "custom";
+    markersByKind.set(kind, (markersByKind.get(kind) ?? 0) + 1);
+  }
+  const stats = {
+    cells,
+    filled,
+    objects: objectsInRegion.length,
+    markers: markersInRegion.length,
+    tileHistogram: [...histogram.entries()].sort((a, b) => a[0] - b[0]).map(([index, count]) => ({ index, count })),
+    markersByKind: [...markersByKind.entries()].map(([kind, count]) => ({ kind, count }))
+  };
+
+  const text = format === "json"
+    ? undefined
+    : [
+        `45° 地图 ${doc.cols}×${doc.rows} · 区域 (${region.r0},${region.c0})–(${region.r1 - 1},${region.c1 - 1})`,
+        ...layers.map((layer) =>
+          `${String(layer.name)}\n${
+            layer.kind === "object"
+              ? "（物件层，见 objects）"
+              : (rowsByLayer.get(String(layer.id)) ?? []).join("\n") || "（内容过大，已省略逐格文本）"
+          }`
+        ),
+        `图例：${legend.map((entry) => `${String(entry.symbol)}=${String(entry.tilesetName ?? entry.tilesetId ?? "未知")}/${String(entry.index)}`).join(" ")}`
+      ].join("\n\n");
+
+  return {
+    module: "iso",
+    projectId,
+    revision: await isoRevision(project, doc),
+    cols: doc.cols,
+    rows: doc.rows,
+    cell: project.cell,
+    wrap: project.wrap,
+    range: region,
+    truncated,
+    nextRange,
+    truncatedItems: [
+      ...(markersInRegion.length > markers.length ? ["markers"] : []),
+      ...(objectsInRegion.length > objects.length ? ["objects"] : [])
+    ],
+    legend: include.has("legend") ? legend : [],
+    layers: include.has("layers") ? layers : [],
+    markers: include.has("markers") ? markers : undefined,
+    objects: include.has("objects") ? objects : undefined,
+    pass: include.has("pass") ? pass : undefined,
+    stats,
+    warnings: [
+      ...warningsFor(project, doc),
+      ...(used.size > ISO_INSPECT_SYMBOLS.length ? [`不同图块超过 ${ISO_INSPECT_SYMBOLS.length} 种，文本网格用 ? 代替，精确值请用 format=json。`] : [])
+    ],
+    busy: isoBusy(projectId),
+    canUndo: historyState(projectId).canUndo,
+    canRedo: historyState(projectId).canRedo,
+    ...(text === undefined ? {} : { text })
   };
 }
 
@@ -1259,6 +1605,11 @@ export async function isoPlan(
 
 export interface ApplyIsoOpsOutcome {
   changed: number;
+  /** 写入后的版本哈希。 */
+  revision?: string;
+  dryRun?: boolean;
+  stale?: boolean;
+  summary?: { cells: number; markers: number; stamps: number; objects: number };
   skipped: string[];
   dirtyChunks: string[];
   dropKeys: string[];
@@ -1270,13 +1621,18 @@ export interface ApplyIsoOpsOutcome {
 export async function applyIsoOps(
   projectId: string,
   ops: readonly unknown[],
-  options: { stroke?: string; have?: readonly string[] } = {}
+  options: { stroke?: string; have?: readonly string[]; dryRun?: boolean; ifRevision?: string } = {}
 ): Promise<ApplyIsoOpsOutcome> {
   const project = await readProjectOrThrow(projectId);
   const doc = await theDocOrFresh(projectId);
-  const layout = layoutOf(project.cell, doc.cols, doc.rows, project.wrap);
-  const result = applyDocOps(doc, ops, layout, project);
-  if (result.changed > 0 || result.touched) {
+  const currentRevision = await isoRevision(project, doc);
+  if (options.ifRevision !== undefined && options.ifRevision !== "" && options.ifRevision !== currentRevision) {
+    throw new Error(`版本不一致：当前 ${currentRevision}，请求 ${options.ifRevision}；请重新 isoInspect 后再改。`);
+  }
+  const target = options.dryRun === true ? cloneIsoDoc(doc) : doc;
+  const layout = layoutOf(project.cell, target.cols, target.rows, project.wrap);
+  const result = applyDocOps(target, ops, layout, project);
+  if (options.dryRun !== true && (result.changed > 0 || result.touched)) {
     pushHistory(projectId, { undo: result.undo, redo: result.redo, stroke: options.stroke }, doc);
     scheduleDocWrite(projectId, doc);
   }
@@ -1284,7 +1640,23 @@ export async function applyIsoOps(
   const have = new Set(options.have ?? []);
   const dropKeys = dirty.filter((key) => have.has(key));
   const state = historyState(projectId);
-  return { changed: result.changed, skipped: result.skipped, dirtyChunks: dirty, dropKeys, canUndo: state.canUndo, canRedo: state.canRedo, touched: result.touched };
+  return {
+    changed: result.changed,
+    skipped: result.skipped,
+    dirtyChunks: dirty,
+    dropKeys,
+    canUndo: state.canUndo,
+    canRedo: state.canRedo,
+    touched: result.touched,
+    revision: options.dryRun === true ? currentRevision : await isoRevision(project, doc),
+    ...(options.dryRun === true ? { dryRun: true } : {}),
+    summary: {
+      cells: result.changed,
+      markers: ops.filter((op) => (op as any)?.kind === "marker").length,
+      stamps: 0,
+      objects: ops.filter((op) => (op as any)?.kind === "object").length
+    }
+  };
 }
 
 export async function isoUndo(projectId: string, have: readonly string[] = []): Promise<ApplyIsoOpsOutcome> {
@@ -1292,7 +1664,7 @@ export async function isoUndo(projectId: string, have: readonly string[] = []): 
   const doc = await theDocOrFresh(projectId);
   const state = history.get(projectId);
   if (state === undefined || state.index < 0) {
-    return { changed: 0, skipped: [], dirtyChunks: [], dropKeys: [], canUndo: false, canRedo: false, touched: false };
+    return { changed: 0, skipped: [], dirtyChunks: [], dropKeys: [], canUndo: false, canRedo: false, touched: false, revision: await isoRevision(project, doc) };
   }
   const entry = state.entries[state.index];
   const layout = layoutOf(project.cell, doc.cols, doc.rows, project.wrap);
@@ -1315,7 +1687,8 @@ export async function isoUndo(projectId: string, have: readonly string[] = []): 
     dropKeys: dirtyChunks.filter((key) => haveSet.has(key)),
     canUndo: state.index >= 0,
     canRedo: state.index < state.entries.length - 1,
-    touched: true
+    touched: true,
+    revision: await isoRevision(project, doc)
   };
 }
 
@@ -1324,7 +1697,7 @@ export async function isoRedo(projectId: string, have: readonly string[] = []): 
   const doc = await theDocOrFresh(projectId);
   const state = history.get(projectId);
   if (state === undefined || state.index >= state.entries.length - 1) {
-    return { changed: 0, skipped: [], dirtyChunks: [], dropKeys: [], canUndo: false, canRedo: false, touched: false };
+    return { changed: 0, skipped: [], dirtyChunks: [], dropKeys: [], canUndo: false, canRedo: false, touched: false, revision: await isoRevision(project, doc) };
   }
   const entry = state.entries[state.index + 1];
   const layout = layoutOf(project.cell, doc.cols, doc.rows, project.wrap);
@@ -1347,7 +1720,8 @@ export async function isoRedo(projectId: string, have: readonly string[] = []): 
     dropKeys: dirtyChunks.filter((key) => haveSet.has(key)),
     canUndo: state.index >= 0,
     canRedo: state.index < state.entries.length - 1,
-    touched: true
+    touched: true,
+    revision: await isoRevision(project, doc)
   };
 }
 
@@ -1367,7 +1741,7 @@ export interface IsoDocPatch {
 export async function saveIsoDoc(
   projectId: string,
   patch: IsoDocPatch
-): Promise<{ doc: IsoDoc; dropped: number; droppedMarkers: number; droppedObjects: number; warnings: string[] }> {
+): Promise<{ doc: IsoDoc; dropped: number; droppedMarkers: number; droppedObjects: number; warnings: string[]; revision: string }> {
   const project = await readProjectOrThrow(projectId);
   const doc = await theDocOrFresh(projectId);
   const before = cloneIsoDoc(doc);
@@ -1415,7 +1789,14 @@ export async function saveIsoDoc(
     scheduleDocWrite(projectId, doc);
     await flushIsoDoc(projectId);
   }
-  return { doc: cloneIsoDoc(doc), dropped: 0, droppedMarkers: 0, droppedObjects: 0, warnings };
+  return {
+    doc: cloneIsoDoc(doc),
+    dropped: 0,
+    droppedMarkers: 0,
+    droppedObjects: 0,
+    warnings,
+    revision: await isoRevision(await readProjectOrThrow(projectId), doc)
+  };
 }
 
 export async function saveIsoProject(projectId: string, patch: { name?: string; wrap?: boolean }): Promise<IsoProjectView> {
@@ -1446,7 +1827,7 @@ function mulberry32(seed: number): () => number {
 export async function runIsoGenerate(
   projectId: string,
   options: { kind: "random" | "maze" | "continent"; tiles?: number[]; seed?: number; layerId?: string }
-): Promise<{ changed: number; seed: number; warnings: string[] }> {
+): Promise<{ changed: number; seed: number; warnings: string[]; revision?: string }> {
   const project = await readProjectOrThrow(projectId);
   const doc = await theDocOrFresh(projectId);
   const layout = layoutOf(project.cell, doc.cols, doc.rows, project.wrap);
@@ -1551,7 +1932,7 @@ export async function runIsoGenerate(
     }
   }
   const outcome = await applyIsoOps(projectId, [{ kind: "paint", layerId: layer.id, cells }], { stroke: `generate-${seed}` });
-  return { changed: outcome.changed, seed, warnings: outcome.skipped };
+  return { changed: outcome.changed, seed, warnings: outcome.skipped, revision: outcome.revision };
 }
 
 // ── 预览 / 导出 ─────────────────────────────────────────────────────────
@@ -1607,7 +1988,9 @@ async function decodeTilesetsForProject(project: IsoProject): Promise<Map<string
   return lookup;
 }
 
-export async function runIsoPreview(projectId: string): Promise<{ started: boolean; reason?: string }> {
+export async function runIsoPreview(
+  projectId: string
+): Promise<{ started: boolean; reason?: string; previewPath?: string; revisionAtStart?: string }> {
   const reason = reserve(projectId);
   if (reason !== undefined) return { started: false, reason };
   let project: IsoProject;
@@ -1617,10 +2000,12 @@ export async function runIsoPreview(projectId: string): Promise<{ started: boole
     reserved.delete(projectId);
     throw error;
   }
+  const previewPath = join(isoProjectDir(projectId), "preview", "map.png");
   if (project.tilesets.length === 0) {
     reserved.delete(projectId);
-    return { started: false, reason: "还没有素材。" };
+    return { started: false, reason: "还没有素材。", previewPath };
   }
+  const revisionAtStart = await isoRevision(project, await theDocOrFresh(projectId));
   void background(projectId, "paint", async () => {
     const fresh = await readProjectOrThrow(projectId);
     const doc = await theDocOrFresh(projectId);
@@ -1637,7 +2022,128 @@ export async function runIsoPreview(projectId: string): Promise<{ started: boole
       for (const warning of raster.warnings) appendJobLog(current.logs, "warn", `预览告警：${warning}`);
     });
   });
-  return { started: true };
+  return { started: true, previewPath, revisionAtStart };
+}
+
+// ── Agent 检查图（同步、按区域、可叠加）─────────────────────────────────
+
+export interface IsoRenderRequest {
+  region?: IsoInspectRegion;
+  scale?: number;
+  layerIds?: string[];
+  frame?: number;
+  background?: "transparent" | "checker" | "white" | "dark";
+  overlay?: {
+    markers?: boolean;
+    markerLabels?: boolean;
+    grid?: boolean;
+    axes?: boolean;
+    pass?: boolean;
+    outlines?: Array<{ r: number; c: number; color?: string; label?: string; width?: number; height?: number }>;
+  };
+  maxPixels?: number;
+  name?: string;
+}
+
+export interface IsoRenderOutcome {
+  module: "iso";
+  projectId: string;
+  revision: string;
+  revisionAtStart: string;
+  stale: boolean;
+  file: string;
+  localPath: string;
+  url: string;
+  width: number;
+  height: number;
+  crop: IsoBounds;
+  scale: number;
+  range: IsoInspectRegion;
+  drawn: number;
+  markersDrawn: number;
+  warnings: string[];
+  elapsedMs: number;
+}
+
+async function pruneAgentRenders(projectId: string, keep = 20): Promise<void> {
+  const dir = join(isoProjectDir(projectId), "preview", "agent");
+  let names: string[];
+  try {
+    names = (await readdir(dir)).filter((name) => name.endsWith(".png"));
+  } catch {
+    return;
+  }
+  if (names.length <= keep) return;
+  const entries = await Promise.all(
+    names.map(async (name) => {
+      try {
+        return { name, mtime: (await stat(join(dir, name))).mtimeMs };
+      } catch {
+        return { name, mtime: 0 };
+      }
+    })
+  );
+  entries.sort((a, b) => b.mtime - a.mtime);
+  for (const entry of entries.slice(keep)) await rm(join(dir, entry.name), { force: true }).catch(() => undefined);
+}
+
+/** 同步渲染一块 45° 地图区域；与导出共用 `buildIsoPlan` 和同一个 z 排序。 */
+export async function runIsoRender(projectId: string, options: IsoRenderRequest = {}): Promise<IsoRenderOutcome> {
+  const startedAt = Date.now();
+  const project = await readProjectOrThrow(projectId);
+  const doc = await theDocOrFresh(projectId);
+  const revisionAtStart = await isoRevision(project, doc);
+  const region = isoInspectRegion(options.region, doc);
+  const layerIndexes =
+    options.layerIds === undefined
+      ? undefined
+      : options.layerIds
+          .map((id) => doc.layers.findIndex((layer) => layer.id === id))
+          .filter((index) => index >= 0);
+  const context = isoRenderContext(project, doc, project.tilesets);
+  const lookup = await decodeTilesetsForProject(project);
+  const passCells = options.overlay?.pass === true ? passCellsOf(context, doc) : undefined;
+  const rendered = renderIsoView(context, doc, lookup, {
+    range: { r0: region.r0, c0: region.c0, r1: region.r1, c1: region.c1 },
+    scale: options.scale,
+    layers: layerIndexes,
+    frame: options.frame,
+    background: options.background,
+    overlay: options.overlay,
+    passCells,
+    maxPixels: options.maxPixels
+  });
+  const dir = join(isoProjectDir(projectId), "preview", "agent");
+  await mkdir(dir, { recursive: true });
+  const safe = (options.name ?? "inspect").replace(/[^\w\u4e00-\u9fa5.-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "inspect";
+  const optionsHash = createHash("sha1")
+    .update(JSON.stringify({ region, scale: rendered.scale, layerIndexes, frame: options.frame ?? 0, background: options.background ?? "transparent", overlay: options.overlay ?? {} }))
+    .digest("hex")
+    .slice(0, 8);
+  const file = `preview/agent/${safe}-${revisionAtStart}-${optionsHash}.png`;
+  const localPath = join(isoProjectDir(projectId), file);
+  await writeFile(localPath, isoBitmapToPng(rendered.bitmap));
+  await pruneAgentRenders(projectId);
+  const revision = await isoRevision(project, doc);
+  return {
+    module: "iso",
+    projectId,
+    revision,
+    revisionAtStart,
+    stale: revision !== revisionAtStart,
+    file,
+    localPath,
+    url: `${originForLinks()}${isoAssetBase(projectId)}${file}`,
+    width: rendered.bitmap.width,
+    height: rendered.bitmap.height,
+    crop: rendered.crop,
+    scale: rendered.scale,
+    range: rendered.range,
+    drawn: rendered.drawn,
+    markersDrawn: rendered.markersDrawn,
+    warnings: rendered.warnings,
+    elapsedMs: Date.now() - startedAt
+  };
 }
 
 export function isoExportDirName(doc: IsoDoc | undefined, project: { id: string; name: string }): string {

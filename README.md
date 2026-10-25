@@ -282,7 +282,7 @@ flowchart LR
 
 | action | 作用 |
 |---|---|
-| `guide` | 读手册：`overview` / `workflow` / `config` / `methods` / `ai-asset` / 八个模块主题 |
+| `guide` | 读手册：`overview` / `workflow` / `config` / `methods` / `ai-asset` / `map-agent` / 八个模块主题 |
 | `intake` | **固定流程第 0 步**：先把关键参数与审核模式问清楚，再动手 |
 | `call` | 万能通道：插件全部远程方法逐个可调（`{method, payload}`） |
 | `upload` | 按本机文件路径上传素材（设定图 / 参考图 / 首尾帧 / 部件…） |
@@ -301,11 +301,22 @@ game_material({ action: "call", method: "runTurnVideo", payload: { projectId } }
 game_material({ action: "wait", module: "sprite", id: projectId })
 ```
 
+地图编辑器还支持 Agent 专用的「读状态 → 画 → 看效果图」闭环：
+
+```js
+game_material({ action: "call", method: "mapInspect", payload: { projectId, region: { r0: 0, c0: 0, r1: 16, c1: 16 } } })
+game_material({ action: "call", method: "mapRender", payload: { projectId, region: { r0: 0, c0: 0, r1: 16, c1: 16 }, overlay: { markers: true, grid: true } } })
+// 把返回的 localPath 交给 read_image；iso 用 isoInspect / isoRender
+```
+
 旧版按 `game_material_call` / `game_material_status` / … 逐个注册的工具已经合并到上面这一个工具，
 迁移对照见 [docs/ENGINEERING.md](docs/ENGINEERING.md#对话调用agent-也能驱动整条流水线)。
 
 验收链接是**深链接**：agent 在回复里贴出的 `openUrl` 点一下就切到插件对应页面，原地落到
 对应模块 / 项目 / 阶段上，不需要你自己翻。
+
+每个模块的项目 / 任务标题旁都有「**复制 ID**」按钮（侧栏项目行里还有 `⧉`），点一下就把
+`projectId` / `jobId` 复制到剪贴板，直接粘贴给 agent 即可。
 
 ---
 
