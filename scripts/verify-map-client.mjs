@@ -3497,6 +3497,68 @@ try {
     };
     const stampOpsSince = (from) => apiLog.applies.slice(from).flatMap((entry) => entry.ops ?? []).filter((op) => op.kind === "stampPlace" || op.kind === "paint");
 
+    /**
+     * ★ 换成别的工具后，整图笔刷的「多格」状态必须收成一格。
+     *
+     * 真机反馈：先在印整图，切到标记 / 橡皮之后，悬停框还是 3×2 的一大块，
+     * 看着像这些工具也会一次作用好几格。整图只借给「画笔」；其它工具一律单格。
+     * 另外橡皮工具下右键也应该擦（以前整图笔刷还在时右键是转整图）。
+     */
+    {
+      const redFrameSince = (from) => {
+        const rects = fillRects.slice(from).filter((item) => item.fillStyle === "#e23b2b").slice(-4);
+        if (rects.length < 4) return null;
+        return {
+          left: Math.min(...rects.map((item) => item.x)),
+          right: Math.max(...rects.map((item) => item.x + item.w)),
+          top: Math.min(...rects.map((item) => item.y)),
+          bottom: Math.max(...rects.map((item) => item.y + item.h))
+        };
+      };
+      const hoverFrame = async (r, c) => {
+        const before = fillRects.length;
+        const node = collect(tree, (item) => item.props?.["data-testid"] === "map-canvas")[0];
+        const at = clientOf(r, c);
+        node.props.onPointerMove({ clientX: at.x, clientY: at.y, pointerId: 61 });
+        tree = await renderTree(() => MapModule({ api }));
+        return redFrameSince(before);
+      };
+      const sizeOf = (frame) =>
+        frame === null ? "" : `${Math.round(frame.right - frame.left)}×${Math.round(frame.bottom - frame.top)}`;
+      const penFrame = await hoverFrame(3, 3);
+      check("画笔 + 整图：悬停框按整张算（3×2 = 96×64）", sizeOf(penFrame) === "96×64", sizeOf(penFrame));
+      const toolSwitches = [["eraser", "橡皮"], ["marker", "标记"], ["bucket", "油漆桶"], ["pipette", "吸管"]];
+      for (const [index, [key, label]] of toolSwitches.entries()) {
+        byTool(tree, key)[0].props.onClick();
+        tree = await renderTree(() => MapModule({ api }));
+        /**
+         * 先悬停另一格热身，再量目标格。
+         *
+         * ① 同一格不会触发重画（hover 去重），量到的会是上一帧；
+         * ② 本 harness 里「切工具后的第一次 pointermove」偶尔会晚一拍才提交，
+         *    直接拿它当测量值会读到切换前的 3×2。
+         */
+        await hoverFrame(6, 6);
+        const one = await hoverFrame(3, 3 + index);
+        check(`★ 切到${label}：悬停框回到 1×1（不再保留整图的 3×2）`, sizeOf(one) === "32×32", sizeOf(one));
+      }
+      // 橡皮工具下右键 = 擦一格（不是转整图）
+      byTool(tree, "eraser")[0].props.onClick();
+      tree = await renderTree(() => MapModule({ api }));
+      const eraseFrom = apiLog.applies.length;
+      await tapBrush(2, clientOf(9, 9), 62);
+      const eraserOps = apiLog.applies.slice(eraseFrom).flatMap((entry) => entry.ops ?? []);
+      check(
+        "★ 橡皮工具下右键 = 擦一格（不再因为整图笔刷而去旋转）",
+        eraserOps.some((op) => op.kind === "paint") && !eraserOps.some((op) => op.kind === "stampPlace"),
+        JSON.stringify(eraserOps)
+      );
+      byTool(tree, "pen")[0].props.onClick();
+      tree = await renderTree(() => MapModule({ api }));
+      const backFrame = await hoverFrame(5, 5);
+      check("切回画笔：整图的悬停框恢复 3×2（多格状态只是不借给别的工具）", sizeOf(backFrame) === "96×64", sizeOf(backFrame));
+    }
+
     const applyFrom = apiLog.applies.length;
     await tapBrush(0, clientOf(1, 1), 41);
     let ops = stampOpsSince(applyFrom);
