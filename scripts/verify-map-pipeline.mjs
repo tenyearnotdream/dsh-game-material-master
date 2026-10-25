@@ -1934,6 +1934,60 @@ try {
     const brush = brief.palette[0].index;
     const planOf = async (extra = {}) => G.mapPlan(project.id, { view: { x: 0, y: 0, width: 20 * 16, height: 20 * 16 }, have: [], ...extra });
 
+    /**
+     * ★ 下限是 1（曾经是 2）：1×1 的整图 = 「一格一张图」—— 带通行区域、可旋转的普通图块。
+     * 只把常量改小不够，几何里任何一处「至少 2 格」的假设都会在这里露出来。
+     */
+    {
+      const tiny = { width: cell, height: cell, rgba: Buffer.alloc(cell * cell * 4) };
+      for (let y = 0; y < cell; y++) {
+        for (let x = 0; x < cell; x++) {
+          const offset = (y * cell + x) * 4;
+          tiny.rgba[offset] = 200;
+          tiny.rgba[offset + 1] = 40;
+          tiny.rgba[offset + 2] = 60;
+          tiny.rgba[offset + 3] = 255;
+        }
+      }
+      const tinyFile = join(dir, "tiny.png");
+      await writeFile(tinyFile, encodeBitmap(tiny));
+      /**
+       * 走 AI 那条路（`composeMapAsset` 也共用 `parseStampSpec`）：1×1 在「切成 N×M 格」那一步同样不能翻车。
+       * 合成出来的源图再交给导入端烘 4 个旋转 —— 与用户实际点「AI 生成素材」是同一条链路。
+       */
+      const tinyComposed = await G.composeMapAsset({ projectId: project.id, name: "单格整图", files: [tinyFile], shape: "stamp", stampCols: 1, stampRows: 1 });
+      check(
+        "★ 1×1 整图也能整理（composeMapAsset 不限 2 格）",
+        tinyComposed.stamp.cols === 1 && tinyComposed.stamp.rows === 1 && tinyComposed.width === cell && tinyComposed.height === cell,
+        JSON.stringify({ stamp: tinyComposed.stamp, size: `${tinyComposed.width}×${tinyComposed.height}` })
+      );
+      const tinyBytes = await readFile(G.mapAssetPath(project.id, tinyComposed.file));
+      const tinyImported = await G.importMapTileset(project.id, "单格整图", tinyBytes.toString("base64"), {
+        stamp: { ...tinyComposed.stamp, pass: [2] }
+      });
+      const tinyTileset = tinyImported.tilesets.find((entry) => entry.stamp !== undefined && entry.stamp.cols === 1 && entry.stamp.rows === 1);
+      check("★ 1×1 整图能导入（下限是 1，不是 2；4 个旋转各一块）", tinyTileset !== undefined && Array.isArray(tinyTileset.tiles) && tinyTileset.tiles.length === 4, JSON.stringify(tinyImported.tilesets.map((entry) => entry.stamp)));
+      check(
+        "1×1 整图：成品图 = 1 格宽 × 2(1+1) = 4 格高（4 个旋转，每档仍是一格）",
+        tinyTileset.imageWidth === cell && tinyTileset.imageHeight === 4 * cell,
+        `${tinyTileset.imageWidth}×${tinyTileset.imageHeight}`
+      );
+      for (const rot of [0, 1]) {
+        await G.applyMapOps(project.id, [
+          { kind: "stampPlace", layerId: layer, tilesetId: tinyTileset.id, r: 10, c: 12, rot, id: "tiny1" }
+        ]);
+        const tinyPlan = await planOf({ pass: true });
+        const tinyOps = tinyPlan.chunks.flatMap((chunk) => chunk.ops).filter((op) => op.l === 0);
+        check(
+          `★ 1×1 整图 rot${rot}：只占 1 格（不多画、也不因为 1 格被当成空）`,
+          tinyOps.length === 1 && tinyOps[0].r === 10 && tinyOps[0].c === 12,
+          tinyOps.map((op) => `${op.r},${op.c}`).join(" ")
+        );
+        check(`1×1 整图 rot${rot}：区域/通行性也只要 1 格`, tinyPlan.pass.length === 1 && tinyPlan.pass[0].kind === 2, JSON.stringify(tinyPlan.pass));
+        await G.applyMapOps(project.id, [{ kind: "stampRemove", id: "tiny1" }]);
+      }
+    }
+
     // ── 印一张（rot 0）：占 3×2 格
     await G.applyMapOps(project.id, [{ kind: "stampPlace", layerId: layer, tilesetId: tileset.id, r: 2, c: 3, rot: 0 }]);
     let plan = await planOf();

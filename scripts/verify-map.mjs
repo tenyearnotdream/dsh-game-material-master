@@ -735,10 +735,11 @@ section("11) AI 素材的帧整理（fitFrameToCell / stackFrames / safeAssetSte
     check("parseStampSpec：没给 cols/rows = 不是整图（返回 undefined）", tiles.parseStampSpec(undefined) === undefined && tiles.parseStampSpec({}) === undefined);
     check("parseStampSpec：区域缺省 = 0（不可通过）", tiles.parseStampSpec({ cols: 2, rows: 2 }).pass.every((value) => value === 0));
     /**
-     * 占格的上下限：下限 2；上限是**地图自己**（由 `assertStampFitsProject` 按项目校验），
+     * 占格的上下限：下限 1（1×1 = 一格一张图）；上限是**地图自己**（由 `assertStampFitsProject` 按项目校验），
      * 这里只留一道「别把 9999 传进来」的硬上限（512）。所以 9 格现在是**合法**的。
      */
-    check("反向验证：占格 < 2 抛错", throws(() => tiles.parseStampSpec({ cols: 1, rows: 3 })) && throws(() => tiles.parseStampSpec({ cols: 3, rows: 0 })));
+    check("占格下限是 1（1×1 = 一格一张图，带上通行区域 / 可旋转）", tiles.parseStampSpec({ cols: 1, rows: 1 }).cols === 1 && tiles.parseStampSpec({ cols: 1, rows: 3 }).rows === 3);
+    check("反向验证：占格 < 1 抛错（0 / 负数不是一张图）", throws(() => tiles.parseStampSpec({ cols: 0, rows: 3 })) && throws(() => tiles.parseStampSpec({ cols: 3, rows: -1 })));
     check("占格 9 现在合法（旧限制是 8，地图够大就该允许）", tiles.parseStampSpec({ cols: 9, rows: 3 }).cols === 9);
     check("占格超过硬上限（512）抛错", throws(() => tiles.parseStampSpec({ cols: 513, rows: 3 })));
     check("★ assertStampFitsProject：比地图大就抛错，和地图一样大可以", (() => {

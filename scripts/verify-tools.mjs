@@ -730,12 +730,14 @@ async function main() {
   })(), JSON.stringify(links.parseIntentQuery(assetLink.split("?")[1])));
   check("反向验证：dialog 只认 add（别的值丢掉）", links.parseIntentQuery("dsh-gmm=1&dialog=nope")?.dialog === undefined);
   check(
-    "整图回链：cols / rows 只认 2~512 的整数（0 / 513 / 小数丢掉）",
+    "整图回链：cols / rows 只认 1~512 的整数（1×1 合法；0 / 513 / 小数丢掉）",
     links.parseIntentQuery("dsh-gmm=1&cols=4&rows=3")?.cols === 4 &&
       links.parseIntentQuery("dsh-gmm=1&cols=4&rows=3")?.rows === 3 &&
       // 上限是 512（真正的上限是地图大小，由宿主按项目校验）
       links.parseIntentQuery("dsh-gmm=1&cols=64&rows=48")?.cols === 64 &&
-      links.parseIntentQuery("dsh-gmm=1&cols=1")?.cols === undefined &&
+      links.parseIntentQuery("dsh-gmm=1&cols=1")?.cols === 1 &&
+      links.parseIntentQuery("dsh-gmm=1&rows=1")?.rows === 1 &&
+      links.parseIntentQuery("dsh-gmm=1&cols=0")?.cols === undefined &&
       links.parseIntentQuery("dsh-gmm=1&rows=513")?.rows === undefined &&
       links.parseIntentQuery("dsh-gmm=1&cols=3.5")?.cols === undefined
   );

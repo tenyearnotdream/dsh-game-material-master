@@ -1216,7 +1216,7 @@ export async function composeMapAsset(input: ComposeMapAssetInput): Promise<Comp
       ? parseStampSpec({ cols: input.stampCols, rows: input.stampRows, frames: files.length })
       : undefined;
   if (shape === "stamp" && stampSpec === undefined) {
-    throw new Error(`整图要给「占几格」：stampCols / stampRows（2~${STAMP_MAX_CELLS}）。`);
+    throw new Error(`整图要给「占几格」：stampCols / stampRows（${STAMP_MIN_CELLS}~${STAMP_MAX_CELLS}）。`);
   }
   /** 一张整图最多和整张地图一样大（再大地图上也画不全）。 */
   if (stampSpec !== undefined) {

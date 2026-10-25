@@ -2306,7 +2306,7 @@
      * 硬编码 8 是老限制，用户要做「一张图铺满整张地图」的城门就完全不够；
      * 真正该拦的是「比地图还大」——那个在宿主那边按项目尺寸校验，这里只是把输入框夹住。
      */
-    const STAMP_MIN_CELLS = 2;
+    const STAMP_MIN_CELLS = 1;
     /** 没有项目时（新建地图前）先按 64 格给个足够的余量。 */
     const STAMP_FALLBACK_MAX = 64;
     function stampLimits(mapCols, mapRows) {
@@ -3366,13 +3366,13 @@
       const scale = Number(params.get("scale"));
       if (params.get("scale") !== null && Number.isInteger(scale) && scale >= 1 && scale <= 8) intent.scale = scale;
       /**
-       * `cols` / `rows` = 整图占几格（宿主 `links.ts` 的 2..8）。
+       * `cols` / `rows` = 整图占几格（宿主 `links.ts` 的 1..512）。
        * 少了它们，「新增素材」会按默认 3×3 预填 —— 图与占格对不上就会被拉伸。
        */
       const cols = Number(params.get("cols"));
-      if (params.get("cols") !== null && Number.isInteger(cols) && cols >= 2 && cols <= 512) intent.cols = cols;
+      if (params.get("cols") !== null && Number.isInteger(cols) && cols >= 1 && cols <= 512) intent.cols = cols;
       const rows = Number(params.get("rows"));
-      if (params.get("rows") !== null && Number.isInteger(rows) && rows >= 2 && rows <= 512) intent.rows = rows;
+      if (params.get("rows") !== null && Number.isInteger(rows) && rows >= 1 && rows <= 512) intent.rows = rows;
       /** `keyed=1`：整理时**已经抠过绿幕**，「新增素材」据此取消「抠掉绿幕」勾选（免得抠两遍）。 */
       if (params.get("keyed") === "1") intent.keyed = 1;
       return intent;
@@ -8487,8 +8487,8 @@
            * 整图：回链带了 `cols/rows/frames` 就按它预填（占格是**生图前就定好**的计划，
            * 用户点「确定」前还能改；区域永远留给用户点，AI 猜不准）。
            */
-          stampCols: String(typeof target.cols === "number" && Number.isFinite(target.cols) ? Math.max(2, Math.min(512, Math.round(target.cols))) : 3),
-          stampRows: String(typeof target.rows === "number" && Number.isFinite(target.rows) ? Math.max(2, Math.min(512, Math.round(target.rows))) : 3),
+          stampCols: String(typeof target.cols === "number" && Number.isFinite(target.cols) ? Math.max(1, Math.min(512, Math.round(target.cols))) : 3),
+          stampRows: String(typeof target.rows === "number" && Number.isFinite(target.rows) ? Math.max(1, Math.min(512, Math.round(target.rows))) : 3),
           stampFrames: String(shape === "stamp" && frames > 1 ? frames : 1),
           stampPass: new Array(9).fill(0),
           /**
@@ -9963,7 +9963,7 @@
                         h(NumField, {
                           label: T("宽"),
                           value: Number(addDraft.stampCols) || 3,
-                          min: 2,
+                          min: 1,
                           max: mapLimits.maxCols,
                           onChange: (value) => setAddDraft((current) => resizeStampPass(current, value, undefined))
                         }),
@@ -9971,7 +9971,7 @@
                         h(NumField, {
                           label: T("高"),
                           value: Number(addDraft.stampRows) || 3,
-                          min: 2,
+                          min: 1,
                           max: mapLimits.maxRows,
                           onChange: (value) => setAddDraft((current) => resizeStampPass(current, undefined, value))
                         })
@@ -10218,8 +10218,8 @@
         }
         // 帧数为 1 只用生图模型（视频模型那条路本来也要求帧数大于 1）；整格没有帧这一维。
         const shape = ASSET_SHAPES.includes(draft.shape) ? draft.shape : "auto";
-        const stampCols = Math.max(2, Math.min(512, Math.round(Number(draft.stampCols) || 3)));
-        const stampRows = Math.max(2, Math.min(512, Math.round(Number(draft.stampRows) || 3)));
+        const stampCols = Math.max(1, Math.min(512, Math.round(Number(draft.stampCols) || 3)));
+        const stampRows = Math.max(1, Math.min(512, Math.round(Number(draft.stampRows) || 3)));
         const frames = shape === "corner16" ? ASSET_FRAMES_MIN : Math.min(ASSET_FRAMES_MAX, Math.max(ASSET_FRAMES_MIN, Math.round(Number(draft.frames) || 1)));
         const mode = frames <= 1 ? "image" : draft.mode === "video" ? "video" : "image";
         // 派活要用到的模块被「功能管理」隐藏了就直说：对话里的工具面同样会拒绝，白跑一趟。
@@ -10366,17 +10366,17 @@
                         h(NumField, {
                           label: T("宽"),
                           value: Number(aiDraft.stampCols) || 3,
-                          min: 2,
+                          min: 1,
                           max: 512,
-                          onChange: (value) => setAiDraft((current) => (current === null ? current : { ...current, stampCols: String(Math.max(2, Math.min(512, Math.round(value) || 3))) }))
+                          onChange: (value) => setAiDraft((current) => (current === null ? current : { ...current, stampCols: String(Math.max(1, Math.min(512, Math.round(value) || 3))) }))
                         }),
                         h("span", { className: "SPR_mapEdTimes" }, "×"),
                         h(NumField, {
                           label: T("高"),
                           value: Number(aiDraft.stampRows) || 3,
-                          min: 2,
+                          min: 1,
                           max: 512,
-                          onChange: (value) => setAiDraft((current) => (current === null ? current : { ...current, stampRows: String(Math.max(2, Math.min(512, Math.round(value) || 3))) }))
+                          onChange: (value) => setAiDraft((current) => (current === null ? current : { ...current, stampRows: String(Math.max(1, Math.min(512, Math.round(value) || 3))) }))
                         })
                       )
                     )

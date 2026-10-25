@@ -3110,6 +3110,16 @@ try {
       stampPrompt.includes("不用") && stampPrompt.includes("抠图") && stampPrompt.includes("自己去抠像")
     );
     check("整图提示词：带上「占几格」（4×3 = 12 格）", stampPrompt.includes("4×3") && stampPrompt.includes("12 格"), String(stampPrompt.split("\n").find((line) => line.includes("切成")) ?? ""));
+    /**
+     * 占格下限是 1（曾经是 2）：界面的夹取函数不许再把 1 顶回 2 ——
+     * 喂 1×1 进提示词，拼出来的必须还是 1×1。
+     */
+    const tinyStampPrompt = promptOf({ shape: "stamp", stampCols: 1, stampRows: 1 });
+    check(
+      "★ 整图占格下限是 1：1×1 不会被顶回 2×2（提示词里就是 1×1 = 1 格）",
+      tinyStampPrompt.includes("1×1") && tinyStampPrompt.includes("1 格") && !tinyStampPrompt.includes("2×2"),
+      String(tinyStampPrompt.split("\n").find((line) => line.includes("切成")) ?? "")
+    );
     check(
       "反向验证：非整图的提示词里不许出现绿幕要求（材质类素材要的是不透明方块）",
       !plainPrompt.includes("背景必须是纯绿幕") && plainPrompt.includes("不要用绿幕背景") && !a2Prompt.includes("背景必须是纯绿幕")
