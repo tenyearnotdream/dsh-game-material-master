@@ -1242,7 +1242,9 @@ export class GameStudioGateway extends TypertRemoteService {
       animRows: typeof input.animRows === "boolean" ? input.animRows : undefined,
       // `null` = 清掉自己的速度（跟全局）；`undefined` = 这次不动它。
       fps: input.fps === undefined ? undefined : input.fps === null ? null : Number(input.fps),
-      loop: input.loop
+      loop: input.loop,
+      // 仅整图：逐格通行区域（长度 / 取值由 mapgen 校验，这里只透传）。
+      stampPass: Array.isArray(input.stampPass) ? input.stampPass : undefined
     });
     return { tileset: mapTilesetBrief(result.tileset), warnings: result.warnings };
   }
@@ -2740,8 +2742,8 @@ function mapTilesetBrief(tileset: {
   variants: number;
   /** 会动的素材怎么循环（正放 / 倒放 / 来回）。 */
   loop?: string;
-  /** 仅整图：占几格 / 几帧（界面据此把笔刷变成 N×M、右键转 90°）。 */
-  stamp?: { cols: number; rows: number; frames: number };
+  /** 仅整图：占几格 / 几帧 / 每格通行区域（界面据此把笔刷变成 N×M、右键转 90°）。 */
+  stamp?: { cols: number; rows: number; frames: number; pass?: readonly number[] };
   /** 素材图版本号（文件 mtime）：界面拼 URL 时带 `?v=`，重烘之后才会重新拉图。 */
   rev?: number;
   /** 导入时用的清晰度（图像已烘进去，这里只作显示 / 排查）。 */

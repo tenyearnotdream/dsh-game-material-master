@@ -726,7 +726,9 @@ const saveMapTilesetSchema = z.object({
   /** 改播放速度（帧/秒）；`null` = 清掉，跟全局速度走。 */
   fps: z.number().nullable().optional(),
   /** 改循环方式（正放 / 倒放 / 来回）：只换帧序展开，不动几何也不动序号。 */
-  loop: z.string().optional()
+  loop: z.string().optional(),
+  /** 仅整图：改逐格通行区域（`cols*rows` 个 0/1/2）。只改数据，不动几何 / 序号。 */
+  stampPass: z.array(z.unknown()).optional()
 });
 /**
  * 整理 AI 生成的那几张图 → 一张待确认的素材图（按**生图前定好的形态**规整）。

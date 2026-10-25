@@ -1616,8 +1616,9 @@
       "留空就用原来的名字": "Leave empty to keep the current name",
       "这两项只影响它自己：改完立刻生效，地图上已经画好的格子不用重画。想让它跟「设置」里那条全局速度走，播放速度选第一项。": "These two only affect this asset: changes apply immediately and painted cells do not need to be redrawn. To follow the global speed from Settings, pick the first speed option.",
       "这块素材不会动（没有多帧），所以播放速度与循环方式对它没有意义。": "This asset does not animate (it has a single frame), so speed and loop mode have no effect on it.",
-      "点一下改它的名字 / 播放速度 / 循环方式": "Click to change its name, playback speed and loop mode",
-      "点素材那一行可以改**名字 / 播放速度 / 循环方式**（这三样不动图块，随时能改）。形态与格子大小在新增时就定下来了 —— 要换只能删掉重新新增。": "Click an asset row to change its **name, playback speed and loop mode** (these do not touch the tiles, so you can change them any time). The layout and cell size are fixed when the asset is added - to change them you must delete it and add it again.",
+      "点一下改它的名字 / 播放速度 / 循环方式 / 整图的通行区域": "Click to change its name, playback speed, loop mode and which cells of a stamp are walkable",
+      "点素材那一行可以改**名字 / 播放速度 / 循环方式 / 整图的通行区域**（这些都不动图块，随时能改）。形态与格子大小在新增时就定下来了 —— 要换只能删掉重新新增。": "Click an asset row to change its **name, playback speed, loop mode and which cells of a stamp are walkable** (none of these touch the tiles, so you can change them any time). The layout and cell size are fixed when the asset is added - to change them you must delete it and add it again.",
+      "改完点「保存」：地图上这张素材的所有整图都会立刻改用新区域，不用重新印一遍。": "Click Save when done: every stamp of this asset already placed on the map switches to the new areas immediately, no need to place them again.",
       "哪些格子能走（在图上点格子）": "Which cells are walkable (click cells on the picture)",
       "第 {n0} 行第 {n1} 列：不可通过 / 可通过（被人物遮挡）/ 可通过（遮挡人物）": "Row {n0}, column {n1}: blocked / walkable (the character covers it) / walkable (it covers the character)",
       "墙 · 不可通过": "Wall - blocked",
@@ -9690,6 +9691,108 @@
       ];
 
       /**
+       * 整图的「哪些格子能走」：素材图铺满那个框，格子用 CSS grid 严丝合缝地叠上去 ——
+       * 点的是「图上那一块」，不用再把格子编号与画面位置在心里对一遍。
+       *
+       * 两个入口共用（「新增素材」的草稿 / 「素材属性」改已有素材）：三态颜色、图例、两个快捷按钮
+       * 与测试 id 前缀都走同一份，免得两处慢慢长成不一样的说法。
+       *
+       * `sheetWidthCells`：素材图**一行有多少格**。新增时贴的是原始图（= cols）；
+       * 已有素材贴的是**烘过 4 个旋转**的成品图（= max(cols, rows)）—— 非方形整图（4×3）
+       * 若不按真实行宽算铺图比例，格子与画面就会错位，用户点错格还看不出来。
+       */
+      const stampPassGrid = (options) => {
+        const cols = Math.max(1, Math.round(Number(options.cols) || 1));
+        const rows = Math.max(1, Math.round(Number(options.rows) || 1));
+        const frames = Math.max(1, Math.round(Number(options.frames) || 1));
+        const pass = Array.isArray(options.pass) ? options.pass : [];
+        const sheetWidth = Math.max(cols, Math.round(Number(options.sheetWidthCells) || cols));
+        const image = typeof options.image === "string" && options.image !== "" ? options.image : undefined;
+        const backgroundSize =
+          options.sheetWidthCells === undefined
+            ? frames > 1
+              ? `100% ${frames * 100}%`
+              : "100% 100%"
+            : `${(sheetWidth * 100) / cols}% ${(frames * 2 * (cols + rows) * 100) / rows}%`;
+        const prefix = options.prefix;
+        /**
+         * `onChange` 收到的是**更新函数** `(上一次的 pass) => 新的 pass`，不是算好的数组。
+         *
+         * 为什么：两下点击之间如果还没重渲染（连续点、或一次粘贴式操作），用渲染时捕获的
+         * `pass` 去算会让第二下从旧值出发 —— 用户看到「点了两下只前进一步」。交给 setState
+         * 的函数式更新，每一次都在最新值上累加。
+         */
+        const change = (update) => {
+          if (typeof options.onChange === "function") options.onChange(update);
+        };
+        const passOf = (source) =>
+          Array.from({ length: cols * rows }, (_item, index) => Number(source?.[index]) || 0);
+        return h(
+          "div",
+          { "data-testid": `${prefix}-stamp-block` },
+          h("div", { className: "SPR_mapEdDlgLabel" }, T("哪些格子能走（在图上点格子）")),
+          h(
+            "div",
+            {
+              className: "SPR_mapEdStamp",
+              "data-testid": `${prefix}-stamp-preview`,
+              style: {
+                aspectRatio: `${cols} / ${rows}`,
+                backgroundImage: image === undefined ? "none" : `url("${image}")`,
+                backgroundSize,
+                backgroundPosition: "0% 0%"
+              }
+            },
+            h(
+              "div",
+              {
+                className: "SPR_mapEdStampGrid",
+                style: { gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }
+              },
+              Array.from({ length: rows }, (_unused, r) =>
+                Array.from({ length: cols }, (_ignored, c) => {
+                  const index = r * cols + c;
+                  const kind = Number(pass[index]) || 0;
+                  return h("button", {
+                    key: `cell${r}-${c}`,
+                    type: "button",
+                    className: "SPR_mapEdStampCell",
+                    "data-pass": String(kind),
+                    "data-testid": `${prefix}-pass-${r}-${c}`,
+                    title: T("第 {n0} 行第 {n1} 列：不可通过 / 可通过（被人物遮挡）/ 可通过（遮挡人物）", { n0: String(r + 1), n1: String(c + 1) }),
+                    onClick: () =>
+                      change((previous) => {
+                        const next = passOf(previous);
+                        next[index] = (next[index] + 1) % 3;
+                        return next;
+                      })
+                  });
+                })
+              )
+            )
+          ),
+          h(
+            "div",
+            { className: "SPR_mapEdLegend" },
+            h("span", null, h("i", { style: { background: "rgba(226,59,43,.75)" } }), T("墙 · 不可通过")),
+            h("span", null, h("i", { style: { background: "rgba(52,120,246,.75)" } }), T("走·前 · 角色盖住它")),
+            h("span", null, h("i", { style: { background: "rgba(52,190,120,.75)" } }), T("走·后 · 它盖住角色"))
+          ),
+          h(
+            "div",
+            { className: "SPR_mapEdDlgRow" },
+            h(Btn, { "data-testid": `${prefix}-pass-none`, onClick: () => change(() => new Array(cols * rows).fill(0)) }, T("全部不可通过")),
+            h(Btn, { "data-testid": `${prefix}-pass-walk`, onClick: () => change(() => new Array(cols * rows).fill(1)) }, T("全部可通过"))
+          ),
+          h(
+            "p",
+            { className: "SPR_mapEdHint" },
+            T("点格子换状态：墙 = 不可通过；走·前 = 能走、角色画在它上面（地毯）；走·后 = 能走、它画在角色上面（雕像上身，绕后）。")
+          )
+        );
+      };
+
+      /**
        * 「素材说明」的三页：一张示例图 + 几句人话，讲清每种素材图该**怎么排**。
        *
        * 为什么要有它：图排错了不会报错，只会「画上去不对」—— 用户拿着自己画的图卡在这里，
@@ -10002,98 +10105,20 @@
                         { className: "SPR_mapEdHint" },
                         T("整图是「立在格子上的物件」：背景该是透明的，不然地图上会多出一块绿框。AI 生成的图请在提示词里要**纯绿背景**，这里勾上就会自动抠掉；自己导的透明 PNG 也可以勾着（没有绿就什么都不做）。")
                       ),
-                      h("div", { className: "SPR_mapEdDlgLabel" }, T("哪些格子能走（在图上点格子）")),
-                      /**
-                       * **在图上点格子**：素材图铺满这个框，格子用 CSS grid 严丝合缝地叠在上面 ——
-                       * 用户点的是「图上那一块」，不用再把格子编号与画面位置在心里对一遍。
-                       * 三态用半透明色直接涂在格子里（红 = 墙 / 蓝 = 走·前 / 绿 = 走·后）。
-                       */
-                      h(
-                        "div",
-                        {
-                          className: "SPR_mapEdStamp",
-                          "data-testid": "map-add-stamp-preview",
-                          style: {
-                            aspectRatio: `${clampStampSpan(Number(addDraft.stampCols) || 3, mapLimits.maxCols)} / ${clampStampSpan(Number(addDraft.stampRows) || 3, mapLimits.maxRows)}`,
-                            backgroundImage: stampPreviewUrl === undefined ? "none" : `url("${stampPreviewUrl}")`,
-                            /**
-                             * 帧数 > 1 时草稿里那张图是**各帧竖排**的（AI 那条路的格式）：
-                             * 只铺第 1 帧，不然格子与画面对不上（用户会点错格）。
-                             */
-                            backgroundSize: (Number(addDraft.stampFrames) || 1) > 1 ? `100% ${(Number(addDraft.stampFrames) || 1) * 100}%` : "100% 100%",
-                            backgroundPosition: "0% 0%"
-                            
-                          }
-                        },
-                        h(
-                          "div",
-                          {
-                            className: "SPR_mapEdStampGrid",
-                            style: {
-                              gridTemplateColumns: `repeat(${clampStampSpan(Number(addDraft.stampCols) || 3, mapLimits.maxCols)}, 1fr)`,
-                              gridTemplateRows: `repeat(${clampStampSpan(Number(addDraft.stampRows) || 3, mapLimits.maxRows)}, 1fr)`
-                            }
-                          },
-                          Array.from({ length: clampStampSpan(Number(addDraft.stampRows) || 3, mapLimits.maxRows) }, (_unused, r) =>
-                            Array.from({ length: clampStampSpan(Number(addDraft.stampCols) || 3, mapLimits.maxCols) }, (_ignored, c) => {
-                              const cols = clampStampSpan(Number(addDraft.stampCols) || 3, mapLimits.maxCols);
-                              const index = r * cols + c;
-                              const kind = addDraft.stampPass[index] ?? 0;
-                              return h("button", {
-                                key: `cell${r}-${c}`,
-                                type: "button",
-                                className: "SPR_mapEdStampCell",
-                                "data-pass": String(kind),
-                                "data-testid": `map-add-pass-${r}-${c}`,
-                                title: T("第 {n0} 行第 {n1} 列：不可通过 / 可通过（被人物遮挡）/ 可通过（遮挡人物）", { n0: String(r + 1), n1: String(c + 1) }),
-                                onClick: () =>
-                                  setAddDraft((current) => {
-                                    if (current === null) return current;
-                                    const next = [...current.stampPass];
-                                    next[index] = (((next[index] ?? 0) + 1) % 3);
-                                    return { ...current, stampPass: next };
-                                  })
-                              });
-                            })
+                      stampPassGrid({
+                        cols: clampStampSpan(Number(addDraft.stampCols) || 3, mapLimits.maxCols),
+                        rows: clampStampSpan(Number(addDraft.stampRows) || 3, mapLimits.maxRows),
+                        frames: Number(addDraft.stampFrames) || 1,
+                        pass: addDraft.stampPass,
+                        image: stampPreviewUrl,
+                        prefix: "map-add",
+                        onChange: (update) =>
+                          setAddDraft((current) =>
+                            current === null
+                              ? current
+                              : { ...current, stampPass: typeof update === "function" ? update(current.stampPass) : update }
                           )
-                        )
-                      ),
-                      h(
-                        "div",
-                        { className: "SPR_mapEdLegend" },
-                        h("span", null, h("i", { style: { background: "rgba(226,59,43,.75)" } }), T("墙 · 不可通过")),
-                        h("span", null, h("i", { style: { background: "rgba(52,120,246,.75)" } }), T("走·前 · 角色盖住它")),
-                        h("span", null, h("i", { style: { background: "rgba(52,190,120,.75)" } }), T("走·后 · 它盖住角色"))
-                      ),
-                      h(
-                        "div",
-                        { className: "SPR_mapEdDlgRow" },
-                        h(Btn, {
-                          "data-testid": "map-add-pass-none",
-                          onClick: () =>
-                            setAddDraft((current) => {
-                              if (current === null) return current;
-                              const cols = clampStampSpan(Number(current.stampCols) || 3, mapLimits.maxCols);
-                              const rows = clampStampSpan(Number(current.stampRows) || 3, mapLimits.maxRows);
-                              return { ...current, stampPass: new Array(cols * rows).fill(0) };
-                            })
-                        }, T("全部不可通过")),
-                        h(Btn, {
-                          "data-testid": "map-add-pass-walk",
-                          onClick: () =>
-                            setAddDraft((current) => {
-                              if (current === null) return current;
-                              const cols = clampStampSpan(Number(current.stampCols) || 3, mapLimits.maxCols);
-                              const rows = clampStampSpan(Number(current.stampRows) || 3, mapLimits.maxRows);
-                              return { ...current, stampPass: new Array(cols * rows).fill(1) };
-                            })
-                        }, T("全部可通过"))
-                      ),
-                      h(
-                        "p",
-                        { className: "SPR_mapEdHint" },
-                        T("点格子换状态：墙 = 不可通过；走·前 = 能走、角色画在它上面（地毯）；走·后 = 能走、它画在角色上面（雕像上身，绕后）。")
-                      )
+                      })
                     )
                   : null,
                 /**
@@ -10415,12 +10440,13 @@
       /**
        * 「素材属性」窗口：点素材列表里的一行就打开。
        *
-       * 只放开**表现层属性**（名字 / 播放速度 / 循环方式）——它们不动几何、不动图块序号，
-       * 所以随时能改，地图上已经画好的格子不受影响。形态 / 格子尺寸仍然一次定死
-       * （那会重切图块、把画过的格子整体错位）。
+       * 放开的是**不动几何 / 不动图块序号**的属性：名字 / 播放速度 / 循环方式 / 整图的逐格通行区域。
+       * 这几样改完，地图上已经画好的格子不受影响（整图的新区域下一次 `mapPlan` 就生效）。
+       * 形态 / 格子尺寸仍然一次定死（那会重切图块、把画过的格子整体错位）。
        */
       const [tsEdit, setTsEdit] = React.useState(null);
       const openTilesetEditor = (entry) => {
+        const stamp = entry.stamp;
         setTsEdit({
           tilesetId: entry.id,
           name: entry.name,
@@ -10428,7 +10454,23 @@
           fps: entry.fps === undefined ? "" : String(entry.fps),
           loop: entry.loop === undefined ? "forward" : entry.loop,
           animated: frameCountOf(entry) > 0,
-          builtin: entry.builtin === true
+          builtin: entry.builtin === true,
+          // 素材图 + 版本号：整图的区域编辑要在**真素材图**上点格子。
+          file: entry.file,
+          rev: entry.rev,
+          /**
+           * 仅整图：占几格 / 几帧 / 每格通行区域。
+           * `undefined` = 这不是整图，窗口里不出现「哪些格子能走」。
+           */
+          stampCols: stamp === undefined ? undefined : stamp.cols,
+          stampRows: stamp === undefined ? undefined : stamp.rows,
+          stampFrames: stamp === undefined ? 1 : stamp.frames,
+          stampPass:
+            stamp === undefined
+              ? undefined
+              : Array.isArray(stamp.pass) && stamp.pass.length === stamp.cols * stamp.rows
+                ? [...stamp.pass]
+                : new Array(stamp.cols * stamp.rows).fill(0)
         });
       };
       const saveTilesetEditor = async () => {
@@ -10442,7 +10484,9 @@
             name,
             // 空串 = 清掉自己的速度，回到跟「设置」里的动画速度走。
             fps: tsEdit.fps === "" ? null : Number(tsEdit.fps),
-            loop: tsEdit.loop
+            loop: tsEdit.loop,
+            // 仅整图：逐格通行区域（不动几何 / 序号，已经印在地图上的整图下一次就生效）。
+            stampPass: tsEdit.stampCols === undefined ? undefined : tsEdit.stampPass
           });
           if (result !== undefined && Array.isArray(result.warnings) && result.warnings.length > 0) {
             setNotice({ kind: "info", text: result.warnings.join("；") });
@@ -10914,6 +10958,37 @@
                   placeholder: T("留空就用原来的名字"),
                   onChange: (event) => setTsEdit((current) => (current === null ? current : { ...current, name: event.target.value }))
                 }),
+                /**
+                 * 整图：**在真素材图上点格子**改通行区域。
+                 *
+                 * 贴的是烘过 4 个旋转的成品图（第 1 帧 rot0 那块在最上面），所以铺图比例要按
+                 * `max(cols, rows)` 的真实行宽算；只改数据、不动几何与序号，已印在地图上的整图
+                 * 下一次 `mapPlan` 就换成新区域。
+                 */
+                tsEdit.stampCols === undefined
+                  ? null
+                  : stampPassGrid({
+                      cols: tsEdit.stampCols,
+                      rows: tsEdit.stampRows,
+                      frames: tsEdit.stampFrames,
+                      pass: tsEdit.stampPass,
+                      sheetWidthCells: Math.max(tsEdit.stampCols, tsEdit.stampRows),
+                      image: `${assetBase}${tsEdit.file}${tsEdit.rev === undefined ? "" : `?v=${tsEdit.rev}`}`,
+                      prefix: "map-tsedit",
+                      onChange: (update) =>
+                        setTsEdit((current) =>
+                          current === null
+                            ? current
+                            : { ...current, stampPass: typeof update === "function" ? update(current.stampPass) : update }
+                        )
+                    }),
+                tsEdit.stampCols === undefined
+                  ? null
+                  : h(
+                      "p",
+                      { className: "SPR_mapEdHint" },
+                      T("改完点「保存」：地图上这张素材的所有整图都会立刻改用新区域，不用重新印一遍。")
+                    ),
                 h("div", { className: "SPR_mapEdDlgLabel" }, T("动画速度")),
                 h(
                   "select",
@@ -11349,11 +11424,17 @@
       /**
        * 这张素材有几帧（列表上的徽章用）。
        *
-       * 两种会动的情形都算进来：`a2quad` 的**变体就是帧**，`animRows`（翻页图）的**行数就是帧**
-       * —— 宿主算好的 `variants` 在两种情形下都正好是帧数。
+       * 三种会动的情形都算进来：`a2quad` 的**变体就是帧**、`animRows`（翻页图）的**行数就是帧**、
+       * 整图的 `stamp.frames` 就是帧 —— 宿主算好的 `variants` 在前两种情形下都正好是帧数。
        */
       const frameCountOf = (entry) =>
-        entry.animRows === true ? entry.variants : entry.shape === "a2quad" && entry.variants > 1 ? entry.variants : 0;
+        entry.stamp !== undefined && (entry.stamp.frames ?? 1) > 1
+          ? entry.stamp.frames
+          : entry.animRows === true
+            ? entry.variants
+            : entry.shape === "a2quad" && entry.variants > 1
+              ? entry.variants
+              : 0;
 
       const assetsCard = h(
         "div",
@@ -11382,7 +11463,7 @@
                       type: "button",
                       className: "SPR_mapEdTsPick",
                       "data-tileset": entry.id,
-                      title: T("点一下改它的名字 / 播放速度 / 循环方式"),
+                      title: T("点一下改它的名字 / 播放速度 / 循环方式 / 整图的通行区域"),
                       onClick: () => {
                         // 点一下 = 选中它（当笔刷用）+ 打开属性窗口（改名 / 速度 / 循环方式）
                         setTsIndex(index);
@@ -11413,7 +11494,7 @@
         h(
           "p",
           { className: "SPR_mapEdHint" },
-          T("点素材那一行可以改**名字 / 播放速度 / 循环方式**（这三样不动图块，随时能改）。形态与格子大小在新增时就定下来了 —— 要换只能删掉重新新增。")
+          T("点素材那一行可以改**名字 / 播放速度 / 循环方式 / 整图的通行区域**（这些都不动图块，随时能改）。形态与格子大小在新增时就定下来了 —— 要换只能删掉重新新增。")
         )
       );
 

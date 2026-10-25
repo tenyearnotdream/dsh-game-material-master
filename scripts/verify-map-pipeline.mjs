@@ -2290,6 +2290,34 @@ try {
     // 生成把整图盖掉了（本来就会），这里重新印一张，下一段验证「删素材连带删整图」。
     await G.applyMapOps(project.id, [{ kind: "stampPlace", layerId: layer, tilesetId: tileset.id, r: 8, c: 8, rot: 0 }]);
 
+    /**
+     * ★ 素材属性里改整图的**逐格通行区域**：`saveMapTileset({stampPass})`。
+     * 它只改数据、不重切图块、不动序号 —— 所以地图上已经印好的整图下一次 `mapPlan` 就是新区域。
+     */
+    {
+      const beforePass = [...tileset.stamp.pass];
+      const editedPass = [2, 2, 2, 2, 2, 2];
+      const passSaved = await G.saveMapTileset(project.id, tileset.id, { stampPass: editedPass });
+      check("★ 改通行区域：素材规格里的 pass 真的换了", JSON.stringify(passSaved.tileset.stamp.pass) === JSON.stringify(editedPass), JSON.stringify(passSaved.tileset.stamp.pass));
+      check(
+        "★ 改通行区域不动几何（图块数与图片尺寸都没变）",
+        passSaved.tileset.tiles.length === tileset.tiles.length && passSaved.tileset.imageWidth === tileset.imageWidth && passSaved.tileset.imageHeight === tileset.imageHeight,
+        `${passSaved.tileset.tiles.length} 块 / ${passSaved.tileset.imageWidth}×${passSaved.tileset.imageHeight}`
+      );
+      const planAfterPass = await planOf({ pass: true });
+      check(
+        "★ 已经印在地图上的整图立刻用新区域（6 格全变成「可通过·遮挡人物」）",
+        planAfterPass.pass.length === 6 && planAfterPass.pass.every((cell) => cell.kind === 2),
+        JSON.stringify(planAfterPass.pass.map((cell) => cell.kind))
+      );
+      const shortPass = await G.saveMapTileset(project.id, tileset.id, { stampPass: [0, 0] }).then(() => "", (error) => error.message);
+      check("反向验证：通行区域长度不对时明确报错（不按 0 静默补齐）", shortPass.includes("通行区域") && shortPass.includes("6 个"), shortPass.slice(0, 60));
+      const badPass = await G.saveMapTileset(project.id, tileset.id, { stampPass: [0, 0, 0, 0, 0, 7] }).then(() => "", (error) => error.message);
+      check("反向验证：通行区域只能是 0/1/2（7 抛错并指出第几格）", badPass.includes("第 6 格"), badPass.slice(0, 60));
+      const restored = await G.saveMapTileset(project.id, tileset.id, { stampPass: beforePass });
+      check("改回原区域也立刻生效（不是只有第一次能改）", JSON.stringify(restored.tileset.stamp.pass) === JSON.stringify(beforePass), JSON.stringify(restored.tileset.stamp.pass));
+    }
+
     // ── 删素材：引用它的整图一起走
     const removal = await G.removeMapTileset(project.id, tileset.id);
     check("删掉整图素材：连带删掉引用它的整图并说清楚", removal.warnings.some((text) => text.includes("整图")) , removal.warnings.join(" | "));

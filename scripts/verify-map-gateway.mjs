@@ -249,10 +249,10 @@ try {
     })()
   );
   check(
-    "saveMapTileset：cell / shape / animRows 都进 schema",
+    "saveMapTileset：cell / shape / animRows / stampPass 都进 schema",
     (() => {
-      const parsed = parseOf("saveMapTileset", { projectId: "m1", tilesetId: "t1", cell: { width: 64, height: 64 }, shape: "a2quad", animRows: true });
-      return parsed.cell.width === 64 && parsed.cell.height === 64 && parsed.shape === "a2quad" && parsed.animRows === true;
+      const parsed = parseOf("saveMapTileset", { projectId: "m1", tilesetId: "t1", cell: { width: 64, height: 64 }, shape: "a2quad", animRows: true, stampPass: [0, 1, 2] });
+      return parsed.cell.width === 64 && parsed.cell.height === 64 && parsed.shape === "a2quad" && parsed.animRows === true && parsed.stampPass.join(",") === "0,1,2";
     })()
   );
   check(
@@ -617,6 +617,20 @@ try {
   const renamed = await gw("saveMapTileset", { projectId, tilesetId: editable.id, name: "属性自检-改名", fps: 6, loop: "pingpong" });
   check("★ saveMapTileset 的 name / fps / loop 都过 schema 不丢", renamed.tileset.name === "属性自检-改名" && renamed.tileset.fps === 6 && renamed.tileset.loop === "pingpong", JSON.stringify({ name: renamed.tileset.name, fps: renamed.tileset.fps, loop: renamed.tileset.loop }));
   check("改名之后里表里就是新名字", (await gw("getMapProject", { projectId })).tilesets.some((entry) => entry.name === "属性自检-改名"));
+  /**
+   * ★ 整图的**逐格通行区域**也要过 schema：少了 `stampPass`，界面上点了格子、点保存
+   * 看着成功，宿主那边一个值都没收到（与 `fps` / `loop` / `clarity` 是同一个坑）。
+   */
+  const passSaved = await gw("saveMapTileset", { projectId, tilesetId: editable.id, stampPass: [2, 2, 2, 2, 2, 2] });
+  check(
+    "★ saveMapTileset.stampPass 过 schema 不丢（整图通行区域能改）",
+    JSON.stringify(passSaved.tileset.stamp.pass) === JSON.stringify([2, 2, 2, 2, 2, 2]) && passSaved.tileset.tileCount === editable.tileCount,
+    JSON.stringify(passSaved.tileset.stamp)
+  );
+  check(
+    "反向验证：通行区域长度不对时走网关也明确报错",
+    (await failed(() => gw("saveMapTileset", { projectId, tilesetId: editable.id, stampPass: [0] }))).includes("通行区域")
+  );
   const sampleTs = (await gw("getMapProject", { projectId })).tilesets.find((entry) => entry.builtin === true);
   const sampleRenamed = sampleTs === undefined ? undefined : await gw("saveMapTileset", { projectId, tilesetId: sampleTs.id, name: "内置改名", fps: 3 });
   check("★ 内置素材也能改名 / 改速度（走网关）", sampleRenamed === undefined || (sampleRenamed.tileset.name === "内置改名" && sampleRenamed.tileset.fps === 3), JSON.stringify({ name: sampleRenamed?.tileset?.name, fps: sampleRenamed?.tileset?.fps }));

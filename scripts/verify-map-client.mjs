@@ -1002,6 +1002,8 @@ try {
     if (options.fresh === true) resetHooks();
     settleNotes = 0;
     let tree = null;
+    /** 最近一次真正渲染出来的树：40 轮还没稳定时也要把它还回去（`tree` 只是入参元素）。 */
+    let lastRendered = null;
     for (let pass = 0; pass < 40; pass++) {
       cursor = 0;
       pendingRender = false;
@@ -1009,6 +1011,7 @@ try {
       globals.__pendingRefs = [];
       tree = element;
       const rendered = typeof element === "function" ? element() : element;
+      lastRendered = rendered;
       for (const { element: nodeElement, node } of globals.__pendingRefs) {
         nodeElement.props.ref(node);
       }
@@ -1069,7 +1072,15 @@ try {
       }
     }
     HOOK_MISMATCH.push("渲染超过 40 轮（可能有 setState 死循环）");
-    return tree;
+    /**
+     * 40 轮还没稳定时，把**最近一次真正渲染出来的树**还回去。
+     *
+     * `tree` 只是入参（可能是 `() => MapModule(...)` 这个函数本身）—— 原样返回会让后面
+     * 每条 `collect(tree, ...)` 都拿到空结果，然后崩在一条毫不相关的断言上（本机实测：
+     * 第 3 节第一条 `byTool(tree, "pen")[0].props` 就抛 TypeError，后半文件全都不跑）。
+     * 还回最后一帧至少能让其余断言继续，真正的问题（渲染循环）由上面那条单独报出来。
+     */
+    return lastRendered ?? tree;
   }
 
   let tree = await renderTree(() => MapModule({ api }));
@@ -3823,6 +3834,51 @@ try {
           JSON.stringify(editCall ?? null)
         );
         check("保存后窗口关掉", collect(tree, (node) => node.props?.["data-testid"] === "map-tsedit-dialog").length === 0);
+
+        /**
+         * ★ 整图素材：属性窗口里要能**重新点通行区域**（原来只在「新增素材」时点一次，之后改不了）。
+         * 两个关键点：格子数 = 素材规格；贴的图是**烘过 4 个旋转的成品图**（按 max(cols,rows) 行宽算比例，
+         * 否则非方形整图的格子与画面错位，用户点错格还看不出来）。
+         */
+        const stampRow = rowOf("雕像");
+        check("素材列表里有整图素材（下面测它的通行区域）", stampRow !== undefined, textOf(byClass(tree, "SPR_mapEdCard")[0]).slice(0, 80));
+        stampRow.props.onClick();
+        tree = await renderTree(() => MapModule({ api }));
+        check("★ 整图素材的属性窗口里有「哪些格子能走」", textOf(tsDlg()).includes("哪些格子能走"), textOf(tsDlg()).replace(/\s+/g, " ").slice(0, 100));
+        const passCells = () =>
+          collect(tsDlg(), (node) => typeof node.props?.["data-testid"] === "string" && /^map-tsedit-pass-\d+-\d+$/u.test(node.props["data-testid"]));
+        check("★ 格子数 = 素材规格的 3×2 = 6", passCells().length === 6, String(passCells().length));
+        const stampPreview = collect(tsDlg(), (node) => node.props?.["data-testid"] === "map-tsedit-stamp-preview")[0];
+        check(
+          "★ 贴的是烘过旋转的成品图：按真实行宽 max(3,2)=3 与 2 帧 × 2(3+2) 行算铺图比例",
+          stampPreview !== undefined && stampPreview.props.style.backgroundSize === "100% 1000%",
+          String(stampPreview?.props.style.backgroundSize)
+        );
+        check(
+          "格子预填的是素材当前的通行区域（第 0 格是不可通过）",
+          passCells()[0].props["data-pass"] === "0",
+          passCells().map((node) => node.props["data-pass"]).join(",")
+        );
+        passCells()[0].props.onClick();
+        tree = await renderTree(() => MapModule({ api }));
+        check(
+          "★ 点一格就换状态（不可通过 0 → 可通过·被人物遮挡 1）",
+          collect(tsDlg(), (node) => node.props?.["data-testid"] === "map-tsedit-pass-0-0")[0].props["data-pass"] === "1",
+          passCells().map((node) => node.props["data-pass"]).join(",")
+        );
+        const stampSavesBefore = apiLog.tilesetSaves.length;
+        collect(tree, (node) => node.props?.["data-testid"] === "map-tsedit-ok")[0].props.onClick();
+        await tickTimers();
+        tree = await renderTree(() => MapModule({ api }));
+        const stampEditCall = apiLog.tilesetSaves[stampSavesBefore];
+        check(
+          "★ 保存把新的通行区域交给宿主（6 个值、第 0 格改成 1）",
+          stampEditCall !== undefined &&
+            Array.isArray(stampEditCall.stampPass) &&
+            stampEditCall.stampPass.length === 6 &&
+            stampEditCall.stampPass[0] === 1,
+          JSON.stringify(stampEditCall ?? null)
+        );
       }
 
     check(
