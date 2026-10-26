@@ -72,6 +72,9 @@ export const DEFAULT_TURN_PROMPT_POSE_LOCK = [
   "[起始姿态] 画面开始时角色必须就是参考图里的样子：**完全保持参考图中的这个动作姿态**——手臂、腿、武器、躯干的角度与重心位置一律不要改动，也不要把它掰回站立姿势。完整保留参考图的五官、发型、发色、服装款式、配色与整体画风，必须看起来是同一个人、同一个姿势。",
   "[动作] 画面中只有这一个角色，角色原地绕自身竖直轴以完全均匀的速度旋转满一整圈（360 度），转速从头到尾不变，最后回到与开始时完全相同的朝向与姿势，首尾能够无缝接上。",
   "[禁止其它动作] 除了绕竖轴旋转，不要有任何动作：不要迈步、不要挥动、不要把动作收回去、不要换姿势、不要点头；整圈里姿势像被冻结一样保持不动，只有身体朝向在变化。",
+  // 实测：只写「保持姿态」时，模型会把半挥刀姿势里的武器整把丢掉（手变空），
+  // 整条矩阵就变成空手挥拳。武器必须单独用一行点名保留。
+  "[道具保留] 参考图里角色手里握着的武器／道具必须原样保留：仍在同一只手里、同样的握法、同样的外形与长短，整圈都不许消失、不许放下、不许变形、不许换成别的东西。",
   "[一致性] 旋转过程中身高、体型、脸型、发型、服装、配色与画风必须完全一致，只有身体朝向在变化。",
   "[背景] 纯色绿幕，颜色是标准 chroma key 绿 #00FF00，整幅背景颜色完全均匀一致，全程保持纯绿，不要任何阴影、渐变、地面或投影。",
   "[画面] 角色始终完整居中在画面内、不被裁切；不要出现第二个人或任何其它物体，不出现转场、抖动、缩放、运镜或镜头移动。"
@@ -83,6 +86,7 @@ const DEFAULT_TURN_PROMPT_POSE_LOCK_EN = [
   "[Start pose] At the start of the clip the character must look exactly as in the reference image: **keep this exact action pose from the reference image** - the angles of the arms, legs, weapon and torso and the center of gravity must not change at all, and do not straighten it back into a standing pose. Fully preserve the reference image's facial features, hairstyle, hair color, clothing style, color scheme and overall art style; it must look like the exact same person in the exact same pose.",
   "[Motion] There is only this one character in the frame; the character rotates in place around its own vertical axis at a completely even speed for a full circle (360 degrees), the rotation speed stays constant from beginning to end, and it finishes facing exactly the same direction and in exactly the same pose as at the start, so the first and last frames connect seamlessly.",
   "[No other motion] Apart from rotating around the vertical axis, there must be no other movement: no stepping, no swinging, do not retract the action, do not change pose, no nodding. The pose stays frozen for the whole circle, like a statue being turned; only the body orientation changes.",
+  "[Keep the prop] The weapon or prop held in the character's hand in the reference image must be preserved exactly: still in the same hand, with the same grip, the same shape and the same length. It must never disappear, never be put down, never change shape and never be swapped for something else during the whole circle.",
   "[Consistency] During the rotation the height, build, face shape, hairstyle, clothing, color scheme and art style must stay exactly identical; only the body orientation changes.",
   "[Background] Solid green screen, the color is standard chroma key green #00FF00, the whole background is a completely uniform single color, pure green throughout, with no shadows, gradients, ground or cast shadow.",
   "[Frame] The character stays fully centered inside the frame the whole time, never cropped; no second person and no other object appears, no transitions, no jitter, no zooming, no camera movement or camera motion."
