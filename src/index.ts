@@ -75,8 +75,10 @@ import {
   startRekey,
   startTurnFrames,
   startTurnVideo,
-  startVideos
+  startVideos,
+  startComposeMatrix
 } from "./pipeline.js";
+import * as actionseq from "./actionseq.js";
 import { assetPath, createProject, deleteProject, listProjects, log, patchProject, projectDir, projectExists, readProject, resetDerivedFromSource, } from "./store.js";
 import * as imagegen from "./imagegen.js";
 import * as seqgen from "./seqgen.js";
@@ -1660,6 +1662,112 @@ export class GameStudioGateway extends TypertRemoteService {
     return { ok: true };
   }
   /** 方法表里声明的名字都要真实存在，这里做一次自检（仅开发期会失败）。 */
+  // ── 动作（阶段② 的「拍什么动作」）+ 关键帧矩阵 ─────────────────────
+  /** 列出动作库与当前选中项（内置 + 自定义）。 */
+  async listActions(payload) {
+    const projectId = asString(asRecord(payload).projectId);
+    const project = await readProject(projectId);
+    if (project === undefined) throw new Error(`项目不存在：${projectId}`);
+    return actionseq.listActions(project);
+  }
+  /** 新建 / 修改动作（内置动作只允许改提示词与关键帧数）。 */
+  async saveAction(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    const action = await actionseq.saveAction(projectId, input.action);
+    return { ok: true, action };
+  }
+  /** 删除自定义动作（内置动作不能删）。 */
+  async deleteAction(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    const actionId = asString(input.actionId);
+    await actionseq.deleteAction(projectId, actionId);
+    return { ok: true, actionId };
+  }
+  /** 切换当前动作：走路与攻击的产物互不覆盖（切回来还是原样）。 */
+  async setActiveAction(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    const actionId = asString(input.actionId);
+    await actionseq.setActiveAction(projectId, actionId);
+    return { ok: true, actionId };
+  }
+  /** 切换生成方式：八方向独立 / 关键帧转圈。只切流程，不删产物。 */
+  async setMotionMode(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    const mode = asString(input.mode);
+    if (mode !== "perDirection" && mode !== "keyframe") throw new Error(`未知生成方式：${mode}`);
+    await actionseq.setMotionMode(projectId, mode);
+    return { ok: true, mode };
+  }
+  /** 生成母本动作视频（**计费一次**）。关键帧矩阵的第一段。 */
+  async runActionSeed(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    const project = await readProject(projectId);
+    if (project === undefined) throw new Error(`项目不存在：${projectId}`);
+    const baseDirection = input.baseDirection === undefined ? undefined : asString(input.baseDirection);
+    const prompt = input.prompt === undefined ? undefined : asString(input.prompt);
+    const submitted = await actionseq.startSeedVideo(projectId, { baseDirection, prompt });
+    ensurePoller(projectId);
+    return { started: true, taskId: submitted.taskId, backend: submitted.backend };
+  }
+  /** 从母本视频抽候选帧（本机 ffmpeg，免费）。 */
+  async extractActionCandidates(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    const count = input.count === undefined ? undefined : Number(input.count);
+    await actionseq.extractSeedCandidates(projectId, count);
+    return { ok: true };
+  }
+  /** 选定关键帧（矩阵的列）。 */
+  async setActionKeyframes(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    if (!Array.isArray(input.keyframes)) throw new Error("keyframes 必须是数组");
+    const keyframes = input.keyframes.map((value) => Number(value));
+    return actionseq.setSeedKeyframes(projectId, keyframes);
+  }
+  /** 给第 index 个关键帧提交一次转圈（**计费一次**）。 */
+  async runKeyframeTurn(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    const index = Number(input.index);
+    if (!Number.isFinite(index)) throw new Error("index 必须是数字");
+    const submitted = await actionseq.startKeyframeTurn(projectId, index, { regenerate: input.regenerate === true });
+    ensurePoller(projectId);
+    return { started: true, index, taskId: submitted.taskId, backend: submitted.backend };
+  }
+  /** 抽某个关键帧转圈的候选帧并切出八个方向（本机，免费）。 */
+  async cutKeyframeTurn(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    const index = Number(input.index);
+    if (!Number.isFinite(index)) throw new Error("index 必须是数字");
+    const count = input.count === undefined ? undefined : Number(input.count);
+    await actionseq.cutKeyframeTurn(projectId, index, count);
+    return { ok: true };
+  }
+  /** 改某个关键帧某个方向的截帧位置，只重切那一张。 */
+  async setKeyframePick(payload) {
+    const input = asRecord(payload);
+    const projectId = asString(input.projectId);
+    const index = Number(input.index);
+    if (!Number.isFinite(index)) throw new Error("index 必须是数字");
+    const key = asString(input.key);
+    const pick = Number(input.pick);
+    if (!Number.isFinite(pick)) throw new Error("pick 必须是数字");
+    return actionseq.setKeyframeTurnPick(projectId, index, key, pick);
+  }
+  /** 把「8 方向 × N 关键帧」合成整图（纯本地，免费）。 */
+  async composeActionMatrix(payload) {
+    const projectId = asString(asRecord(payload).projectId);
+    const project = await readProject(projectId);
+    if (project === undefined) throw new Error(`项目不存在：${projectId}`);
+    return startComposeMatrix(projectId);
+  }
   // ── 图片生成模块 ──────────────────────────────────────────────────────
 
   async listImageJobs() {
@@ -2851,7 +2959,7 @@ function mapHave(value: unknown): string[] | undefined {
 /** 各模块允许通过 HTTP 路由读取的子目录白名单。 */
 // `turn/` 是转圈截帧的候选帧与缩略条带：轴上那八个圆圈是对着条带拖的，
 // 少了这条白名单，整个时间轴会 403（界面看着只是「图裂了」）。
-const SERVABLE_DIRS = new Set(["source", "images", "videos", "frames", "keyed", "preview", "out", "turn"]);
+const SERVABLE_DIRS = new Set(["source", "images", "videos", "frames", "keyed", "preview", "out", "turn", "actions"]);
 const SERVABLE_IMAGE_DIRS = new Set(["refs", "out", "keyed"]);
 const SERVABLE_SEQUENCE_DIRS = new Set(["refs", "video-refs", "videos", "frames", "keyed", "out"]);
 /** 骨骼动画：源图、拆件摊平图、部件、装配结果、骨骼与图集。 */

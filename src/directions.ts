@@ -300,7 +300,7 @@ export const DEFAULT_VIDEO_PROMPT = [
 ].join("\n");
 
 /** `DEFAULT_VIDEO_PROMPT` 的英文版（逐行对应）。 */
-const DEFAULT_VIDEO_PROMPT_EN = [
+export const DEFAULT_VIDEO_PROMPT_EN = [
   "[Static shot] Fixed camera position, fixed focal length, fixed framing, the camera stays completely motionless, camera height level with the character's chest, neither looking down nor looking up. The green screen background stays exactly as it is.",
   "There is only this one character in the frame; keep the orientation and position from the image unchanged - do not turn around, do not change the direction it faces. Perform a natural walking motion in place: the legs step alternately, the arms swing naturally, walk three complete steps.",
   "While walking the body stays upright and the gaze stays horizontal at all times; do not tilt the head up, tilt the head down, or let the body bob and deform.",

@@ -128,7 +128,70 @@ const resetTurnPicksSchema = z.object({
   direction: z.enum(["cw", "ccw"]).optional()
 });
 const cutTurnFramesSchema = z.object({ projectId: z.string(), keys: z.array(z.string()).optional() });
-const runKeysSchema = z.object({ projectId: z.string(), keys: z.array(z.string()).optional() });
+
+// ── 动作（阶段②）：内置预设 + 自定义动作 + 关键帧矩阵 ────────────────────
+/**
+ * 新建 / 修改动作。
+ *
+ * 不带 `id` = 新建（宿主生成 id）；带 `id` = 改那一条（内置动作只允许改提示词）。
+ */
+const saveActionSchema = z.object({
+  projectId: z.string(),
+  action: z.object({
+    id: z.string().optional(),
+    label: z.string().optional(),
+    labelEn: z.string().optional(),
+    prompt: z.string().optional(),
+    promptEn: z.string().optional(),
+    kind: z.enum(["loop", "oneshot"]).optional(),
+    keyframeCount: z.number().optional()
+  })
+});
+const actionIdSchema = z.object({
+  projectId: z.string(),
+  /** 动作 id（`walk` / `attackSlash` / 自定义 `a…`）。 */
+  actionId: z.string()
+});
+const setMotionModeSchema = z.object({
+  projectId: z.string(),
+  /** `perDirection` = 八个方向各生成一段；`keyframe` = 母本动作 + 关键帧矩阵。 */
+  mode: z.enum(["perDirection", "keyframe"])
+});
+const runActionSeedSchema = z.object({
+  projectId: z.string(),
+  /** 用哪个方向的图当首帧；不给就用 front。 */
+  baseDirection: z.string().optional(),
+  /** 覆盖提示词（不给就用当前动作的提示词）。 */
+  prompt: z.string().optional()
+});
+const extractActionCandidatesSchema = z.object({
+  projectId: z.string(),
+  /** 候选帧张数（8~128）；不给就用默认 32。 */
+  count: z.number().optional()
+});
+const setActionKeyframesSchema = z.object({
+  projectId: z.string(),
+  /** 关键帧 = 候选帧下标，顺序即矩阵的列顺序。 */
+  keyframes: z.array(z.number())
+});
+const runKeyframeTurnSchema = z.object({
+  projectId: z.string(),
+  /** 第几个关键帧（0 起）。 */
+  index: z.number(),
+  /** 已经转好圈了要重做时必须显式声明（会覆盖旧视频与切图）。 */
+  regenerate: z.boolean().optional()
+});
+const cutKeyframeTurnSchema = z.object({
+  projectId: z.string(),
+  index: z.number(),
+  count: z.number().optional()
+});
+const setKeyframePickSchema = z.object({
+  projectId: z.string(),
+  index: z.number(),
+  key: z.string(),
+  pick: z.number()
+});const runKeysSchema = z.object({ projectId: z.string(), keys: z.array(z.string()).optional() });
 /** 从一个方向的行走视频抽出候选帧。count 是候选张数（8~512），不是最终序列帧数。 */
 const prepareFramePickSchema = z.object({
   projectId: z.string(),
@@ -1234,6 +1297,20 @@ export const METHODS: MethodSpec[] = [  { method: "getConfig", result: configVie
   { method: "resetFramePicks", payload: resetWalkPicksSchema, result: jsonObject },
   { method: "rekey", payload: projectOnlySchema, result: startedSchema },
   { method: "compose", payload: projectOnlySchema, result: startedSchema },
+
+  // 动作（阶段② 「拍什么动作」这一层）与关键帧矩阵
+  { method: "listActions", payload: projectOnlySchema, result: jsonObject },
+  { method: "saveAction", payload: saveActionSchema, result: jsonObject },
+  { method: "deleteAction", payload: actionIdSchema, result: okSchema },
+  { method: "setActiveAction", payload: actionIdSchema, result: okSchema },
+  { method: "setMotionMode", payload: setMotionModeSchema, result: okSchema },
+  { method: "runActionSeed", payload: runActionSeedSchema, result: startedSchema },
+  { method: "extractActionCandidates", payload: extractActionCandidatesSchema, result: okSchema },
+  { method: "setActionKeyframes", payload: setActionKeyframesSchema, result: jsonObject },
+  { method: "runKeyframeTurn", payload: runKeyframeTurnSchema, result: jsonObject },
+  { method: "cutKeyframeTurn", payload: cutKeyframeTurnSchema, result: okSchema },
+  { method: "setKeyframePick", payload: setKeyframePickSchema, result: jsonObject },
+  { method: "composeActionMatrix", payload: projectOnlySchema, result: startedSchema },
 
   // 图片生成
   { method: "listImageJobs", result: z.object({ jobs: z.array(jsonObject) }) },

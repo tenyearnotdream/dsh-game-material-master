@@ -31,6 +31,15 @@ import {
   type TurnDirection
 } from "./directions.js";
 import { DEFAULT_CONFIG, ROW_ORDER_VERSION, isLegacyRowOrder, loadConfig, projectsRoot, type Config } from "./config.js";
+import {
+  BUILTIN_ACTIONS,
+  defaultActions,
+  findAction,
+  normalizeMotionMode,
+  type ActionDef,
+  type ActionKind,
+  type MotionMode
+} from "./actions.js";
 
 export type NodeStatus = "empty" | "running" | "ready" | "error";
 export type StageKey = "images" | "videos" | "frames" | "sheet";
@@ -268,6 +277,71 @@ export interface ProjectSettings {
 /** 审核模式：agent 自动审 / 每一步人工审。见 src/tools.ts 的固定流程。 */
 export type ReviewMode = "auto" | "manual";
 
+/**
+ * 「关键帧转圈」流水线里，某一个关键帧自己的一条转圈任务。
+ *
+ * 与项目级的 `turn`（阶段① 生成八方向图用的那一圈）结构相似但**互相独立**：
+ * 那一条产出 `images/<方向>.png`（角色的基准朝向图），这一条产出
+ * `actions/<动作>/k<i>/<方向>.png`（某个动作某一帧的八方向），绝不能混。
+ */
+export interface SeedTurnNode {
+  status: NodeStatus;
+  taskId?: string;
+  backend?: VideoBackend;
+  remoteStatus?: string;
+  error?: string;
+  /** 这一圈的视频（相对路径）。 */
+  file?: string;
+  /** 候选帧（相对路径，按时间顺序）。 */
+  frames: string[];
+  raw?: string;
+  rawWidth?: number;
+  rawHeight?: number;
+  duration?: number;
+  /** 八个方向各自的截帧下标。 */
+  picks: Record<string, number>;
+  /** 八个方向切出来的图（方向 key → 相对路径）。 */
+  directions: Record<string, string>;
+  updatedAt?: number;
+}
+
+/**
+ * 关键帧模式（一次性动作）的全部状态。
+ *
+ * 流程：母本动作视频 → 抽候选帧 → 选 N 张关键帧 → 每个关键帧各转一圈 →
+ * 得到「8 方向 × N 关键帧」的矩阵。全方向共享同一批关键帧，节奏天然对齐。
+ */
+export interface SeedState {
+  /** 母本动作视频（只有一段，从 `baseDirection` 方向图生成）。 */
+  video: VideoNode;
+  /** 母本视频抽出的候选帧（相对路径）。 */
+  candidates: string[];
+  raw?: string;
+  rawWidth?: number;
+  rawHeight?: number;
+  duration?: number;
+  /** 被选中作为关键帧的候选下标（长度 = 矩阵列数）。 */
+  keyframes: number[];
+  /** 关键帧 → 它那一圈转圈（key 形如 "k0"）。 */
+  turns: Record<string, SeedTurnNode>;
+}
+
+/**
+ * 切到别的动作时，把当前动作的工作区整份存进 `actionArchive`。
+ *
+ * 这里刻意**包含 prompts.video**：每个动作的提示词都可以单独改过，
+ * 切回该动作时要还原成它自己那份，而不是别的动作的提示词。
+ */
+export interface ActionWorkspace {
+  videos: Record<string, VideoNode>;
+  frames: Record<string, FramesNode>;
+  sheet: SheetState;
+  videoPrompt: string;
+  videoPerDirection: Record<string, string>;
+  motionMode: MotionMode;
+  seed: SeedState;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -304,6 +378,21 @@ export interface Project {
   imageMode: ImageMode;
   /** 转圈模式的全部状态（视频 + 候选帧 + 八个截帧位置）。 */
   turn: TurnState;
+  /**
+   * 动作库（内置 + 自定义）。选中哪个动作，下面 `videos/frames/sheet` 就是哪个的产物。
+   */
+  actions: ActionDef[];
+  /** 当前动作 id。 */
+  activeActionId: string;
+  /**
+   * 非当前动作的产物存档。切动作时「存旧的、取新的」，
+   * 所以走路与攻击的产物互不覆盖，切回来还是原样。
+   */
+  actionArchive: Record<string, ActionWorkspace>;
+  /** 当前动作走哪条流水线：八方向独立视频 / 关键帧转圈。 */
+  motionMode: MotionMode;
+  /** 关键帧模式的母本动作与逐个关键帧的转圈。 */
+  seed: SeedState;
   /**
    * 固定流程里问过用户的审核模式；没问过就是 undefined。
    * `manual` = 每一步产出后都停下来等用户打「通过」再继续。
@@ -399,6 +488,47 @@ function emptyFrames(): Record<string, FramesNode> {
   return out;
 }
 
+/** 关键帧模式的初始状态：没母本视频、没候选帧、没关键帧、没转圈。 */
+export function emptySeed(): SeedState {
+  return {
+    video: { status: "empty", approved: false },
+    candidates: [],
+    keyframes: [],
+    turns: {}
+  };
+}
+
+/** 当前动作的工作区整份快照（切动作时用）。 */
+export function snapshotWorkspace(project: Project): ActionWorkspace {
+  return {
+    videos: project.videos,
+    frames: project.frames,
+    sheet: project.sheet,
+    videoPrompt: project.prompts.video,
+    videoPerDirection: { ...(project.prompts.videoPerDirection ?? {}) },
+    motionMode: project.motionMode,
+    seed: project.seed ?? emptySeed()
+  };
+}
+
+/** 把一份工作区快照装回项目（没有快照就给初始状态）。 */
+export function applyWorkspace(project: Project, workspace: ActionWorkspace | undefined): void {
+  const ws = workspace;
+  project.videos = ws?.videos ?? emptyVideos();
+  project.frames = ws?.frames ?? emptyFrames();
+  project.sheet = ws?.sheet ?? { status: "empty", approved: false };
+  project.prompts.video = ws?.videoPrompt ?? DEFAULT_VIDEO_PROMPT;
+  project.prompts.videoPerDirection = ws?.videoPerDirection ?? {};
+  project.seed = ws?.seed ?? emptySeed();
+  const action = findAction(project.actions, project.activeActionId);
+  project.motionMode = normalizeMotionMode(ws?.motionMode, action.kind);
+}
+
+/** 当前动作的定义（永远是有效值）。 */
+export function activeAction(project: Project): ActionDef {
+  return findAction(project.actions, project.activeActionId);
+}
+
 /**
  * 换了源图：把「由源图派生出来的东西」全部作废。
  *
@@ -437,6 +567,31 @@ export async function resetDerivedFromSource(id: string): Promise<number> {
     }
     push(project.sheet?.file);
     push(project.sheet?.thumb);
+    // 关键帧模式（母本动作 / 每个关键帧的转圈）与所有动作的存档同样派生自源图，一并作废。
+    const pushSeed = (seed: SeedState | undefined): void => {
+      if (seed === undefined || seed === null) return;
+      push(seed.video?.file);
+      push(seed.raw);
+      for (const file of seed.candidates ?? []) push(file);
+      for (const turn of Object.values(seed.turns ?? {})) {
+        push(turn?.file);
+        push(turn?.raw);
+        for (const file of turn?.frames ?? []) push(file);
+        for (const file of Object.values(turn?.directions ?? {})) push(file);
+      }
+    };
+    pushSeed(project.seed);
+    for (const workspace of Object.values(project.actionArchive ?? {})) {
+      push(workspace?.sheet?.file);
+      for (const key of DIRECTION_KEYS) {
+        push(workspace?.videos?.[key]?.file);
+        push(workspace?.frames?.[key]?.raw);
+        for (const file of workspace?.frames?.[key]?.frames ?? []) push(file);
+      }
+      pushSeed(workspace?.seed);
+    }
+    project.seed = emptySeed();
+    project.actionArchive = {};
     project.images = emptyImages();
     project.videos = emptyVideos();
     project.frames = emptyFrames();
@@ -468,7 +623,7 @@ export async function resetDerivedFromSource(id: string): Promise<number> {
 
 export async function ensureLayout(id: string): Promise<void> {
   const base = projectDir(id);
-  for (const sub of ["source", "images", "videos", "frames", "keyed", "preview", "out", "turn"]) {
+  for (const sub of ["source", "images", "videos", "frames", "keyed", "preview", "out", "turn", "actions"]) {
     await mkdir(join(base, sub), { recursive: true });
   }
 }
@@ -500,6 +655,12 @@ export async function createProject(name: string): Promise<Project> {
     // 恰恰最容易在一致性上翻车。逐方向生图保留为备选，随时可切。
     imageMode: "turn",
     turn: emptyTurn(settings.turnFrameCount),
+    // 动作库：内置全量开箱即用，默认选中走路（与改造前行为一致）。
+    actions: defaultActions(),
+    activeActionId: "walk",
+    actionArchive: {},
+    motionMode: "perDirection",
+    seed: emptySeed(),
     log: []
   };
   await ensureLayout(id);
@@ -708,8 +869,157 @@ function normalizeProject(raw: any): Project {
     settings: merged,
     imageMode,
     turn: normalizeTurn(raw?.turn, merged.turnFrameCount),
+    actions: normalizeActions(raw?.actions),
+    activeActionId: normalizeActiveActionId(raw),
+    actionArchive: normalizeArchive(raw?.actionArchive),
+    motionMode: normalizeMotionMode(raw?.motionMode, findAction(normalizeActions(raw?.actions), normalizeActiveActionId(raw)).kind),
+    seed: normalizeSeed(raw?.seed),
     reviewMode: raw?.reviewMode === "manual" ? "manual" : raw?.reviewMode === "auto" ? "auto" : undefined,
     log: Array.isArray(raw?.log) ? raw.log.slice(-200) : []
+  };
+}
+
+/**
+ * 动作库归一化。
+ *
+ * 老项目没有 `actions` 字段 → 直接给内置全量（含走路），不迁移也要能打开。
+ * 已有动作的项目：内置动作**永远补全**（新版本加了新内置动作时老项目也能看到），
+ * 自定义动作按存档原样保留。
+ */
+function normalizeActions(raw: any): ActionDef[] {
+  const builtins = defaultActions();
+  if (!Array.isArray(raw) || raw.length === 0) return builtins;
+  const seen = new Set<string>();
+  const out: ActionDef[] = [];
+  for (const item of raw) {
+    if (item === null || typeof item !== "object") continue;
+    const id = typeof item.id === "string" ? item.id.trim() : "";
+    if (id === "" || seen.has(id)) continue;
+    seen.add(id);
+    const builtin = builtins.find((action) => action.id === id);
+    const kind: ActionKind = item.kind === "loop" ? "loop" : item.kind === "oneshot" ? "oneshot" : builtin?.kind ?? "oneshot";
+    const count = Number(item.keyframeCount);
+    out.push({
+      id,
+      label: typeof item.label === "string" && item.label.trim() !== "" ? item.label.trim() : builtin?.label ?? id,
+      labelEn: typeof item.labelEn === "string" && item.labelEn.trim() !== "" ? item.labelEn.trim() : builtin?.labelEn ?? id,
+      prompt: typeof item.prompt === "string" && item.prompt.trim() !== "" ? item.prompt : builtin?.prompt ?? DEFAULT_VIDEO_PROMPT,
+      promptEn:
+        typeof item.promptEn === "string" && item.promptEn.trim() !== "" ? item.promptEn : builtin?.promptEn ?? item.prompt ?? "",
+      kind,
+      keyframeCount: Number.isFinite(count) ? Math.min(24, Math.max(2, Math.round(count))) : builtin?.keyframeCount ?? 6,
+      builtin: builtin !== undefined
+    });
+  }
+  // 缺哪个内置动作就补哪个（放在前面，顺序与 BUILTIN_ACTIONS 一致）。
+  for (const action of BUILTIN_ACTIONS) {
+    if (!seen.has(action.id)) out.unshift({ ...action });
+  }
+  // 内置动作按 BUILTIN_ACTIONS 的顺序排在前面，自定义动作按加入顺序跟在后面。
+  const order = new Map(BUILTIN_ACTIONS.map((action, index) => [action.id, index]));
+  const builtinPart = out.filter((action) => action.builtin).sort((a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99));
+  const customPart = out.filter((action) => !action.builtin);
+  return [...builtinPart, ...customPart];
+}
+
+function normalizeActiveActionId(raw: any): string {
+  const id = typeof raw?.activeActionId === "string" ? raw.activeActionId.trim() : "";
+  return id === "" ? "walk" : id;
+}
+
+function normalizeArchive(raw: any): Record<string, ActionWorkspace> {
+  if (raw === null || typeof raw !== "object") return {};
+  const out: Record<string, ActionWorkspace> = {};
+  for (const [id, value] of Object.entries(raw as Record<string, any>)) {
+    if (value === null || typeof value !== "object") continue;
+    const videos = emptyVideos();
+    for (const key of DIRECTION_KEYS) {
+      const node = value.videos?.[key];
+      if (node !== undefined) videos[key] = { ...videos[key], ...node, approved: node.approved === true };
+    }
+    const frames = emptyFrames();
+    for (const key of DIRECTION_KEYS) {
+      const node = value.frames?.[key];
+      if (node !== undefined) {
+        frames[key] = {
+          ...frames[key],
+          ...node,
+          frames: Array.isArray(node.frames) ? node.frames.map(String) : [],
+          keyed: Array.isArray(node.keyed) ? node.keyed.map(String) : [],
+          approved: node.approved === true,
+          stale: node.stale === true
+        };
+      }
+    }
+    out[id] = {
+      videos,
+      frames,
+      sheet: value.sheet ?? { status: "empty", approved: false },
+      videoPrompt: typeof value.videoPrompt === "string" && value.videoPrompt.trim() !== "" ? value.videoPrompt : DEFAULT_VIDEO_PROMPT,
+      videoPerDirection:
+        value.videoPerDirection !== null && typeof value.videoPerDirection === "object" ? { ...value.videoPerDirection } : {},
+      motionMode: normalizeMotionMode(value.motionMode),
+      seed: normalizeSeed(value.seed)
+    };
+  }
+  return out;
+}
+
+function normalizeSeedTurn(raw: any): SeedTurnNode {
+  const picks: Record<string, number> = {};
+  for (const key of DIRECTION_KEYS) {
+    const value = Number(raw?.picks?.[key]);
+    picks[key] = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+  }
+  const directions: Record<string, string> = {};
+  for (const key of DIRECTION_KEYS) {
+    const value = raw?.directions?.[key];
+    if (typeof value === "string" && value !== "") directions[key] = value;
+  }
+  return {
+    status: raw?.status ?? "empty",
+    taskId: typeof raw?.taskId === "string" ? raw.taskId : undefined,
+    backend: normalizeVideoBackend(raw?.backend),
+    remoteStatus: typeof raw?.remoteStatus === "string" ? raw.remoteStatus : undefined,
+    error: typeof raw?.error === "string" ? raw.error : undefined,
+    file: typeof raw?.file === "string" ? raw.file : undefined,
+    frames: Array.isArray(raw?.frames) ? raw.frames.map(String) : [],
+    raw: typeof raw?.raw === "string" ? raw.raw : undefined,
+    rawWidth: typeof raw?.rawWidth === "number" ? raw.rawWidth : undefined,
+    rawHeight: typeof raw?.rawHeight === "number" ? raw.rawHeight : undefined,
+    duration: typeof raw?.duration === "number" ? raw.duration : undefined,
+    picks,
+    directions,
+    updatedAt: typeof raw?.updatedAt === "number" ? raw.updatedAt : undefined
+  };
+}
+
+function normalizeSeed(raw: any): SeedState {
+  const video = raw?.video;
+  const turns: Record<string, SeedTurnNode> = {};
+  if (raw?.turns !== null && typeof raw?.turns === "object") {
+    for (const [key, value] of Object.entries(raw.turns as Record<string, any>)) turns[key] = normalizeSeedTurn(value);
+  }
+  return {
+    video: {
+      status: video?.status ?? "empty",
+      approved: video?.approved === true,
+      taskId: typeof video?.taskId === "string" ? video.taskId : undefined,
+      backend: normalizeVideoBackend(video?.backend),
+      remoteStatus: typeof video?.remoteStatus === "string" ? video.remoteStatus : undefined,
+      file: typeof video?.file === "string" ? video.file : undefined,
+      error: typeof video?.error === "string" ? video.error : undefined,
+      updatedAt: typeof video?.updatedAt === "number" ? video.updatedAt : undefined
+    },
+    candidates: Array.isArray(raw?.candidates) ? raw.candidates.map(String) : [],
+    raw: typeof raw?.raw === "string" ? raw.raw : undefined,
+    rawWidth: typeof raw?.rawWidth === "number" ? raw.rawWidth : undefined,
+    rawHeight: typeof raw?.rawHeight === "number" ? raw.rawHeight : undefined,
+    duration: typeof raw?.duration === "number" ? raw.duration : undefined,
+    keyframes: Array.isArray(raw?.keyframes)
+      ? raw.keyframes.map((value: unknown) => Number(value)).filter((value: number) => Number.isFinite(value) && value >= 0)
+      : [],
+    turns
   };
 }
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * dsh-game-material-master —— 浏览器半区。
  *
  * 两块界面：
@@ -257,8 +257,6 @@
       "重新生成": "Regenerate",
       "正在提交 8 个方向的视频任务…": "Submitting video jobs for all 8 directions…",
       "提示词要求「固定镜头、固定背景、原地走三步」。Hailuo 一段通常要 1~6 分钟，提交后可以离开这个页面。": "The prompt asks for \"fixed camera, fixed background, three steps in place\". A Hailuo clip usually takes 1-6 minutes, so you can leave this page after submitting.",
-      "保存视频提示词": "Save video prompt",
-      "视频提示词已保存": "Video prompt saved",
       "正在提交 8 个方向…": "Submitting all 8 directions…",
       "生成全部视频（{n0}/8 张绿幕图就绪）": "Generate all videos ({n0}/8 chroma-key images ready)",
       "正在查询…": "Checking…",
@@ -2052,6 +2050,71 @@
       "默认模型": "Default model",
       "默认输出格式": "Default output format",
       "默认采样率": "Default sample rate",
+      "走路": "Walk",
+      "待机": "Idle",
+      "挥砍": "Slash",
+      "突刺": "Thrust",
+      "受击": "Hit",
+      "倒地": "Death",
+      "施法": "Cast",
+      "＋ 新建动作": "+ New action",
+      "改提示词": "Edit prompt",
+      "删除动作": "Delete action",
+      "删除动作「{n0}」？它的产物会一起丢弃。": "Delete action \"{n0}\"? Its output will be discarded.",
+      "循环动作（八方向各自生成）": "Looping action (one video per direction)",
+      "一次性动作（建议用关键帧转圈）": "One-shot action (keyframe turns recommended)",
+      "八个方向各自生成一段": "One video per direction",
+      "便宜、够用；但一次性动作的节奏在八个方向之间会对不齐": "Cheaper and fine for walks, but one-shot timing drifts between directions",
+      "关键帧转圈（母本动作 → 关键帧 → 逐帧转圈）": "Keyframe turns (master clip → keyframes → one turn per keyframe)",
+      "全方向共用同一批关键帧，节奏天然一致；一次母本 + N 次转圈": "Every direction shares the same keyframes, so timing matches by construction; 1 master + N turns",
+      "保存提示词": "Save prompt",
+      "恢复为动作预设": "Reset to action preset",
+      "新建动作": "New action",
+      "修改动作「{n0}」": "Edit action \"{n0}\"",
+      "动作名称": "Action name",
+      "例如：挥砍 / 施法 / 受击": "e.g. Slash / Cast / Hit",
+      "动作类型": "Action type",
+      "循环（走路 / 待机：首尾要接得上）": "Looping (walk / idle: first and last frame must match)",
+      "一次性（攻击 / 受击 / 倒地：有起手和收招）": "One-shot (attack / hit / death: has wind-up and recovery)",
+      "关键帧数（矩阵列数）": "Keyframes (matrix columns)",
+      "动作提示词": "Action prompt",
+      "写清动作本身：起手 → 出手 → 收招；镜头/朝向/绿幕由系统统一追加，不用重复写": "Describe the action itself: wind-up → strike → recovery. Camera, orientation and green screen are appended automatically.",
+      "保存动作": "Save action",
+      "动作已保存": "Action saved",
+      "动作已删除": "Action deleted",
+      "一次性动作的一致性靠这条流水线保证：先只生成**一段**母本动作视频（用正面图当首帧），把它抽成候选帧、挑出 N 张关键帧，再让**每个关键帧各转一圈**得到八个方向。全方向共用同一批关键帧，所以每一列都是同一个姿态——打击帧不会串行。": "Consistency comes from this pipeline: generate **one** master clip (front image as its first frame), sample it into candidates, pick N keyframes, then spin **each keyframe** once to get all eight directions. Every direction shares the same keyframes, so each column is the same pose — the impact frame cannot drift.",
+      "① 母本动作视频（整条流水线只生成这一段）": "① Master clip (the only video generated in this pipeline)",
+      "正在生成母本视频…": "Generating the master clip…",
+      "还没有母本动作视频": "No master clip yet",
+      "生成母本视频（计费一次）": "Generate master clip (one charge)",
+      "重新生成母本视频（计费一次）": "Regenerate master clip (one charge)",
+      "正在提交母本视频…": "Submitting the master clip…",
+      "抽取候选帧（本地免费）": "Sample candidate frames (local, free)",
+      "正在抽取母本候选帧…": "Sampling candidate frames…",
+      "② 关键帧（矩阵的列）": "② Keyframes (matrix columns)",
+      "{n0} 列": "{n0} columns",
+      "还没有候选帧，先抽候选帧": "No candidates yet — sample them first",
+      "母本候选帧条带": "Master candidate strip",
+      "列数": "Columns",
+      "按列数均匀取关键帧": "Pick keyframes evenly",
+      "第 {n0} 列": "Column {n0}",
+      "关键帧": "Keyframe",
+      "候选帧 {n0}": "Candidate {n0}",
+      "转圈（计费一次）": "Turn (one charge)",
+      "重新转圈（计费一次）": "Turn again (one charge)",
+      "转圈生成中…": "Turning…",
+      "正在提交第 {n0} 个关键帧的转圈…": "Submitting the turn for keyframe {n0}…",
+      "抽帧切八向": "Sample and cut 8 directions",
+      "正在切图…": "Cutting…",
+      "正在切出八个方向…": "Cutting the eight directions…",
+      "已切出 {n0}/8 个方向": "{n0}/8 directions cut",
+      "③ 合成矩阵": "③ Compose the matrix",
+      "动作矩阵": "Action matrix",
+      "还没有合成": "Not composed yet",
+      "合成整图（本地免费）": "Compose the sheet (local, free)",
+      "正在合成动作矩阵…": "Composing the action matrix…",
+      "正在合成…": "Composing…",
+      "保存整图": "Save sheet",
     };
 /* i18n-ignore-end */
 
@@ -2858,6 +2921,19 @@
       ["resetFramePicks", true],
       ["rekey", true],
       ["compose", true],
+      // 动作（阶段② 的「拍什么动作」）+ 关键帧矩阵
+      ["listActions", true],
+      ["saveAction", true],
+      ["deleteAction", true],
+      ["setActiveAction", true],
+      ["setMotionMode", true],
+      ["runActionSeed", true],
+      ["extractActionCandidates", true],
+      ["setActionKeyframes", true],
+      ["runKeyframeTurn", true],
+      ["cutKeyframeTurn", true],
+      ["setKeyframePick", true],
+      ["composeActionMatrix", true],
 
       // 模块②（图片生成）—— 这一段只是远程方法清单，和下面的组件区无关
       ["listImageJobs", false],
@@ -6345,6 +6421,397 @@
     const KEY_VIDEO_ONE = (key) => `video:${key}`;
     const KEY_VIDEO_ALL = "video:*all";
     const KEY_VIDEO_POLL = "video:*poll";
+    const KEY_ACTION = "action:*";
+    const KEY_SEED = "action:seed";
+    const KEY_MATRIX = "action:matrix";
+
+    /** 当前动作（永远有兜底：动作库为空时按走路算）。 */
+    function currentAction(project) {
+      const list = project.actions ?? [];
+      return list.find((item) => item.id === project.activeActionId) ?? list.find((item) => item.id === "walk") ?? null;
+    }
+
+    /** 动作类型徽章文案。 */
+    function actionKindLabel(action) {
+      if (action === null) return "";
+      return action.kind === "loop" ? T("循环动作（八方向各自生成）") : T("一次性动作（建议用关键帧转圈）");
+    }
+
+    /**
+     * 动作显示名。
+     *
+     * 内置动作的中文名在宿主那边是数据（`actions.ts` 的预设），所以这里按 id
+     * 映射到字面量 `T(...)`：文案表只认字面量，动态拼出来的 key 会被当成漏译。
+     * 自定义动作直接用用户起的名字（不翻译，这是用户输入）。
+     */
+    function actionLabelText(action) {
+      if (action === null) return "";
+      switch (action.id) {
+        case "walk": return T("走路");
+        case "idle": return T("待机");
+        case "attackSlash": return T("挥砍");
+        case "attackStab": return T("突刺");
+        case "hurt": return T("受击");
+        case "die": return T("倒地");
+        case "cast": return T("施法");
+        default: return action.label;
+      }
+    }
+
+    /**
+     * 阶段② 顶部的「动作条」：动作下拉 + 新建/编辑 + 生成方式。
+     *
+     * 真组件（不是 render 函数）——新建动作要弹窗、要存草稿，需要 useState。
+     */
+    function ActionBar({ project, api, start, setNotice, savePrompts, videoPromptDraft, setVideoPromptDraft }) {
+      const action = currentAction(project);
+      const actions = project.actions ?? [];
+      const mode = project.motionMode ?? "perDirection";
+      const [editing, setEditing] = React.useState(null);
+      const promptDirty = videoPromptDraft !== (project.prompts?.video ?? "");
+      const openNew = () => setEditing({ id: "", label: "", labelEn: "", kind: "oneshot", keyframeCount: 6, prompt: "" });
+      const openEdit = () => {
+        if (action === null) return;
+        setEditing({
+          id: action.id,
+          label: action.label,
+          labelEn: action.labelEn ?? action.label,
+          kind: action.kind,
+          keyframeCount: action.keyframeCount,
+          prompt: action.prompt
+        });
+      };
+      const submit = () => {
+        if (editing === null) return;
+        void start(
+          () => api.saveAction({ projectId: project.id, action: { ...editing, id: editing.id === "" ? undefined : editing.id } }),
+          { reload: true, notice: T("动作已保存"), noticeKind: "ok" }
+        );
+        setEditing(null);
+      };
+      return h(
+        React.Fragment,
+        null,
+        h(
+          "div",
+          { className: "SPR_toolbar" },
+          h(
+            "label",
+            { className: "SPR_field", style: { flexDirection: "row", alignItems: "center", gap: 6, flex: "none" } },
+            h("span", { className: "SPR_fieldLabel" }, T("动作")),
+            h(
+              "select",
+              {
+                className: "SPR_input",
+                "data-testid": "sprite-action-select",
+                value: action?.id ?? "",
+                onChange: (event) => void start(() => api.setActiveAction({ projectId: project.id, actionId: event.target.value }), { reload: true })
+              },
+              actions.map((item) => h("option", { key: item.id, value: item.id }, actionLabelText(item)))
+            )
+          ),
+          h(Btn, { onClick: openNew, testId: "sprite-action-new" }, T("＋ 新建动作")),
+          action !== null && action.builtin === true ? h(Btn, { onClick: openEdit }, T("改提示词")) : null,
+          action !== null && action.builtin !== true
+            ? h(Btn, {
+                onClick: () => {
+                  if (typeof window !== "undefined" && !window.confirm(T("删除动作「{n0}」？它的产物会一起丢弃。", { n0: action.label }))) return;
+                  void start(() => api.deleteAction({ projectId: project.id, actionId: action.id }), { reload: true, notice: T("动作已删除"), noticeKind: "ok" });
+                }
+              }, T("删除动作"))
+            : null,
+          h("span", { className: "SPR_refRow" }, actionKindLabel(action))
+        ),
+        // 生成方式：循环动作默认八方向独立，一次性动作默认关键帧矩阵。
+        h(
+          "div",
+          { className: "SPR_modeBar" },
+          [
+            { key: "perDirection", title: T("八个方向各自生成一段"), hint: T("便宜、够用；但一次性动作的节奏在八个方向之间会对不齐") },
+            { key: "keyframe", title: T("关键帧转圈（母本动作 → 关键帧 → 逐帧转圈）"), hint: T("全方向共用同一批关键帧，节奏天然一致；一次母本 + N 次转圈") }
+          ].map((entry) =>
+            h(
+              "button",
+              {
+                key: entry.key,
+                type: "button",
+                className: "SPR_mode",
+                "data-active": mode === entry.key ? "true" : "false",
+                title: entry.hint,
+                onClick: () => {
+                  if (mode === entry.key) return;
+                  void start(() => api.setMotionMode({ projectId: project.id, mode: entry.key }), { reload: true });
+                }
+              },
+              entry.title
+            )
+          )
+        ),
+        h("textarea", {
+          className: "SPR_area",
+          value: videoPromptDraft,
+          onChange: (event) => setVideoPromptDraft(event.target.value)
+        }),
+        h(
+          "div",
+          { className: "SPR_toolbar" },
+          h(Btn, { disabled: !promptDirty, onClick: () => void savePrompts({ video: videoPromptDraft }) }, promptDirty ? T("保存提示词") : T("提示词已保存")),
+          h(
+            Btn,
+            {
+              disabled: action === null,
+              onClick: () => {
+                if (action === null) return;
+                setVideoPromptDraft(action.prompt);
+                void savePrompts({ video: action.prompt });
+              }
+            },
+            T("恢复为动作预设")
+          )
+        ),
+        editing === null
+          ? null
+          : h(
+              "div",
+              { className: "SPR_node", "data-busy": "false", style: { marginTop: 8 } },
+              h("div", { className: "SPR_nodeTop" }, h("span", { className: "SPR_nodeTitle" }, editing.id === "" ? T("新建动作") : T("修改动作「{n0}」", { n0: editing.label }))),
+              h(
+                "label",
+                { className: "SPR_field" },
+                h("span", { className: "SPR_fieldLabel" }, T("动作名称")),
+                h("input", {
+                  className: "SPR_input",
+                  value: editing.label,
+                  placeholder: T("例如：挥砍 / 施法 / 受击"),
+                  onChange: (event) => setEditing({ ...editing, label: event.target.value })
+                })
+              ),
+              h(
+                "label",
+                { className: "SPR_field" },
+                h("span", { className: "SPR_fieldLabel" }, T("动作类型")),
+                h(
+                  "select",
+                  {
+                    className: "SPR_input",
+                    value: editing.kind,
+                    onChange: (event) => setEditing({ ...editing, kind: event.target.value })
+                  },
+                  h("option", { value: "loop" }, T("循环（走路 / 待机：首尾要接得上）")),
+                  h("option", { value: "oneshot" }, T("一次性（攻击 / 受击 / 倒地：有起手和收招）"))
+                )
+              ),
+              h(NumField, {
+                label: T("关键帧数（矩阵列数）"),
+                value: editing.keyframeCount,
+                min: 2,
+                max: 24,
+                onChange: (value) => setEditing({ ...editing, keyframeCount: value })
+              }),
+              h(
+                "label",
+                { className: "SPR_field" },
+                h("span", { className: "SPR_fieldLabel" }, T("动作提示词")),
+                h("textarea", {
+                  className: "SPR_area",
+                  value: editing.prompt,
+                  placeholder: T("写清动作本身：起手 → 出手 → 收招；镜头/朝向/绿幕由系统统一追加，不用重复写"),
+                  onChange: (event) => setEditing({ ...editing, prompt: event.target.value })
+                })
+              ),
+              h(
+                "div",
+                { className: "SPR_btnRow" },
+                h(Btn, { primary: true, onClick: submit, disabled: editing.label.trim() === "" || editing.prompt.trim() === "" }, T("保存动作")),
+                h(Btn, { onClick: () => setEditing(null) }, T("取消"))
+              )
+            )
+      );
+    }
+
+    /**
+     * 关键帧矩阵面板：母本动作 → 关键帧 → 每帧转圈 → 合成。
+     *
+     * 这是「一次性动作」的流水线。核心保证：**所有方向共用同一批关键帧**，
+     * 所以矩阵的每一列是同一个姿态——节奏一致是结构上的，不靠模型配合。
+     */
+    function KeyframeMatrix({ project, api, start, tasks, setNotice }) {
+      const action = currentAction(project);
+      const seed = project.seed ?? { video: { status: "empty" }, candidates: [], keyframes: [], turns: {} };
+      const keyframes = seed.keyframes ?? [];
+      const candidates = seed.candidates ?? [];
+      const [columns, setColumns] = React.useState(keyframes.length || (action?.keyframeCount ?? 6));
+      React.useEffect(() => {
+        if (keyframes.length > 0) setColumns(keyframes.length);
+      }, [keyframes.length]);
+      const seedBusy = seed.video?.status === "running" || tasks.has(KEY_SEED);
+      const sheet = project.sheet;
+      const missing = keyframes.map((_, index) => (seed.turns?.[`k${index}`]?.directions ? Object.keys(seed.turns[`k${index}`].directions).length : 0));
+
+      return h(
+        React.Fragment,
+        null,
+        h("p", { className: "SPR_hint" }, T("一次性动作的一致性靠这条流水线保证：先只生成**一段**母本动作视频（用正面图当首帧），把它抽成候选帧、挑出 N 张关键帧，再让**每个关键帧各转一圈**得到八个方向。全方向共用同一批关键帧，所以每一列都是同一个姿态——打击帧不会串行。")),
+        // ① 母本动作视频
+        h(
+          "div",
+          { className: "SPR_node" },
+          h("div", { className: "SPR_nodeTop" }, h("span", { className: "SPR_nodeTitle" }, T("① 母本动作视频（整条流水线只生成这一段）")), h(StatusChip, { node: seed.video })),
+          seed.video?.file !== undefined
+            ? h(MediaBox, { overlay: seedBusy, text: T("正在生成母本视频…") }, h("video", { className: "SPR_video", src: assetUrl(project, seed.video.file, seed.video.updatedAt), controls: true, preload: "metadata" }))
+            : h("div", { className: "SPR_thumbEmpty" }, T("还没有母本动作视频")),
+          seed.video?.error !== undefined ? h("p", { className: "SPR_error" }, seed.video.error) : null,
+          h(
+            "div",
+            { className: "SPR_btnRow" },
+            h(
+              BusyBtn,
+              {
+                primary: seed.video?.file === undefined,
+                busy: seedBusy,
+                busyText: T("正在提交…"),
+                disabled: project.images?.front?.file === undefined,
+                onClick: () => void start(() => api.runActionSeed({ projectId: project.id }), { reload: true }, { key: KEY_SEED, label: T("正在提交母本视频…") })
+              },
+              seed.video?.file === undefined ? T("生成母本视频（计费一次）") : T("重新生成母本视频（计费一次）")
+            ),
+            h(
+              BusyBtn,
+              {
+                busy: tasks.has("action:candidates"),
+                busyText: T("正在抽帧…"),
+                disabled: seed.video?.file === undefined,
+                onClick: () =>
+                  void start(() => api.extractActionCandidates({ projectId: project.id }), { reload: true }, { key: "action:candidates", label: T("正在抽取母本候选帧…") })
+              },
+              T("抽取候选帧（本地免费）")
+            )
+          )
+        ),
+        // ② 关键帧
+        h(
+          "div",
+          { className: "SPR_node" },
+          h("div", { className: "SPR_nodeTop" }, h("span", { className: "SPR_nodeTitle" }, T("② 关键帧（矩阵的列）")), h(Chip, { kind: keyframes.length > 0 ? "ready" : "empty", text: T("{n0} 列", { n0: keyframes.length }) })),
+          candidates.length === 0
+            ? h("div", { className: "SPR_thumbEmpty" }, T("还没有候选帧，先抽候选帧"))
+            : h(
+                React.Fragment,
+                null,
+                h("img", { className: "SPR_thumb", style: { width: "100%", height: "auto" }, src: assetUrl(project, `actions/${action.id}/seed/strip.png`, project.updatedAt), alt: T("母本候选帧条带") }),
+                h(
+                  "div",
+                  { className: "SPR_btnRow" },
+                  h(NumField, { label: T("列数"), value: columns, min: 2, max: 24, onChange: setColumns }),
+                  h(
+                    Btn,
+                    {
+                      onClick: () => {
+                        const total = candidates.length;
+                        const next = [];
+                        for (let i = 0; i < columns; i++) next.push(Math.min(total - 1, Math.floor(((i + 0.5) * total) / columns)));
+                        void start(() => api.setActionKeyframes({ projectId: project.id, keyframes: next }), { reload: true });
+                      }
+                    },
+                    T("按列数均匀取关键帧")
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "SPR_grid" },
+                  keyframes.map((candidate, index) => {
+                    const turn = seed.turns?.[`k${index}`];
+                    return h(
+                      "div",
+                      { key: index, className: "SPR_node" },
+                      h("div", { className: "SPR_nodeTop" }, h("span", { className: "SPR_nodeTitle" }, T("第 {n0} 列", { n0: index + 1 })), h(StatusChip, { node: turn ?? { status: "empty" } })),
+                      h("img", { className: "SPR_thumb", src: assetUrl(project, candidates[candidate], project.updatedAt), alt: T("关键帧") }),
+                      h(
+                        "select",
+                        {
+                          className: "SPR_input",
+                          value: String(candidate),
+                          onChange: (event) => {
+                            const next = keyframes.slice();
+                            next[index] = Number(event.target.value);
+                            void start(() => api.setActionKeyframes({ projectId: project.id, keyframes: next }), { reload: true });
+                          }
+                        },
+                        candidates.map((file, i) => h("option", { key: i, value: String(i) }, T("候选帧 {n0}", { n0: i + 1 })))
+                      ),
+                      h(
+                        "div",
+                        { className: "SPR_btnRow" },
+                        h(
+                          BusyBtn,
+                          {
+                            primary: turn?.status !== "ready",
+                            busy: turn?.status === "running",
+                            busyText: T("转圈生成中…"),
+                            onClick: () =>
+                              void start(
+                                () => api.runKeyframeTurn({ projectId: project.id, index, regenerate: turn?.status === "ready" }),
+                                { reload: true },
+                                { key: `action:turn:${index}`, label: T("正在提交第 {n0} 个关键帧的转圈…", { n0: index + 1 }) }
+                              )
+                          },
+                          turn?.status === "ready" ? T("重新转圈（计费一次）") : T("转圈（计费一次）")
+                        ),
+                        h(
+                          BusyBtn,
+                          {
+                            busy: tasks.has(`action:cut:${index}`),
+                            busyText: T("正在切图…"),
+                            disabled: turn?.file === undefined,
+                            onClick: () =>
+                              void start(() => api.cutKeyframeTurn({ projectId: project.id, index }), { reload: true }, { key: `action:cut:${index}`, label: T("正在切出八个方向…") })
+                          },
+                          T("抽帧切八向")
+                        )
+                      ),
+                      h("span", { className: "SPR_refRow" }, T("已切出 {n0}/8 个方向", { n0: missing[index] ?? 0 }))
+                    );
+                  })
+                )
+              )
+        ),
+        // ③ 合成
+        h(
+          "div",
+          { className: "SPR_node" },
+          h("div", { className: "SPR_nodeTop" }, h("span", { className: "SPR_nodeTitle" }, T("③ 合成矩阵"))),
+          sheet?.status === "ready" && sheet.file !== undefined
+            ? h(ZoomableImage, { src: assetUrl(project, sheet.file, sheet.generatedAt ?? project.updatedAt), alt: T("动作矩阵"), className: "SPR_sheet" })
+            : h("div", { className: "SPR_thumbEmpty" }, T("还没有合成")),
+          h(
+            "div",
+            { className: "SPR_btnRow" },
+            h(
+              BusyBtn,
+              {
+                primary: true,
+                busy: tasks.has(KEY_MATRIX),
+                busyText: T("正在合成…"),
+                disabled: keyframes.length < 2,
+                onClick: () => void start(() => api.composeActionMatrix({ projectId: project.id }), { reload: true }, { key: KEY_MATRIX, label: T("正在合成动作矩阵…") })
+              },
+              T("合成整图（本地免费）")
+            ),
+            h(
+              BusyBtn,
+              {
+                busy: tasks.has(KEY_VIDEO_POLL),
+                busyText: T("正在查询…"),
+                onClick: () => void start(() => api.pollVideos({ projectId: project.id }), { reload: true }, { key: KEY_VIDEO_POLL, label: T("正在查询远端视频进度…") })
+              },
+              T("立即刷新进度")
+            ),
+            sheet?.file !== undefined ? h(SaveLink, { url: assetUrl(project, sheet.file, sheet.generatedAt ?? project.updatedAt), name: `${project.name}-${action?.id ?? "action"}.png`, label: T("保存整图") }) : null
+          )
+        )
+      );
+    }
+
 
     function renderVideoStage(ctx) {
       const { project, videoPromptDraft, setVideoPromptDraft, savePrompts, start, setNotice, api, tasks } = ctx;
@@ -6363,16 +6830,16 @@
       return h(
         React.Fragment,
         null,
+        h(ActionBar, { project, api, start, setNotice, savePrompts, videoPromptDraft, setVideoPromptDraft }),
+        project.motionMode === "keyframe"
+          ? h(KeyframeMatrix, { project, api, start, tasks, setNotice })
+          : h(
+        React.Fragment,
+        null,
         h("p", { className: "SPR_hint" }, T("提示词要求「固定镜头、固定背景、原地走三步」。Hailuo 一段通常要 1~6 分钟，提交后可以离开这个页面。") + T("某一个方向已经有现成的行走视频（自己电脑上的文件）时，点那一格的「选择本地视频」直接用它，不必走远程生成。")),
-        h("textarea", {
-          className: "SPR_area",
-          value: videoPromptDraft,
-          onChange: (event) => setVideoPromptDraft(event.target.value)
-        }),
         h(
           "div",
           { className: "SPR_toolbar" },
-          h(Btn, { disabled: !promptDirty, onClick: () => void savePrompts({ video: videoPromptDraft }) }, promptDirty ? T("保存视频提示词") : T("视频提示词已保存")),
           h(
             BusyBtn,
             {
@@ -6537,6 +7004,7 @@
             );
           })
         )
+          )
       );
     }
 
@@ -21517,6 +21985,19 @@
         resetFramePicks: (payload) => call("resetFramePicks", payload),
         rekey: (payload) => call("rekey", payload),
         compose: (payload) => call("compose", payload),
+
+        listActions: (payload) => call("listActions", payload),
+        saveAction: (payload) => call("saveAction", payload),
+        deleteAction: (payload) => call("deleteAction", payload),
+        setActiveAction: (payload) => call("setActiveAction", payload),
+        setMotionMode: (payload) => call("setMotionMode", payload),
+        runActionSeed: (payload) => call("runActionSeed", payload),
+        extractActionCandidates: (payload) => call("extractActionCandidates", payload),
+        setActionKeyframes: (payload) => call("setActionKeyframes", payload),
+        runKeyframeTurn: (payload) => call("runKeyframeTurn", payload),
+        cutKeyframeTurn: (payload) => call("cutKeyframeTurn", payload),
+        setKeyframePick: (payload) => call("setKeyframePick", payload),
+        composeActionMatrix: (payload) => call("composeActionMatrix", payload),
 
         listImageJobs: () => call("listImageJobs"),
         createImageJob: (payload) => call("createImageJob", payload),
