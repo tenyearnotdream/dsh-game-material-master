@@ -2074,6 +2074,7 @@
       "动作提示词是项目创建时拷进存档的，插件后来更新过默认值（道具锁定、留边构图等）时用它换新": "The action prompt is copied into the project file at creation time, so it misses later plugin updates (prop lock, framing margin, ...) - use this to catch up.",
       "把「{n0}」的提示词换成插件当前版本的默认值？你自己改过的部分会被覆盖。": "Replace the prompt of \"{n0}\" with the plugin's current default? Any edits you made will be overwritten.",
       "已换成插件默认提示词": "Switched to the plugin default prompt",
+      "还有 {n0} 列没切出八个方向（{n1}/{n2} 列就绪），现在合成会缺列——先把上面每一列的转圈做开。": "{n0} column(s) still have no eight-direction cut ({n1}/{n2} ready); composing now would leave gaps - finish the turns above first.",
       "新建动作": "New action",
       "修改动作「{n0}」": "Edit action \"{n0}\"",
       "动作名称": "Action name",
@@ -2098,7 +2099,7 @@
       "正在抽取母本候选帧…": "Sampling candidate frames…",
       "② 关键帧（矩阵的列）": "② Keyframes (matrix columns)",
       "⚠ {n0} 列贴边": "{n0} columns touch the edge",
-      "点缩略图挑关键帧（再点一次取消），列序按时间自动排。左上角带 ⚠ 的帧角色或武器贴着画面边缘，多半已经被裁掉一截，尽量避开——拿它当关键帧，那一列的八方向就会缺一块。": "Click a thumbnail to add or remove a keyframe; column order follows time automatically. Thumbnails flagged in the corner have the body or weapon touching the frame edge, so they are probably clipped already - avoid them, because that column's eight directions will be missing a piece.",
+      "点缩略图挑关键帧（再点一次取消），列序按时间自动排。左上角带橙色角标的帧，角色或武器贴着画面边缘，多半已经被裁掉一截，尽量避开——拿它当关键帧，那一列的八方向就会缺一块。": "Click a thumbnail to add or remove a keyframe; column order follows time automatically. Thumbnails flagged in the corner have the body or weapon touching the frame edge, so they are probably clipped already - avoid them, because that column's eight directions will be missing a piece.",
       "至少要留 2 列（一次动作至少得有起手和收招）": "Keep at least 2 columns (an action needs a wind-up and a recovery)",
       "最多 24 列，再多一整圈视频就切不动了": "24 columns at most — beyond that a single turn clip cannot cover the rotation",
       "候选帧 {n0}：角色/武器贴着画面边缘，可能已经被裁掉一截": "Candidate {n0}: the body or weapon touches the frame edge and may already be clipped",
@@ -6802,7 +6803,7 @@
             : h(
                 React.Fragment,
                 null,
-                h("p", { className: "SPR_hint" }, T("点缩略图挑关键帧（再点一次取消），列序按时间自动排。左上角带 ⚠ 的帧角色或武器贴着画面边缘，多半已经被裁掉一截，尽量避开——拿它当关键帧，那一列的八方向就会缺一块。")),
+                h("p", { className: "SPR_hint" }, T("点缩略图挑关键帧（再点一次取消），列序按时间自动排。左上角带橙色角标的帧，角色或武器贴着画面边缘，多半已经被裁掉一截，尽量避开——拿它当关键帧，那一列的八方向就会缺一块。")),
                 action === null ? null : h("img", { className: "SPR_strip", src: assetUrl(project, `actions/${action.id}/seed/strip.png`, project.updatedAt), alt: T("母本候选帧条带") }),
                 h(
                   "div",
@@ -6950,6 +6951,18 @@
           "div",
           { className: "SPR_node" },
           h("div", { className: "SPR_nodeTop" }, h("span", { className: "SPR_nodeTitle" }, T("③ 合成矩阵"))),
+          // 缺列提醒：合成不会补列，缺的那几列会直接少一截（动画在那一拍会顿一下）。
+          keyframes.length > readyColumns
+            ? h(
+                "p",
+                { className: "SPR_warnNote" },
+                T("还有 {n0} 列没切出八个方向（{n1}/{n2} 列就绪），现在合成会缺列——先把上面每一列的转圈做开。", {
+                  n0: keyframes.length - readyColumns,
+                  n1: readyColumns,
+                  n2: keyframes.length
+                })
+              )
+            : null,
           sheet?.status === "ready" && sheet.file !== undefined
             ? h("div", { className: "SPR_sheetWrap" }, h(ZoomableImage, { src: assetUrl(project, sheet.file, sheet.generatedAt ?? project.updatedAt), alt: T("动作矩阵"), className: "SPR_sheet" }))
             : h("div", { className: "SPR_thumbEmpty" }, T("还没有合成")),
