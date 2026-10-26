@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 动作序列：「母本动作 → 关键帧 → 逐关键帧转圈」的流水线。
  *
  * ── 为什么需要它 ────────────────────────────────────────────────────
@@ -252,6 +252,9 @@ export async function startSeedVideo(
 
   const dir = actionDir(action.id);
   const firstFrameRel = `${dir}/seed-first-frame.jpg`;
+  // 动作目录是新建才有的（ensureLayout 只建项目根下的固定几层），转码目标目录要先存在，
+  // 否则 ffmpeg 的 image2 muxer 会以 I/O error 退出。
+  await mkdir(dirname(assetPath(projectId, firstFrameRel)), { recursive: true });
   const dataUri = await toJpegDataUri(
     assetPath(projectId, baseImage.file),
     assetPath(projectId, firstFrameRel),
@@ -429,6 +432,7 @@ export async function startKeyframeTurn(
   const prompt = poseLockTurnPrompt(promptLangOf(project));
   const dir = actionDir(action.id);
   const jpegRel = `${dir}/${key}/turn-first-frame.jpg`;
+  await mkdir(dirname(assetPath(projectId, jpegRel)), { recursive: true });
   const dataUri = await toJpegDataUri(
     assetPath(projectId, firstFrame),
     assetPath(projectId, jpegRel),

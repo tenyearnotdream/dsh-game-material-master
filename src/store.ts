@@ -340,6 +340,16 @@ export interface ActionWorkspace {
   videoPerDirection: Record<string, string>;
   motionMode: MotionMode;
   seed: SeedState;
+  /**
+   * 这个动作自己的工作区帧数（走路 8 帧 / 攻击矩阵 N 列）。
+   *
+   * 必须逐动作存：`settings.frameCount` 是项目级的，而整图合成、行走预览、
+   * 外部工具都按它切图——攻击切到 5 列之后，如果走路不把 8 还原回来，
+   * 切回走路就会按 5 列去切那 8 帧的序列，整张图错位。
+   *
+   * 可选：老存档里没有这个字段，缺省就沿用当前的 `settings.frameCount`。
+   */
+  frameCount?: number;
 }
 
 export interface Project {
@@ -507,7 +517,8 @@ export function snapshotWorkspace(project: Project): ActionWorkspace {
     videoPrompt: project.prompts.video,
     videoPerDirection: { ...(project.prompts.videoPerDirection ?? {}) },
     motionMode: project.motionMode,
-    seed: project.seed ?? emptySeed()
+    seed: project.seed ?? emptySeed(),
+    frameCount: project.settings.frameCount
   };
 }
 
@@ -520,6 +531,8 @@ export function applyWorkspace(project: Project, workspace: ActionWorkspace | un
   project.prompts.video = ws?.videoPrompt ?? DEFAULT_VIDEO_PROMPT;
   project.prompts.videoPerDirection = ws?.videoPerDirection ?? {};
   project.seed = ws?.seed ?? emptySeed();
+  // 帧数逐动作还原（走路 8 / 攻击 N 列），否则切回走路会按攻击的列数去切图。
+  if (ws?.frameCount !== undefined && ws.frameCount > 0) project.settings.frameCount = ws.frameCount;
   const action = findAction(project.actions, project.activeActionId);
   project.motionMode = normalizeMotionMode(ws?.motionMode, action.kind);
 }

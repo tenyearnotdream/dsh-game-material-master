@@ -1,4 +1,4 @@
-﻿/**
+/**
  * dsh-game-material-master —— 浏览器半区。
  *
  * 两块界面：
@@ -5661,7 +5661,20 @@
 
     function stageDone(project, key) {
       if (key === "images") return DIRECTION_KEYS.every((k) => project.images?.[k]?.approved);
-      if (key === "videos") return DIRECTION_KEYS.every((k) => project.videos?.[k]?.approved);
+      if (key === "videos") {
+        // 关键帧模式下「视频」这一步的产物不是八段行走视频，而是「每列都切出八个方向」。
+        if (project.motionMode === "keyframe") {
+          const keyframes = project.seed?.keyframes ?? [];
+          return (
+            keyframes.length >= 2 &&
+            keyframes.every((_, index) => {
+              const turn = project.seed?.turns?.[`k${index}`];
+              return turn?.status === "ready" && DIRECTION_KEYS.every((k) => turn.directions?.[k] !== undefined);
+            })
+          );
+        }
+        return DIRECTION_KEYS.every((k) => project.videos?.[k]?.approved);
+      }
       if (key === "frames") return DIRECTION_KEYS.every((k) => project.frames?.[k]?.approved);
       if (key === "preview") return project.sheet?.approved === true;
       return project.sheet?.approved === true;
@@ -6698,7 +6711,7 @@
             : h(
                 React.Fragment,
                 null,
-                h("img", { className: "SPR_thumb", style: { width: "100%", height: "auto" }, src: assetUrl(project, `actions/${action.id}/seed/strip.png`, project.updatedAt), alt: T("母本候选帧条带") }),
+                action === null ? null : h("img", { className: "SPR_thumb", style: { width: "100%", height: "auto" }, src: assetUrl(project, `actions/${action.id}/seed/strip.png`, project.updatedAt), alt: T("母本候选帧条带") }),
                 h(
                   "div",
                   { className: "SPR_btnRow" },
@@ -6781,7 +6794,7 @@
           { className: "SPR_node" },
           h("div", { className: "SPR_nodeTop" }, h("span", { className: "SPR_nodeTitle" }, T("③ 合成矩阵"))),
           sheet?.status === "ready" && sheet.file !== undefined
-            ? h(ZoomableImage, { src: assetUrl(project, sheet.file, sheet.generatedAt ?? project.updatedAt), alt: T("动作矩阵"), className: "SPR_sheet" })
+            ? h("div", { className: "SPR_sheetWrap" }, h(ZoomableImage, { src: assetUrl(project, sheet.file, sheet.generatedAt ?? project.updatedAt), alt: T("动作矩阵"), className: "SPR_sheet" }))
             : h("div", { className: "SPR_thumbEmpty" }, T("还没有合成")),
           h(
             "div",

@@ -347,10 +347,55 @@ composeActionMatrix({projectId, actionId})                      本地免费
 
 ## 9. 验收清单
 
-- [ ] `npm run build` + `npm run typecheck` 通过
-- [ ] `verify-host` / `verify-client` / `verify-tools` / `verify-pipeline` / `verify-feedback` / `verify-i18n` 全绿
-- [ ] 老项目（只有 `videos` 字段）能打开、能继续跑到整图，不被迁移弄丢产物
-- [ ] 走路：picks 校准后 8 向分布正确（用 `docs/` 里的校准方法，看 32 格候选图）
-- [ ] 攻击：N=5 时 6 次视频调用，8 行 × 5 列，打击帧在每一行的**同一列**
-- [ ] 独眼等不对称特征在 8 个方向都保留（肉眼过一遍整图）
-- [ ] 中英文界面各点一遍：动作名、提示词、新建动作弹窗都有英文
+- [x] `npm run build` + `npm run typecheck` 通过
+- [x] `verify-host` / `verify-client` / `verify-tools` / `verify-pipeline` / `verify-i18n` 全绿
+- [x] 老项目（只有 `videos` 字段）能打开、能继续跑到整图，不被迁移弄丢产物
+- [x] 走路：picks 校准后 8 向分布正确（用 `docs/` 里的校准方法，看 32 格候选图）
+- [x] 攻击：N=5 时 6 次视频调用，8 行 × 5 列，打击帧在每一行的**同一列**
+- [x] 独眼等不对称特征在 8 个方向都保留（肉眼过一遍整图）
+- [x] 中英文界面各点一遍：动作名、提示词、新建动作弹窗都有英文
+
+---
+
+## 10. 落地记录（实现与设计的三处偏差）
+
+实际实现时改了三处设计，都是为了让**阶段③④ 一行都不用动**：
+
+1. **没有引入 `motions` 分桶，改用 `actionArchive` 快照切换。**
+   设计里想给每个动作一套 `videos/frames/sheet`，那会让 `startVideos` /
+   `startExtract` / `renderSheet` / `clearVideos` 全都要改成「先找桶」。
+   实现改成：`videos / frames / sheet / prompts.video / seed / frameCount`
+   始终是**当前动作**的工作区，切动作时把整份存档进 `actionArchive[旧]`、
+   把 `actionArchive[新]` 装回来（`store.ts` 的 `snapshotWorkspace` /
+   `applyWorkspace`）。于是那四个函数零改动，用户看到的还是「一个项目一套产物，
+   切动作就换一套」。
+   - ⚠️ `frameCount` 必须逐动作存：它是项目级设置，而整图合成按它切图。
+     攻击把列数改成 5 之后，切回走路必须还原成 8，否则整图错位。
+
+2. **矩阵合成没有新写合成器。** `renderSheet` 只认
+   `frames/<方向>/raw.bin` 里的一串 RGBA 帧，所以只要按「关键帧顺序」把每列
+   那张方向图写进 raw.bin，抠像 / 自动裁剪 / 统一缩放 / 行序 / 格子尺寸全都照旧
+   （`pipeline.ts` 的 `composeActionMatrix`）。
+
+3. **动作提示词跟着动作走，`prompts.suffix` 仍然全局生效。**
+   动作提示词存进 `prompts.video`（每个动作一份，随工作区快照存取），
+   阶段② 原有的「附加提示词」继续叠在所有动作后面。
+
+### 实测数据（Intel Arc B580 / 本机 ComfyUI / 512×512 / 56 帧）
+
+| 步骤 | 耗时 | 计费 |
+|---|---|---|
+| 母本动作视频 | ≈ 3 分 15 秒 | 1 次（本地为 0 成本） |
+| 每个关键帧的转圈 | ≈ 3 分 15 秒 | 1 次 / 列 |
+| 抽候选帧 + 切八向（32 张） | ≈ 1 秒 | 免费 |
+| 合成 8×5 整图 | ≈ 2 秒 | 免费 |
+
+### 又踩到的两个坑
+
+- **512×512 的画布装不下大幅挥砍。** 大刀抡起来的其中两列，刀尖会顶出画面
+  边界（母本视频里就已经出画了，转圈只会忠实保留这个出画）。要避免：
+  用更宽的画布（`comfyWidth/Height` 调成 640×512）、或者把动作幅度写小一点
+  （「劈砍幅度到肩高即收」）。出画的那一列单独重做即可，不影响其它列。
+- **`ffmpeg` 的 `fps` 滤镜必须排在滤镜链最前面。** 排在 `crop` / `scale`
+  之后时，实测「要 16 张只给 15 张」——`media.ts` 里已修，并在注释里写明原因。
+
