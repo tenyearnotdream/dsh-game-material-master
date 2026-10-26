@@ -106,6 +106,7 @@ export const METHOD_MODULE: Record<string, ModuleKey> = {
   listActions: "sprite",
   saveAction: "sprite",
   deleteAction: "sprite",
+  resetActionPrompt: "sprite",
   setActiveAction: "sprite",
   setMotionMode: "sprite",
   runActionSeed: "sprite",

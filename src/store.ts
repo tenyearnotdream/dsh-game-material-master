@@ -316,6 +316,14 @@ export interface SeedState {
   video: VideoNode;
   /** 母本视频抽出的候选帧（相对路径）。 */
   candidates: string[];
+  /**
+   * 每张候选帧的「内容贴边」标记（与 `candidates` 一一对应）。
+   *
+   * 贴边 = 角色或武器顶到了画面边缘，这张图多半已经被裁掉一截：拿它当关键帧，
+   * 那一列的八方向就会缺一块（实测：挥砍第 1 列的刀整截不见了）。
+   * 界面上给这些帧打警告，提示换一张或者重烧母本。
+   */
+  candidateEdges?: boolean[];
   raw?: string;
   rawWidth?: number;
   rawHeight?: number;

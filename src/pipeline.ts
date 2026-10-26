@@ -39,7 +39,7 @@ import {
   imageSizeOf,
   imageWatermarkOf
 } from "./imageprovider.js";
-import { extractFrames, mimeOf, sniffVideo, toDataUri, toJpegDataUri } from "./media.js";
+import { decodeToRgba, extractFrames, mimeOf, sniffVideo, toDataUri, toJpegDataUri } from "./media.js";
 import {
   assertVideoBackendReady,
   downloadVideoTask,
@@ -49,6 +49,7 @@ import {
   videoBackendOf
 } from "./videogen.js";
 import { composeSheet, keyGreen, type SheetRow } from "./chroma.js";
+import { FRAME_FIT_RATIO, fitFrameContent } from "./framefit.js";
 import { encodePng } from "./png.js";
 import { zipEntries, type ZipEntry } from "./zip.js";
 import {
@@ -421,7 +422,18 @@ async function submitTurnVideo(projectId: string): Promise<void> {
   const startedAt = Date.now();
   try {
     const jpegRel = "videos/turn-first-frame.jpg";
-    const dataUri = await toJpegDataUri(assetPath(projectId, first.file), assetPath(projectId, jpegRel), 1280, 3, videoBackendOf(config) === "toapis" ? "white" : undefined);
+    // 转圈是图生视频：首帧先把角色缩到 70% 并居中留出余量，否则模型没有地方
+    // 放伸出去的武器，转一圈下来武器就被画面边缘切掉（另一半区同理，见 framefit.ts）。
+    const fittedRel = "videos/turn-first-frame-fit.png";
+    const decoded = await decodeToRgba(assetPath(projectId, first.file));
+    const fitted = fitFrameContent(decoded.rgba, decoded.width, decoded.height, { ratio: FRAME_FIT_RATIO });
+    await writeFile(assetPath(projectId, fittedRel), encodePng(fitted.rgba, fitted.width, fitted.height));
+    if (fitted.touchedEdge) {
+      await patchProject(projectId, (current) => {
+        log(current, "warn", "转圈首帧里的角色已经贴到画面边缘（源图本身就被裁过），转出来的方向可能缺一块");
+      });
+    }
+    const dataUri = await toJpegDataUri(assetPath(projectId, fittedRel), assetPath(projectId, jpegRel), 1280, 3, videoBackendOf(config) === "toapis" ? "white" : undefined);
     const submitted = await submitVideoTask(config, {
       prompt,
       firstFrameImage: dataUri,

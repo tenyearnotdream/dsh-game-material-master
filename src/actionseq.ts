@@ -57,7 +57,7 @@ import {
   type ActionDef,
   type MotionMode
 } from "./actions.js";
-import { extractFrames, toJpegDataUri } from "./media.js";
+import { decodeToRgba, extractFrames, toJpegDataUri } from "./media.js";
 import { encodePng } from "./png.js";
 import {
   assertVideoBackendReady,
@@ -81,6 +81,7 @@ import {
   type VideoBackend
 } from "./store.js";
 import { composeSheet } from "./chroma.js";
+import { FRAME_FIT_RATIO, contentBox, fitFrameContent, touchesEdge } from "./framefit.js";
 
 /** 母本动作 / 关键帧转圈的候选帧张数：与阶段① 转圈轴保持同一档，截帧才够细。 */
 export const SEED_CANDIDATE_DEFAULT = 32;
@@ -123,6 +124,33 @@ export function listActions(project: Project): { actions: ActionDef[]; activeAct
     activeActionId: project.activeActionId ?? "walk",
     motionMode: project.motionMode ?? "perDirection"
   };
+}
+
+/**
+ * 把内置动作的提示词恢复成插件里的默认值。
+ *
+ * 动作提示词在**项目创建时就被拷进存档**（用户可以随便改），所以插件升级了默认
+ * 提示词，老项目还是旧的那一份——提示词本身也在迭代（道具锁定、留边构图都是
+ * 后加的），老项目不会自动吃到。这个方法就是显式的「我要新默认值」。
+ */
+export async function resetActionPrompt(projectId: string, actionId: string): Promise<ActionDef> {
+  const project = await readProject(projectId);
+  if (project === undefined) throw new Error(`项目不存在：${projectId}`);
+  const builtin = BUILTIN_ACTIONS.find((item) => item.id === actionId);
+  if (builtin === undefined) throw new Error(`「${actionId}」不是内置动作，没有默认提示词可恢复`);
+  const actions = project.actions ?? defaultActions();
+  const index = actions.findIndex((item) => item.id === actionId);
+  if (index < 0) throw new Error(`这个项目里没有动作「${actionId}」`);
+  const next = actions.slice();
+  next[index] = mergeActionPatch(actions[index], { prompt: builtin.prompt, promptEn: builtin.promptEn });
+  await patchProject(projectId, (current) => {
+    current.actions = next;
+    // 当前动作的「阶段② 生效提示词」是单独存的（用户可以在提示词框里覆盖），
+    // 不同步过去的话，恢复默认之后跑出来的还是旧文本。
+    if (current.activeActionId === actionId) current.prompts.video = builtin.prompt;
+    log(current, "info", `动作「${next[index].label}」的提示词已恢复成插件默认值`);
+  });
+  return next[index];
 }
 
 /**
@@ -224,6 +252,25 @@ function actionDir(actionId: string): string {
 }
 
 /**
+ * 把首帧里的角色缩到画布 70% 并居中，落成 PNG，返回相对路径。
+ *
+ * 图生视频是「照着首帧画」：首帧里角色顶到边缘，模型就没余量画挥出去的手臂和
+ * 武器，刀就会被画面边缘切掉（实测踩过：挥砍第 1 列的刀整截不见）。先缩一圈
+ * 再送去生成，模型有地方挥；整图合成时按内容框放大回格子尺寸，分辨率不亏。
+ */
+async function fitFirstFrame(
+  projectId: string,
+  sourceRel: string,
+  targetRel: string
+): Promise<{ relative: string; touchedEdge: boolean; scale: number }> {
+  await mkdir(dirname(assetPath(projectId, targetRel)), { recursive: true });
+  const decoded = await decodeToRgba(assetPath(projectId, sourceRel));
+  const fitted = fitFrameContent(decoded.rgba, decoded.width, decoded.height, { ratio: FRAME_FIT_RATIO });
+  await writeFile(assetPath(projectId, targetRel), encodePng(fitted.rgba, fitted.width, fitted.height));
+  return { relative: targetRel, touchedEdge: fitted.touchedEdge, scale: fitted.scale };
+}
+
+/**
  * 生成母本动作视频（**计费一次**）。
  *
  * 首帧是「当前动作的基准方向图」（默认 front）：这张图已经是绿幕、已经是对的画风，
@@ -255,8 +302,10 @@ export async function startSeedVideo(
   // 动作目录是新建才有的（ensureLayout 只建项目根下的固定几层），转码目标目录要先存在，
   // 否则 ffmpeg 的 image2 muxer 会以 I/O error 退出。
   await mkdir(dirname(assetPath(projectId, firstFrameRel)), { recursive: true });
+  // 先把角色缩到 70% 留出挥动余量，再转 JPEG 送后端（母本视频是「照着首帧画」）。
+  const fitted = await fitFirstFrame(projectId, baseImage.file, `${dir}/seed-first-frame-fit.png`);
   const dataUri = await toJpegDataUri(
-    assetPath(projectId, baseImage.file),
+    assetPath(projectId, fitted.relative),
     assetPath(projectId, firstFrameRel),
     1280,
     3,
@@ -316,10 +365,14 @@ export async function extractSeedCandidates(projectId: string, count?: number): 
   await writeFile(assetPath(projectId, rawRelative), Buffer.concat(extracted.frames));
 
   const files: string[] = [];
+  const edges: boolean[] = [];
   for (let i = 0; i < extracted.frames.length; i++) {
     const relative = `${dir}/seed/c${String(i).padStart(2, "0")}.png`;
     await writeFile(assetPath(projectId, relative), encodePng(extracted.frames[i], extracted.width, extracted.height));
     files.push(relative);
+    // 顺手记一下这帧有没有贴边：贴边说明母本视频里角色/武器已经被切了，
+    // 拿它当关键帧，那一列八方向必然缺一块。
+    edges.push(touchesEdge(contentBox(extracted.frames[i], extracted.width, extracted.height), extracted.width, extracted.height));
   }
 
   // 缩略条带（选关键帧时对着它拖），与阶段① 的条带同一套尺寸规则。
@@ -340,6 +393,7 @@ export async function extractSeedCandidates(projectId: string, count?: number): 
     current.seed = {
       ...(current.seed ?? emptySeed()),
       candidates: files,
+      candidateEdges: edges,
       raw: rawRelative,
       rawWidth: extracted.width,
       rawHeight: extracted.height,
@@ -352,6 +406,14 @@ export async function extractSeedCandidates(projectId: string, count?: number): 
       "info",
       `母本候选帧抽取完成：${files.length} 张 / ${extracted.width}×${extracted.height} / 时长 ${extracted.duration.toFixed(2)} 秒；关键帧 ${current.seed.keyframes.length} 张`
     );
+    const clipped = edges.map((edge, index) => (edge ? index + 1 : 0)).filter((n) => n > 0);
+    if (clipped.length > 0) {
+      log(
+        current,
+        "warn",
+        `有 ${clipped.length} 张候选帧的角色/武器贴到了画面边缘（#${clipped.join(" / #")}），这些帧多半被裁掉了一截：拿它们当关键帧会缺一块，建议避开或重烧母本视频`
+      );
+    }
   });
 }
 
@@ -433,8 +495,11 @@ export async function startKeyframeTurn(
   const dir = actionDir(action.id);
   const jpegRel = `${dir}/${key}/turn-first-frame.jpg`;
   await mkdir(dirname(assetPath(projectId, jpegRel)), { recursive: true });
+  // 关键帧同样是「照着首帧保持姿势」：先把角色（含武器）缩到画布 70% 居中，
+  // 模型才不会把这把已经伸到画面边上的刀直接画丢。
+  const fitted = await fitFirstFrame(projectId, firstFrame, `${dir}/${key}/turn-first-frame-fit.png`);
   const dataUri = await toJpegDataUri(
-    assetPath(projectId, firstFrame),
+    assetPath(projectId, fitted.relative),
     assetPath(projectId, jpegRel),
     1280,
     3,

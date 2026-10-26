@@ -260,8 +260,8 @@ const MODULE_TEXTS: Record<StudioModule, string> = {
     "## 一次性动作的流水线（关键帧矩阵，全方向共用同一批关键帧）",
     "`setMotionMode({projectId,mode:'keyframe'})` 切过去，然后：",
     "1. `runActionSeed({projectId,baseDirection?,prompt?})`【★计费一次：整条流水线**只生成这一段**母本动作视频，首帧是 `images/front.png`】",
-    "2. `extractActionCandidates({projectId,count?})`【本机 ffmpeg，免费：抽成候选帧 + 条带图】",
-    "3. `setActionKeyframes({projectId,keyframes:[下标,…]})`【矩阵的列 = 关键帧，顺序即列顺序；2~24 列】",
+    "2. `extractActionCandidates({projectId,count?})`【本机 ffmpeg，免费：抽成候选帧 + 条带图；顺带算出哪些帧**贴边**（角色/武器顶到画面边缘 = 这一帧已经被裁掉一截），存在 `seed.candidateEdges`】",
+    "3. `setActionKeyframes({projectId,keyframes:[下标,…]})`【矩阵的列 = 关键帧，顺序即列顺序；2~24 列。挑帧时避开 `candidateEdges[i] === true` 的那几张】",
     "4. `runKeyframeTurn({projectId,index,regenerate?})`【★计费一次/列：给第 index 个关键帧转一圈（提示词自动换成**姿势锁定**版，否则模型会把半挥刀的姿势掰回站姿）】",
     "5. `cutKeyframeTurn({projectId,index})`【免费：抽该列的候选帧并按 `picks` 切出八个方向，落在 `actions/<动作>/k<i>/`，**不动** `images/<方向>.png`】",
     "6. `composeActionMatrix({projectId})`【免费：按列顺序把每列那张方向图拼进 `frames/<方向>/raw.bin`，再走原来的抠像 / 裁切 / 合成 → 整图是「8 行 × N 列」】",
@@ -272,7 +272,9 @@ const MODULE_TEXTS: Record<StudioModule, string> = {
     "- 每次提交类调用后先 `action:\"wait\"`；视频这一步最贵，确认 prompt 后再提交。",
     "- `getProject` 的 `imageMode` 是转圈 / 逐方向的分叉点；`motionMode` 是八方向独立 / 关键帧矩阵的分叉点。不要拿旧项目的产物当新角色。",
     "- 八个方向的提示词是内置模板，可单独保存 / 重置；改一份语言设置只影响未改过的模板。",
-    "- 一次性动作的提示词要写成「起手 → 出手 → 收招」三段，否则抽出来的关键帧彼此长得一样，矩阵每一列没有区别。"
+    "- 一次性动作的提示词要写成「起手 → 出手 → 收招」三段，否则抽出来的关键帧彼此长得一样，矩阵每一列没有区别。",
+    "- **武器问题（实测最容易翻车的一条）**：图生视频会照着首帧画，但提示词里只要出现「挥砍／突刺」，模型就会自己给角色**变出一把武器**——空手立绘也会凭空多出一把刀，而且每次形状不一样（这一版是短弯刀、下一版就是发光的巨剑），挥起来还会被画面边缘切掉。三条对策：① 提交前会自动把首帧的角色缩到画布 78% 并居中（`framefit.ts`），留出挥动余量；② 提示词里的 `[道具锁定]` 是「一切以首帧为准」，空手就不许变出武器；③ **空手立绘优先用 `attackPunch`（出拳，徒手，提示词里明确禁止武器）**，别用 `attackSlash`。真要带武器的攻击，先把武器画进 `images/<方向>.png` 再跑，别指望模型自己长出来。",
+    "- 内置动作的提示词在**项目创建时就拷进存档**，插件后续改进（道具锁定、留边构图）老项目吃不到：`resetActionPrompt({projectId,actionId})` 可以把它换成插件当前版本的默认值（`action:\"call\"` 通道）；界面上是「用插件最新默认」。"
   ].join("\n"),
 
   image: [

@@ -1302,6 +1302,7 @@ export const METHODS: MethodSpec[] = [  { method: "getConfig", result: configVie
   { method: "listActions", payload: projectOnlySchema, result: jsonObject },
   { method: "saveAction", payload: saveActionSchema, result: jsonObject },
   { method: "deleteAction", payload: actionIdSchema, result: okSchema },
+  { method: "resetActionPrompt", payload: actionIdSchema, result: jsonObject },
   { method: "setActiveAction", payload: actionIdSchema, result: okSchema },
   { method: "setMotionMode", payload: setMotionModeSchema, result: okSchema },
   { method: "runActionSeed", payload: runActionSeedSchema, result: startedSchema },

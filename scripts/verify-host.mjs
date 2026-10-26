@@ -124,7 +124,8 @@ async function main() {
   // 「原地重烘」新增 recomposeMapTileset（按现在的规则重烘一张素材，保留图块序号），135 → 136。
   // 音效生成（模块八）新增 13 个方法（testSfx + 12 个 sfx 方法），163 → 176。
   // 动作序列（阶段② 的动作库 + 关键帧矩阵）新增 12 个方法，188 → 200。
-  check("manifest 方法数为 200（新增远程方法时同步改这个数）", invocations.length === 200, `实际 ${invocations.length}`);
+  // 恢复默认提示词（插件升级后老项目换新提示词）再 +1，200 → 201。
+  check("manifest 方法数为 201（新增远程方法时同步改这个数）", invocations.length === 201, `实际 ${invocations.length}`);
   const ids = new Set(invocations.map((i) => i.id));
   check("方法 id 唯一", ids.size === invocations.length);
   check("所有方法都声明在 gameStudio 服务下", invocations.every((i) => i.service === "gameStudio" && i.namespace === "gameStudio"));
@@ -2075,8 +2076,60 @@ async function main() {
     check("45° 地图项目已删除", !isoList.projects.some((item) => item.id === isoId));
   }
 
-  // ── 15. 删除 ───────────────────────────────────────────────────────────
-  console.log("15) 删除项目");
+  // ── 15. 首帧留边（framefit）────────────────────────────────────────────
+  console.log("15) 首帧留边");
+  {
+    const framefit = await import("../lib/framefit.js");
+    // 造一张 64×64 的绿幕图，角色框在 x=0..19 / y=8..55（贴左边，模拟被裁的画面）。
+    const W = 64;
+    const H = 64;
+    const buf = Buffer.alloc(W * H * 4);
+    for (let i = 0; i < W * H; i++) {
+      buf[i * 4] = 0;
+      buf[i * 4 + 1] = 255;
+      buf[i * 4 + 2] = 0;
+      buf[i * 4 + 3] = 255;
+    }
+    for (let y = 8; y <= 55; y++) {
+      for (let x = 0; x <= 19; x++) {
+        const o = (y * W + x) * 4;
+        buf[o] = 200;
+        buf[o + 1] = 40;
+        buf[o + 2] = 40;
+        buf[o + 3] = 255;
+      }
+    }
+    const box = framefit.contentBox(buf, W, H);
+    check("内容框认得出来（贴左边）", box.x === 0 && box.y === 8 && box.width === 20 && box.height === 48, JSON.stringify(box));
+    check("贴边判定为真", framefit.touchesEdge(box, W, H));
+
+    const fitted = framefit.fitFrameContent(buf, W, H, { ratio: 0.5 });
+    const fittedBox = framefit.contentBox(fitted.rgba, fitted.width, fitted.height);
+    check("缩放后内容高度约等于画布的 50%", Math.abs(fittedBox.height - Math.round(H * 0.5)) <= 2, String(fittedBox.height));
+    check("缩放后水平居中（左右留白差 ≤ 1px）", Math.abs(fittedBox.x - (fitted.width - (fittedBox.x + fittedBox.width))) <= 1, `x=${fittedBox.x} right=${fitted.width - (fittedBox.x + fittedBox.width)}`);
+    check("缩放后不再贴边", !framefit.touchesEdge(fittedBox, fitted.width, fitted.height));
+    check("垫底是纯绿（视频后端要的就是这个）", fitted.rgba[3] === 255 && fitted.rgba[1] === 255 && fitted.rgba[0] === 0, `${fitted.rgba[0]},${fitted.rgba[1]},${fitted.rgba[2]},${fitted.rgba[3]}`);
+
+    // 已经居中且够小的图不应该被放大（maxUpscale 默认 1）。
+    const small = Buffer.alloc(32 * 32 * 4);
+    for (let i = 0; i < 32 * 32; i++) {
+      small[i * 4 + 1] = 255;
+      small[i * 4 + 3] = 255;
+    }
+    for (let y = 10; y < 22; y++) for (let x = 10; x < 22; x++) {
+      const o = (y * 32 + x) * 4;
+      small[o] = 9;
+      small[o + 1] = 9;
+      small[o + 2] = 9;
+    }
+    const kept = framefit.fitFrameContent(small, 32, 32, { ratio: 0.5 });
+    check("小图不放大（scale 封顶 1）", kept.scale <= 1.0001, String(kept.scale));
+    const empty = framefit.contentBox(Buffer.alloc(8 * 8 * 4), 8, 8);
+    check("全背景的图不报内容框", empty.empty === true);
+  }
+
+  // ── 16. 删除 ───────────────────────────────────────────────────────────
+  console.log("16) 删除项目");
   await studio.deleteProject({ projectId });
   const after = await studio.listProjects();
   check("项目已从列表移除", !after.projects.some((p) => p.id === projectId));
