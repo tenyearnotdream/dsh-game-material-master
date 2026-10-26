@@ -12,7 +12,18 @@ third-party service.
 [![npm](https://img.shields.io/npm/v/dsh-game-material-master?color=blue)](https://www.npmjs.com/package/dsh-game-material-master)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **🆕 0.10.0 update**: the conversational surface is now a single **`game_material`** tool
+> **🆕 0.11.0 update**: both map editors gain a full **Agent loop** — `mapInspect` / `isoInspect` read cells,
+> objects, stamps, markers and passability by region, while `mapRender` / `isoRender` synchronously produce a
+> **check image** (region crop, zoom, optional marker / grid / passability / outline overlays) and return a local
+> absolute path for `read_image`. `applyMapOps` / `applyIsoOps` add **`dryRun`** (validate without writing) and
+> **`ifRevision`** (reject stale writes instead of overwriting newer edits). Markers carry **kind / color / note /
+> tags** (`marker update`; export formats move to `@5` / `@2`); stamps can be **moved / rotated**, the minimum
+> footprint drops to **1×1**, and passability can be **repainted from the asset properties**; 45° objects can be
+> **duplicated**; tile imports accept a **local path**; every project / task has a **Copy ID** button. Also fixes
+> the multi-cell stamp brush leaking into marker / eraser tools. Wire methods 184 → **188**, new
+> `verify-map-agent` self-check.
+>
+> **0.10.0 update**: the conversational surface is now a single **`game_material`** tool
 > (`action` picks `guide / intake / call / status / wait / review / approve / reviewMode / upload`).
 > The always-resident context drops from **49 KB to about 4 KB**; flows and method tables are loaded on demand
 > through `action:"guide"`. Module ⑤ is replaced by a fully local **45° isometric map editor** (2:1 diamonds,
@@ -392,7 +403,7 @@ dsh plugin --profile web add /path/to/dsh-game-material-master
 ```
 
 The package is published to npm: [dsh-game-material-master](https://www.npmjs.com/package/dsh-game-material-master)
-(currently `0.10.2`, `latest`). It has no runtime dependencies, so `dsh plugin add` is all you need.
+(currently `0.11.0`, `latest`). It has no runtime dependencies, so `dsh plugin add` is all you need.
 
 **DSH version**: `>=0.2.0-rc.2 <0.3.0` (the `engines.dsh` field; since DSH 0.2.1 the plugin manager checks it first).
 When a Web deployment uses `--public-url https://host/prefix/`, deep links and asset URLs include that path prefix.

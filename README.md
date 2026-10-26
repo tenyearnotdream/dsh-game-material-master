@@ -10,7 +10,14 @@
 [![npm](https://img.shields.io/npm/v/dsh-game-material-master?color=blue)](https://www.npmjs.com/package/dsh-game-material-master)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **🆕 0.10.0 更新**：对话工具面收成一个 **`game_material`**（`action` 选 `guide / intake / call / status /
+> **🆕 0.11.0 更新**：两套地图编辑器补上 **Agent 闭环** —— `mapInspect` / `isoInspect` 按区域读逐格、物件、整图、标记与通行性，
+> `mapRender` / `isoRender` 同步出**检查图**（区域裁切、放大、可叠标记 / 网格 / 通行性 / 轮廓，返回本机绝对路径交给 `read_image`）；
+> `applyMapOps` / `applyIsoOps` 新增 **`dryRun`**（只校验不写盘）与 **`ifRevision`**（旧版本直接拒绝，防覆盖）。
+> 标记可带 **类型 / 颜色 / 备注 / 标签**（`marker update`，导出格式升到 `@5` / `@2`）；整图支持**移动 / 旋转**、最小占格放宽到 **1×1**，
+> 素材属性里可**重画通行区域**；45° 物件可**复制**；导入素材支持直接传**本机路径**；所有项目 / 任务都能**一键复制 ID**。
+> 另外修掉「整图多格笔刷被标记 / 橡皮借用」的问题。wire 方法 184 → **188**，新增自检 `verify-map-agent`。
+>
+> **0.10.0 更新**：对话工具面收成一个 **`game_material`**（`action` 选 `guide / intake / call / status /
 > wait / review / approve / reviewMode / upload`），常驻上下文从 **49 KB 降到约 4 KB**，流程与方法表改成按需读手册；
 > 模块⑤换成**全本地的 45° 地图编辑器**（2:1 等距、4×4 自动连接、多格 / 高处物件、动画地块、标记层、环绕、
 > 一键生成；还能「**AI 生成素材**」：自动开对话生成，整理好回链到「新增素材」确认导入）；
@@ -331,7 +338,7 @@ dsh plugin --profile web add /path/to/dsh-game-material-master
 ```
 
 包已发布到 npm：[dsh-game-material-master](https://www.npmjs.com/package/dsh-game-material-master)
-（当前 `0.10.2`，`latest`）。本包没有运行时依赖，`dsh plugin add` 拉下来即可用。
+（当前 `0.11.0`，`latest`）。本包没有运行时依赖，`dsh plugin add` 拉下来即可用。
 
 **DSH 版本**：`>=0.2.0-rc.2 <0.3.0`（`package.json` 的 `engines.dsh`；DSH 0.2.1 起插件管理器优先按它判断兼容性）。
 Web 部署用 `--public-url https://host/prefix/` 时，深链接与产物地址会跟着补路径前缀。

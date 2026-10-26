@@ -203,6 +203,64 @@ Conventional Commits，中文描述：`feat(rig): …` / `docs: …` / `fix(spri
 | `0.10.0` | 2026-10-24 06:49 | **对话工具面收成单入口**（`feat(tools)!`）：8 个 `game_material_*` 合并成 1 个 `game_material`，常驻 49,393 B → 约 3.9 KB，流程 / 方法表改由 `guide` 按需加载。**模块五推倒重做**（`feat(iso)!`）：删掉「45° 地图地块生成」，换成全本地 **45° 地图编辑器**（2:1 等距 / 4×4 自动连接 / 多格高处物件 / 动画地块 / 标记层 / 环绕 / 一键生成 / 内置素材 / 导出 PNG·JSON·zip），并支持**AI 生成素材**（开新对话 → `composeIsoAsset` → 回链确认）。**新增可选 ToAPIs 异步图片 / 视频后端**（`feat(toapis)`，[PR #7](https://github.com/universe-st/dsh-game-material-master/pull/7) by [@ToAPIs-2025](https://github.com/ToAPIs-2025)）。wire 方法 176 → **184**；新增 `verify-iso*` 四件与 `verify-toapis`。⚠️ 宿主半区改动，需重启 DSH。 |
 | `0.10.1` | 2026-10-24 07:18 | **45° 地图编辑器修复**（`fix(iso)`）：「一键生成 · 大陆」的高度场中点插值把 `grid[8.5]` 当成格子写，点一次必抛 `TypeError`；现在 `step < 2` 时跳过这段（step = 1 的第一段已经把每格补满，中点那段本来就是重复的）。`verify-iso-pipeline` 54 → **55**（新增 continent 回归）。⚠️ 宿主半区改动，需重启 DSH。 |
 | `0.10.2` | 2026-10-24 07:23 | **ToAPIs 后端验收修复**（`fix(toapis)`，[PR #8](https://github.com/universe-st/dsh-game-material-master/pull/8) by [@YamiAnn](https://github.com/YamiAnn)）：生图新增**背景**选项（`auto` / `transparent` / `opaque`，GPT Image 原生透明 PNG，下载原图不再二次抠像）；图生视频新增**画幅比例**（默认 16:9，方形角色用 1:1），透明首帧先铺白再交给视频模型；补真实 DSH 八方向 / 精灵导出验收文档，新增 `verify-toapis-alpha`（原生透明、白底首帧、ZIP 原字节）与 Windows 临时文件锁回归 `verify-project-windows-lock`；`verify-toapis` 42 → **43**、`verify-feedback` 214 → **217**。⚠️ 宿主半区改动，需重启 DSH。 |
+| `0.11.0` | 2026-10-26 04:32 | **两套地图编辑器补上 Agent 闭环**（`feat(map)`）：新增 `mapInspect` / `isoInspect`（按区域、按预算读逐格 / 物件 / 整图 / 标记 / 通行性，默认 4096 格，超了回 `truncated` + `nextRange`）与 `mapRender` / `isoRender`（同步检查图：区域裁切、1~4 倍、透明 / 棋盘 / 白 / 深底、可叠 markers / grid / axes / pass / outlines，返回 `localPath` 给 `read_image`）；新增 `guide` 主题 `map-agent`。`applyMapOps` / `applyIsoOps` 新增 **`dryRun`** 与 **`ifRevision`**，项目视图带 `revision`。标记新增 **kind / color / note / tags** 与 `marker update`，导出格式 `dsh-gem-map@5` / `dsh-gem-iso-map@2`。整图新增 `stampMove` / `stampRotate`（越界或被别的整图占住会跳过，不静默顶掉）、最小占格 2 → **1**，素材属性里可改 `stampPass`；45° 物件新增 `duplicate`；`importMapTileset` / `importIsoTileset` 支持 **`path`**；`compose*` 返回 `localPath` / `previewPath`；所有模块的项目 / 任务标题旁与侧栏行都能**一键复制 projectId / jobId**。修复整图多格笔刷被标记 / 橡皮 / 油漆桶 / 吸管借用。wire 184 → **188**；新增 `verify-map-agent` 35。自检：host 387 / client 362 / tools 196 / feedback 217 / map 239 / map-pipeline 429 / map-gateway 228 / map-client 474 / iso 42 / iso-pipeline 55 / iso-gateway 64 / iso-client 83。⚠️ 宿主半区改动，需重启 DSH。 |
+
+### 0.11.0 发布说明（2026-10-26）
+
+`package.json` 是 `0.11.0`。相对已发布的 `0.10.2`，这次把两套地图编辑器从「Agent 能调写入接口」补成
+「**读状态 → 出方案 → 批量执行 → 看效果图 → 校验 / 迭代**」的完整闭环，并顺带修掉几处真机反馈。
+
+#### ① Agent 闭环：inspect / render
+
+- 新增 `mapInspect` / `isoInspect`：按 `region`（右下开区间）读逐格、物件 / 整图、标记、通行性与统计；
+  默认预算 4096 格，超了回 `truncated:true` + `nextRange`，不会让 agent 把 512×512 一次拉出来。
+  `include` 可选 `layers / markers / stamps / pass / stats / legend`，`format` 可选 `text / json / both`。
+- 新增 `mapRender` / `isoRender`：**同步**出检查图，按 `region` 裁、`scale` 1~4、`background` 透明 / 棋盘 /
+  白 / 深，`overlay` 可叠 `markers / markerLabels / grid / axes / pass / objects / regions / outlines`；
+  返回 `localPath`（本机绝对路径）与 `url`，`read_image` 直接看。返回 `revision` 与 `revisionAtStart`
+  对不上时标 `stale:true`。`MAX_RENDER_PIXELS` 兜住超大图。
+- 新增 `guide({topic:"map-agent"})`：两套编辑器共用的读 / 写 / 看 / 验收流程与硬规则
+  （不要拿 `mapPlan` / `isoPlan` 当状态查询、不要用 shell 改 `map.json`、检查图不代替阶段通过）。
+
+#### ② 安全写入：dryRun / ifRevision
+
+- `applyMapOps` / `applyIsoOps` 新增 `dryRun`：只校验、回 `skipped` / `summary`，不写盘、不进撤销栈。
+- 新增 `ifRevision`：文档 revision 不一致时直接拒绝，避免 agent 拿着旧状态覆盖用户刚做的编辑。
+- `getMapProject` / `getIsoProject` 等回包带 `revision`；`apply*` 回 `revision`。
+
+#### ③ 标记语义
+
+- `MapMarker` / `IsoMarker` 新增 `kind`（spawn / exit / chest / boss / event / resource / npc / custom…，开放字符串）、
+  `color`（`#rrggbb`）、`note`、`tags`；新增 `{kind:"marker", op:"update", patch:{…}}`，可逐字段改 / 清空。
+- 导出格式在有语义字段时升到 `dsh-gem-map@5` / `dsh-gem-iso-map@2`；没有语义字段仍写 `@4` / `@1`，旧档照常读。
+- 标记仍是源数据，导出 PNG 不画标记；检查图要看标记必须打开 `overlay.markers`。
+
+#### ④ 编辑能力
+
+- 整图新增 `stampMove` / `stampRotate`：目标越界、比地图大、或与另一张整图重叠时**跳过并写 `skipped`**，
+  不会静默顶掉别的实例；撤销恢复到旧位置 / 旧朝向。
+- 整图最小占格 **2 → 1**：1×1 也能带 4 个旋转与逐格通行区域（`STAMP_MIN_CELLS` / `OPEN_STAMP_MIN` / 界面 /
+  回链预填一起改）。
+- 整图素材属性里可直接重画通行区域：`saveMapTileset({stampPass})`，长度必须 = `cols×rows`，
+  只改数据、不动几何与图块序号；下次 `mapPlan` / 导出立刻生效。
+- 45° 物件新增 `duplicate`（可指定 `newId`，自动错开 / 防重叠）。
+- `importMapTileset` / `importIsoTileset` 支持 `path`（本机绝对路径，宿主自己读盘），避免把 base64 塞进工具参数；
+  `data` 与 `path` 二选一。`composeMapAsset` / `composeIsoAsset` 回 `localPath` / `previewPath`。
+- `upload` 的 `options` 透传到 map / iso 的素材导入。
+- 所有模块的项目 / 任务标题旁与侧栏行新增**一键复制 `projectId` / `jobId`**。
+
+#### ⑤ 修复
+
+- 整图的多格笔刷只借给「画笔」：切到标记 / 橡皮 / 油漆桶 / 吸管时悬停框、右键与落笔都回到 1×1；
+  橡皮右键恢复为「擦一格」，切回画笔仍是整张。
+- 多帧整图在素材列表正确显示「会动」，属性窗口的速度 / 循环不再被禁用。
+- `verify-map-client` 在渲染 40 轮仍未稳定时返回最后一帧（原来返回入参函数，后续断言拿到空树）。
+
+#### 自检项数（0.11.0）
+
+`host 387` / `client 362` / `tools 196` / `feedback 217` / `i18n 9` / `map 239` / `map-pipeline 429` /
+`map-gateway 228` / `map-client 474` / `map-agent 35` / `iso 42` / `iso-pipeline 55` /
+`iso-gateway 64` / `iso-client 83`。wire 方法 **188**。
 
 ### 0.10.0 发布说明（2026-10-24）
 
