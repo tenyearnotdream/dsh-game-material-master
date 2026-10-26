@@ -1,4 +1,4 @@
-﻿/**
+/**
  * dsh-game-material-master —— 浏览器半区。
  *
  * 两块界面：
@@ -92,6 +92,10 @@
       "① 八方向绿幕图": "① Eight-direction chroma-key images",
       "以源图为基准，按依赖顺序生成八个方位的纯绿幕全身图": "Using the source image as the base, generate full-body images on a pure green screen for all eight directions, in dependency order",
       "② 行走动作视频": "② Walking animation videos",
+      "② 关键帧转圈视频（每列一段）": "② Keyframe turn videos (one per column)",
+      "③ 切出八方向": "③ Cut out the eight directions",
+      "④ 合成关键帧矩阵": "④ Compose the keyframe matrix",
+      "⑤ 动作预览": "⑤ Action preview",
       "固定镜头、固定背景，让角色朝原方位原地走三步": "Fixed camera, fixed background: the character walks three steps in place, facing its original direction",
       "③ 提取序列帧": "③ Extract sequence frames",
       "可整批等分抽帧，也可对每一段视频手动选帧": "Extract evenly spaced frames for the whole batch, or pick frames manually for each video",
@@ -3257,6 +3261,23 @@
     }
     let STAGES = make_STAGES();
 
+    /**
+     * 阶段条标题按「生成方式」换说法。
+     *
+     * 走路（八方向独立）和一次性动作（关键帧矩阵）共用同一组阶段键，但两条流水线
+     * 做的事完全不一样：走路是「八个方向各走一段」，一次性动作是「一张关键帧转一圈
+     * 再切八方向」。固定写「② 行走动作视频」会让切到攻击动作的人以为界面没更新
+     * （实测被问过一次），所以按 project.motionMode 换标题，键不变。
+     */
+    function stageTitle(item, mode) {
+      if (mode !== "keyframe") return item.title;
+      if (item.key === "videos") return T("② 关键帧转圈视频（每列一段）");
+      if (item.key === "frames") return T("③ 切出八方向");
+      if (item.key === "sheet") return T("④ 合成关键帧矩阵");
+      if (item.key === "preview") return T("⑤ 动作预览");
+      return item.title;
+    }
+
     // ── 音乐生成编辑（模块七）────────────────────────────────────────────
     //
     // 引擎/模型表在这里也有一份：浏览器半区是经典脚本，不能 import 宿主模块。
@@ -5525,7 +5546,7 @@
                               : "var(--dsw-alias-label-tertiary)"
                           }
                         }),
-                        item.title
+                        stageTitle(item, project.motionMode)
                       )
                     )
                   ),
